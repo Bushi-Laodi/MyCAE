@@ -9,6 +9,7 @@ class QVTKOpenGLNativeWidget;
 class TopoDS_Shape;
 class vtkGenericOpenGLRenderWindow;
 class vtkRenderer;
+class vtkUnstructuredGrid;
 
 class VtkRenderCanvas final : public QWidget
 {
@@ -18,6 +19,7 @@ public:
     void showEmpty();
     void showBoxGeometry(const BoxGeometry &box);
     void showOccShape(const TopoDS_Shape &shape);
+    void showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid);
 
 private:
     void resetCamera();

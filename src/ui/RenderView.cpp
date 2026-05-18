@@ -76,3 +76,11 @@ void RenderView::showOccShape(const TopoDS_Shape &shape, const QString &title, c
     m_detailLabel->setText("Open CASCADE TopoDS_Shape converted to VTK PolyData.");
     m_canvas->showOccShape(shape);
 }
+
+void RenderView::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const QString &title, const QString &subtitle)
+{
+    m_titleLabel->setText(title);
+    m_subtitleLabel->setText(subtitle);
+    m_detailLabel->setText("Gmsh tetrahedral mesh converted to VTK UnstructuredGrid.");
+    m_canvas->showMeshGrid(grid);
+}

@@ -81,6 +81,13 @@ qt_add_executable(MyCAE
     src/geometry/BoxGeometry.h
     src/geometry/GeometryManager.cpp
     src/geometry/GeometryManager.h
+    src/mesh/GmshRunner.cpp
+    src/mesh/GmshRunner.h
+    src/mesh/MeshData.h
+    src/mesh/MeshToVtkConverter.cpp
+    src/mesh/MeshToVtkConverter.h
+    src/mesh/MshReader.cpp
+    src/mesh/MshReader.h
     src/occ/OCCBoxBuilder.cpp
     src/occ/OCCBoxBuilder.h
     src/occ/OCCGeometryFactory.cpp

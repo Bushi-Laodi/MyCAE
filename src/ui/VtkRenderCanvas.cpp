@@ -9,12 +9,14 @@
 #include <vtkActor.h>
 #include <vtkCamera.h>
 #include <vtkCubeSource.h>
+#include <vtkDataSetMapper.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkNew.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkProperty.h>
 #include <vtkRenderer.h>
+#include <vtkUnstructuredGrid.h>
 
 VtkRenderCanvas::VtkRenderCanvas(QWidget *parent)
     : QWidget(parent)
@@ -84,6 +86,25 @@ void VtkRenderCanvas::showOccShape(const TopoDS_Shape &shape)
     actor->GetProperty()->SetEdgeColor(0.12, 0.18, 0.24);
     actor->GetProperty()->EdgeVisibilityOn();
     actor->GetProperty()->SetLineWidth(1.2);
+
+    m_renderer->RemoveAllViewProps();
+    m_renderer->AddActor(actor);
+    resetCamera();
+    m_renderWindow->Render();
+}
+
+void VtkRenderCanvas::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid)
+{
+    vtkNew<vtkDataSetMapper> mapper;
+    mapper->SetInputData(grid);
+
+    vtkNew<vtkActor> actor;
+    actor->SetMapper(mapper);
+    actor->GetProperty()->SetColor(0.42, 0.72, 0.54);
+    actor->GetProperty()->SetEdgeColor(0.08, 0.16, 0.11);
+    actor->GetProperty()->EdgeVisibilityOn();
+    actor->GetProperty()->SetLineWidth(0.8);
+    actor->GetProperty()->SetOpacity(0.78);
 
     m_renderer->RemoveAllViewProps();
     m_renderer->AddActor(actor);

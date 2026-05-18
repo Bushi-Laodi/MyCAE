@@ -2,6 +2,9 @@
 
 #include "BoxDialog.h"
 #include "LogPanel.h"
+#include "mesh/GmshRunner.h"
+#include "mesh/MeshToVtkConverter.h"
+#include "mesh/MshReader.h"
 #include "occ/OCCGeometryFactory.h"
 #include "occ/OCCShapeIO.h"
 #include "ProjectTreePanel.h"
@@ -10,6 +13,7 @@
 
 #include <Standard_Failure.hxx>
 #include <TopoDS_Shape.hxx>
+#include <vtkUnstructuredGrid.h>
 
 #include <QAction>
 #include <QDockWidget>
@@ -57,6 +61,22 @@ void MainWindow::createActions()
     m_createBoxAction->setStatusTip("根据用户输入参数创建长方体几何");
     connect(m_createBoxAction, &QAction::triggered, this, &MainWindow::createBox);
 
+    m_checkGmshAction = new QAction("Check Gmsh", this);
+    m_checkGmshAction->setStatusTip("Run gmsh.exe --version to check the local Gmsh environment");
+    connect(m_checkGmshAction, &QAction::triggered, this, &MainWindow::checkGmsh);
+
+    m_generateMeshAction = new QAction("Generate Mesh", this);
+    m_generateMeshAction->setStatusTip("Generate a minimal 3D mesh from the selected STEP geometry");
+    connect(m_generateMeshAction, &QAction::triggered, this, &MainWindow::generateMesh);
+
+    m_readMeshInfoAction = new QAction("Read Mesh Info", this);
+    m_readMeshInfoAction->setStatusTip("Read node and tetrahedron counts from the selected MSH file");
+    connect(m_readMeshInfoAction, &QAction::triggered, this, &MainWindow::readMeshInfo);
+
+    m_showMeshAction = new QAction("Show Mesh", this);
+    m_showMeshAction->setStatusTip("Read and display the selected tetrahedral MSH file");
+    connect(m_showMeshAction, &QAction::triggered, this, &MainWindow::showMesh);
+
     m_exitAction = new QAction("退出", this);
     connect(m_exitAction, &QAction::triggered, this, &QWidget::close);
 }
@@ -74,6 +94,12 @@ void MainWindow::createMenus()
     geometryMenu->addAction("导入 STEP", this, [this]() {
         writeLog("已点击导入 STEP。Open CASCADE 集成将在后续阶段实现。");
     });
+
+    auto *meshMenu = menuBar()->addMenu("Mesh");
+    meshMenu->addAction(m_checkGmshAction);
+    meshMenu->addAction(m_generateMeshAction);
+    meshMenu->addAction(m_readMeshInfoAction);
+    meshMenu->addAction(m_showMeshAction);
 
     auto *simulationMenu = menuBar()->addMenu("仿真");
     simulationMenu->addAction("生成网格", this, [this]() {
@@ -143,6 +169,7 @@ void MainWindow::newProject()
 
     setCurrentProject(project);
     m_boxes.clear();
+    m_selectedBoxIndex = -1;
     refreshGeometryTree();
     writeLog("工程已创建：" + project.rootPath);
 }
@@ -197,6 +224,7 @@ void MainWindow::createBox()
     }
 
     m_boxes.append(box);
+    m_selectedBoxIndex = m_boxes.size() - 1;
     refreshGeometryTree();
     displayBoxGeometry(box);
     if (box.occBrepSaved) {
@@ -212,9 +240,161 @@ void MainWindow::createBox()
     writeLog("长方体几何已创建：" + box.name);
 }
 
+void MainWindow::checkGmsh()
+{
+    const GmshRunner gmshRunner;
+    const GmshRunResult result = gmshRunner.checkVersion();
+
+    writeLog("Gmsh 路径：" + gmshRunner.gmshExecutablePath());
+    writeLog("Gmsh 命令：" + gmshRunner.gmshExecutablePath() + " --version");
+    writeLog(QString("Gmsh exitCode：%1").arg(result.exitCode));
+    writeLog("Gmsh stdout：" + (result.standardOutput.isEmpty() ? QString("<empty>") : result.standardOutput));
+    writeLog("Gmsh stderr：" + (result.standardError.isEmpty() ? QString("<empty>") : result.standardError));
+
+    if (result.success) {
+        writeLog("Gmsh 环境检查成功。");
+    } else {
+        writeLog(result.errorMessage.isEmpty() ? "Gmsh 环境检查失败：未知错误。" : result.errorMessage);
+    }
+}
+
+void MainWindow::generateMesh()
+{
+    if (m_currentProject.rootPath.isEmpty()) {
+        writeLog("网格生成失败：请先新建或打开工程。");
+        return;
+    }
+
+    if (m_selectedBoxIndex < 0 || m_selectedBoxIndex >= m_boxes.size()) {
+        writeLog("请先在工程树中选择一个几何对象。");
+        return;
+    }
+
+    const BoxGeometry &box = m_boxes.at(m_selectedBoxIndex);
+    if (box.occStepFile.isEmpty()) {
+        writeLog("当前几何对象没有 STEP 文件，无法生成网格。");
+        return;
+    }
+
+    const QString stepAbsPath = QFileInfo(box.occStepFile).isAbsolute()
+        ? box.occStepFile
+        : QDir(m_currentProject.rootPath).filePath(box.occStepFile);
+    const QString meshRelativePath = QDir("mesh").filePath(QFileInfo(stepAbsPath).completeBaseName() + ".msh");
+    const QString meshAbsPath = QDir(m_currentProject.rootPath).filePath(meshRelativePath);
+
+    const GmshRunner gmshRunner;
+    const GmshRunResult result = gmshRunner.generate3DMesh(stepAbsPath, meshAbsPath);
+
+    writeLog("Gmsh 路径：" + gmshRunner.gmshExecutablePath());
+    writeLog("Gmsh 命令：" + gmshRunner.gmshExecutablePath()
+             + " " + stepAbsPath
+             + " -3 -format msh2 -o " + meshAbsPath);
+    writeLog("Gmsh 输入文件：" + stepAbsPath);
+    writeLog("Gmsh 输出文件：" + meshAbsPath);
+    writeLog(QString("Gmsh exitCode：%1").arg(result.exitCode));
+    writeLog("Gmsh stdout：" + (result.standardOutput.isEmpty() ? QString("<empty>") : result.standardOutput));
+    writeLog("Gmsh stderr：" + (result.standardError.isEmpty() ? QString("<empty>") : result.standardError));
+
+    if (result.success) {
+        writeLog("网格生成成功：" + meshRelativePath);
+    } else {
+        writeLog(result.errorMessage.isEmpty() ? "网格生成失败：未知错误。" : result.errorMessage);
+    }
+}
+
+void MainWindow::readMeshInfo()
+{
+    if (m_currentProject.rootPath.isEmpty()) {
+        writeLog("读取网格失败：请先新建或打开工程。");
+        return;
+    }
+
+    if (m_selectedBoxIndex < 0 || m_selectedBoxIndex >= m_boxes.size()) {
+        writeLog("请先在工程树中选择一个几何对象。");
+        return;
+    }
+
+    const BoxGeometry &box = m_boxes.at(m_selectedBoxIndex);
+    const QString meshRelativePath = QDir("mesh").filePath(box.name.toLower() + ".msh");
+    const QString meshAbsPath = QDir(m_currentProject.rootPath).filePath(meshRelativePath);
+
+    writeLog("MSH 文件路径：" + meshAbsPath);
+    if (!QFileInfo::exists(meshAbsPath)) {
+        writeLog("读取网格失败：MSH 文件不存在。");
+        return;
+    }
+
+    MeshData meshData;
+    meshData.sourceGeometryName = box.name;
+    QString errorMessage;
+    if (!MshReader::readMsh2(meshAbsPath, meshData, &errorMessage)) {
+        writeLog("读取网格失败：" + errorMessage);
+        return;
+    }
+
+    meshData.sourceGeometryName = box.name;
+    writeLog("读取网格成功。");
+    writeLog(QString("网格节点数量：%1").arg(meshData.nodeCount()));
+    writeLog(QString("四面体单元数量：%1").arg(meshData.tetraCount()));
+}
+
+void MainWindow::showMesh()
+{
+    if (m_currentProject.rootPath.isEmpty()) {
+        writeLog("显示网格失败：请先新建或打开工程。");
+        return;
+    }
+
+    if (m_selectedBoxIndex < 0 || m_selectedBoxIndex >= m_boxes.size()) {
+        writeLog("请先在工程树中选择一个几何对象。");
+        return;
+    }
+
+    const BoxGeometry &box = m_boxes.at(m_selectedBoxIndex);
+    const QString meshRelativePath = QDir("mesh").filePath(box.name.toLower() + ".msh");
+    const QString meshAbsPath = QDir(m_currentProject.rootPath).filePath(meshRelativePath);
+
+    writeLog("MSH 文件路径：" + meshAbsPath);
+    if (!QFileInfo::exists(meshAbsPath)) {
+        writeLog("显示网格失败：MSH 文件不存在。");
+        return;
+    }
+
+    MeshData meshData;
+    meshData.sourceGeometryName = box.name;
+    QString errorMessage;
+    if (!MshReader::readMsh2(meshAbsPath, meshData, &errorMessage)) {
+        writeLog("显示网格失败：读取 MSH 失败：" + errorMessage);
+        return;
+    }
+    meshData.sourceGeometryName = box.name;
+
+    writeLog(QString("网格节点数量：%1").arg(meshData.nodeCount()));
+    writeLog(QString("四面体单元数量：%1").arg(meshData.tetraCount()));
+
+    vtkSmartPointer<vtkUnstructuredGrid> grid = MeshToVtkConverter::toUnstructuredGrid(meshData, &errorMessage);
+    if (!grid) {
+        writeLog("VTK 网格转换失败：" + errorMessage);
+        return;
+    }
+    writeLog("VTK 网格转换成功。");
+
+    if (!m_renderView) {
+        writeLog("网格显示失败：渲染窗口不可用。");
+        return;
+    }
+
+    const QString subtitle = QString("%1 nodes, %2 tetrahedra")
+        .arg(meshData.nodeCount())
+        .arg(meshData.tetraCount());
+    m_renderView->showMeshGrid(grid, box.name + " Mesh", subtitle);
+    writeLog("网格显示成功。");
+}
+
 void MainWindow::setCurrentProject(const Project &project)
 {
     m_currentProject = project;
+    m_selectedBoxIndex = -1;
     setWindowTitle("MyCAE - " + project.name);
 
     if (m_projectTreePanel) {
@@ -240,6 +420,7 @@ void MainWindow::loadProjectGeometries()
     }
 
     refreshGeometryTree();
+    m_selectedBoxIndex = -1;
     if (m_propertyPanel) {
         m_propertyPanel->showEmptySelection();
     }
@@ -264,12 +445,15 @@ void MainWindow::refreshGeometryTree()
 
 void MainWindow::showGeometryProperties(const QString &geometryName)
 {
-    for (const BoxGeometry &box : m_boxes) {
+    for (int index = 0; index < m_boxes.size(); ++index) {
+        const BoxGeometry &box = m_boxes.at(index);
         if (box.name == geometryName) {
+            m_selectedBoxIndex = index;
             displayBoxGeometry(box);
             return;
         }
     }
+    m_selectedBoxIndex = -1;
 }
 
 void MainWindow::displayBoxGeometry(const BoxGeometry &box)

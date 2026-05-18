@@ -30,6 +30,10 @@ private:
     void newProject();
     void openProject();
     void createBox();
+    void checkGmsh();
+    void generateMesh();
+    void readMeshInfo();
+    void showMesh();
     void setCurrentProject(const Project &project);
     void loadProjectGeometries();
     void refreshGeometryTree();
@@ -40,6 +44,10 @@ private:
     QAction *m_newProjectAction = nullptr;
     QAction *m_openProjectAction = nullptr;
     QAction *m_createBoxAction = nullptr;
+    QAction *m_checkGmshAction = nullptr;
+    QAction *m_generateMeshAction = nullptr;
+    QAction *m_readMeshInfoAction = nullptr;
+    QAction *m_showMeshAction = nullptr;
     QAction *m_exitAction = nullptr;
     ProjectTreePanel *m_projectTreePanel = nullptr;
     PropertyPanel *m_propertyPanel = nullptr;
@@ -49,4 +57,5 @@ private:
     GeometryManager m_geometryManager;
     Project m_currentProject;
     QVector<BoxGeometry> m_boxes;
+    int m_selectedBoxIndex = -1;
 };
