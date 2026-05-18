@@ -2,7 +2,8 @@
 
 #include "BoxDialog.h"
 #include "LogPanel.h"
-#include "occ/OCCBoxBuilder.h"
+#include "occ/OCCGeometryFactory.h"
+#include "occ/OCCShapeIO.h"
 #include "ProjectTreePanel.h"
 #include "PropertyPanel.h"
 #include "RenderView.h"
@@ -13,6 +14,8 @@
 #include <QAction>
 #include <QDockWidget>
 #include <QFileDialog>
+#include <QFileInfo>
+#include <QDir>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -54,10 +57,6 @@ void MainWindow::createActions()
     m_createBoxAction->setStatusTip("根据用户输入参数创建长方体几何");
     connect(m_createBoxAction, &QAction::triggered, this, &MainWindow::createBox);
 
-    m_testOccBoxAction = new QAction("Test OCC Box", this);
-    m_testOccBoxAction->setStatusTip("Create a temporary Open CASCADE TopoDS_Shape box");
-    connect(m_testOccBoxAction, &QAction::triggered, this, &MainWindow::testOccBox);
-
     m_exitAction = new QAction("退出", this);
     connect(m_exitAction, &QAction::triggered, this, &QWidget::close);
 }
@@ -72,7 +71,6 @@ void MainWindow::createMenus()
 
     auto *geometryMenu = menuBar()->addMenu("几何");
     geometryMenu->addAction(m_createBoxAction);
-    geometryMenu->addAction(m_testOccBoxAction);
     geometryMenu->addAction("导入 STEP", this, [this]() {
         writeLog("已点击导入 STEP。Open CASCADE 集成将在后续阶段实现。");
     });
@@ -200,37 +198,18 @@ void MainWindow::createBox()
 
     m_boxes.append(box);
     refreshGeometryTree();
-    if (m_propertyPanel) {
-        m_propertyPanel->showBoxGeometry(box);
+    displayBoxGeometry(box);
+    if (box.occBrepSaved) {
+        writeLog("BREP 保存成功：" + box.occBrepFile);
+    } else {
+        writeLog("BREP 保存失败：" + box.occBrepErrorMessage);
     }
-    if (m_renderView) {
-        m_renderView->showBoxGeometry(box);
+    if (box.occStepSaved) {
+        writeLog("STEP 保存成功：" + box.occStepFile);
+    } else {
+        writeLog("STEP 保存失败：" + box.occStepErrorMessage);
     }
     writeLog("长方体几何已创建：" + box.name);
-}
-
-void MainWindow::testOccBox()
-{
-    constexpr double length = 300.0;
-    constexpr double width = 120.0;
-    constexpr double height = 80.0;
-
-    try {
-        OCCBoxBuilder builder;
-        const TopoDS_Shape shape = builder.createBox(length, width, height);
-        if (shape.IsNull()) {
-            writeLog("OCC Box 创建失败：TopoDS_Shape 为空。");
-            return;
-        }
-
-        writeLog("OCC Box 创建成功：300 x 120 x 80 mm");
-    } catch (const Standard_Failure &failure) {
-        writeLog(QString("OCC Box 创建失败：%1").arg(failure.what()));
-    } catch (const std::exception &error) {
-        writeLog(QString("OCC Box 创建失败：%1").arg(error.what()));
-    } catch (...) {
-        writeLog("OCC Box 创建失败：未知错误。");
-    }
 }
 
 void MainWindow::setCurrentProject(const Project &project)
@@ -287,14 +266,62 @@ void MainWindow::showGeometryProperties(const QString &geometryName)
 {
     for (const BoxGeometry &box : m_boxes) {
         if (box.name == geometryName) {
-            if (m_propertyPanel) {
-                m_propertyPanel->showBoxGeometry(box);
-            }
-            if (m_renderView) {
-                m_renderView->showBoxGeometry(box);
-            }
+            displayBoxGeometry(box);
             return;
         }
+    }
+}
+
+void MainWindow::displayBoxGeometry(const BoxGeometry &box)
+{
+    if (m_propertyPanel) {
+        m_propertyPanel->showBoxGeometry(box);
+    }
+
+    if (!m_renderView) {
+        return;
+    }
+
+    const QString sizeText = QString("%1 %4 x %2 %4 x %3 %4")
+        .arg(box.length)
+        .arg(box.width)
+        .arg(box.height)
+        .arg(box.unit);
+
+    const QString brepPath = QFileInfo(box.occBrepFile).isAbsolute()
+        ? box.occBrepFile
+        : QDir(m_currentProject.rootPath).filePath(box.occBrepFile);
+
+    if (!box.occBrepFile.isEmpty() && QFileInfo::exists(brepPath)) {
+        QString errorMessage;
+        TopoDS_Shape loadedShape;
+        OCCShapeIO shapeIO;
+        if (shapeIO.loadBREP(brepPath, loadedShape, &errorMessage)) {
+            try {
+                m_renderView->showOccShape(loadedShape, box.name, sizeText);
+                return;
+            } catch (const Standard_Failure &failure) {
+                writeLog(QString("BREP 显示失败：%1；将使用参数重建 OCC Shape。").arg(failure.what()));
+            } catch (const std::exception &error) {
+                writeLog(QString("BREP 显示失败：%1；将使用参数重建 OCC Shape。").arg(error.what()));
+            }
+        } else {
+            writeLog("BREP 加载失败：" + errorMessage + "；将使用参数重建 OCC Shape。");
+        }
+    } else if (!box.occBrepFile.isEmpty()) {
+        writeLog("BREP 文件不存在：" + box.occBrepFile + "；将使用参数重建 OCC Shape。");
+    }
+
+    try {
+        OCCGeometryFactory factory;
+        const TopoDS_Shape shape = factory.createShape(box);
+        m_renderView->showOccShape(shape, box.name, sizeText);
+    } catch (const Standard_Failure &failure) {
+        writeLog(QString("OCC Box 显示失败：%1；已回退到 vtkCubeSource。").arg(failure.what()));
+        m_renderView->showBoxGeometry(box);
+    } catch (const std::exception &error) {
+        writeLog(QString("OCC Box 显示失败：%1；已回退到 vtkCubeSource。").arg(error.what()));
+        m_renderView->showBoxGeometry(box);
     }
 }
 

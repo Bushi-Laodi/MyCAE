@@ -83,6 +83,12 @@ qt_add_executable(MyCAE
     src/geometry/GeometryManager.h
     src/occ/OCCBoxBuilder.cpp
     src/occ/OCCBoxBuilder.h
+    src/occ/OCCGeometryFactory.cpp
+    src/occ/OCCGeometryFactory.h
+    src/occ/OCCShapeConverter.cpp
+    src/occ/OCCShapeConverter.h
+    src/occ/OCCShapeIO.cpp
+    src/occ/OCCShapeIO.h
     src/project/Project.h
     src/project/ProjectManager.cpp
     src/project/ProjectManager.h
@@ -96,8 +102,6 @@ qt_add_executable(MyCAE
     src/ui/ProjectTreePanel.h
     src/ui/PropertyPanel.cpp
     src/ui/PropertyPanel.h
-    src/ui/RenderCanvas.cpp
-    src/ui/RenderCanvas.h
     src/ui/RenderView.cpp
     src/ui/RenderView.h
     src/ui/VtkRenderCanvas.cpp

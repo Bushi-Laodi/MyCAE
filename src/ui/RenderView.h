@@ -1,8 +1,10 @@
 #pragma once
 
 #include <QFrame>
+#include <QString>
 
 class QLabel;
+class TopoDS_Shape;
 class VtkRenderCanvas;
 struct BoxGeometry;
 
@@ -13,6 +15,7 @@ public:
 
     void showEmpty();
     void showBoxGeometry(const BoxGeometry &box);
+    void showOccShape(const TopoDS_Shape &shape, const QString &title, const QString &subtitle);
 
 private:
     QLabel *m_titleLabel = nullptr;

@@ -6,6 +6,7 @@
 #include <vtkSmartPointer.h>
 
 class QVTKOpenGLNativeWidget;
+class TopoDS_Shape;
 class vtkGenericOpenGLRenderWindow;
 class vtkRenderer;
 
@@ -16,8 +17,11 @@ public:
 
     void showEmpty();
     void showBoxGeometry(const BoxGeometry &box);
+    void showOccShape(const TopoDS_Shape &shape);
 
 private:
+    void resetCamera();
+
     QVTKOpenGLNativeWidget *m_vtkWidget = nullptr;
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;

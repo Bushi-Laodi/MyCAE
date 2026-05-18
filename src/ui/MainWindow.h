@@ -30,17 +30,16 @@ private:
     void newProject();
     void openProject();
     void createBox();
-    void testOccBox();
     void setCurrentProject(const Project &project);
     void loadProjectGeometries();
     void refreshGeometryTree();
     void showGeometryProperties(const QString &geometryName);
+    void displayBoxGeometry(const BoxGeometry &box);
     void writeLog(const QString &message);
 
     QAction *m_newProjectAction = nullptr;
     QAction *m_openProjectAction = nullptr;
     QAction *m_createBoxAction = nullptr;
-    QAction *m_testOccBoxAction = nullptr;
     QAction *m_exitAction = nullptr;
     ProjectTreePanel *m_projectTreePanel = nullptr;
     PropertyPanel *m_propertyPanel = nullptr;

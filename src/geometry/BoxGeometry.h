@@ -10,4 +10,10 @@ struct BoxGeometry
     double height = 200.0;
     QString unit = "mm";
     QString filePath;
+    QString occBrepFile;
+    QString occStepFile;
+    bool occBrepSaved = false;
+    bool occStepSaved = false;
+    QString occBrepErrorMessage;
+    QString occStepErrorMessage;
 };

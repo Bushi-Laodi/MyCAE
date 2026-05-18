@@ -1,5 +1,10 @@
 #include "GeometryManager.h"
 
+#include "occ/OCCGeometryFactory.h"
+#include "occ/OCCShapeIO.h"
+
+#include <TopoDS_Shape.hxx>
+
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -8,6 +13,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QStringList>
+
+#include <exception>
 
 bool GeometryManager::createDefaultBox(const Project &project, BoxGeometry *box, QString *errorMessage) const
 {
@@ -45,6 +52,35 @@ bool GeometryManager::createBox(const Project &project, const BoxGeometry &param
     createdBox.height = parameters.height;
     createdBox.unit = parameters.unit;
     createdBox.filePath = QDir(geometryDirPath).filePath(createdBox.name.toLower() + ".json");
+    createdBox.occBrepFile = QDir(project.rootPath).relativeFilePath(
+        QDir(geometryDirPath).filePath(createdBox.name.toLower() + ".brep")
+    );
+    createdBox.occStepFile = QDir(project.rootPath).relativeFilePath(
+        QDir(geometryDirPath).filePath(createdBox.name.toLower() + ".step")
+    );
+
+    try {
+        OCCGeometryFactory factory;
+        OCCShapeIO shapeIO;
+        const TopoDS_Shape shape = factory.createShape(createdBox);
+
+        createdBox.occBrepSaved = shapeIO.saveBREP(
+            shape,
+            QDir(project.rootPath).filePath(createdBox.occBrepFile),
+            &createdBox.occBrepErrorMessage
+        );
+        createdBox.occStepSaved = shapeIO.saveSTEP(
+            shape,
+            QDir(project.rootPath).filePath(createdBox.occStepFile),
+            &createdBox.occStepErrorMessage
+        );
+    } catch (const std::exception &error) {
+        createdBox.occBrepErrorMessage = error.what();
+        createdBox.occStepErrorMessage = error.what();
+    } catch (...) {
+        createdBox.occBrepErrorMessage = "Unknown OCC export error.";
+        createdBox.occStepErrorMessage = "Unknown OCC export error.";
+    }
 
     if (!writeBoxFile(createdBox, errorMessage)) {
         return false;
@@ -105,10 +141,15 @@ bool GeometryManager::writeBoxFile(const BoxGeometry &box, QString *errorMessage
     dimensions.insert("height", box.height);
     dimensions.insert("unit", box.unit);
 
+    QJsonObject occ;
+    occ.insert("brepFile", box.occBrepFile);
+    occ.insert("stepFile", box.occStepFile);
+
     QJsonObject object;
     object.insert("type", "box");
     object.insert("name", box.name);
     object.insert("dimensions", dimensions);
+    object.insert("occ", occ);
     object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
 
     QFile file(box.filePath);
@@ -150,6 +191,7 @@ bool GeometryManager::readBoxFile(const QString &filePath, BoxGeometry *box, QSt
 
     const QJsonObject object = document.object();
     const QJsonObject dimensions = object.value("dimensions").toObject();
+    const QJsonObject occ = object.value("occ").toObject();
 
     BoxGeometry loadedBox;
     loadedBox.name = object.value("name").toString(QFileInfo(filePath).baseName());
@@ -158,6 +200,14 @@ bool GeometryManager::readBoxFile(const QString &filePath, BoxGeometry *box, QSt
     loadedBox.height = dimensions.value("height").toDouble(200.0);
     loadedBox.unit = dimensions.value("unit").toString("mm");
     loadedBox.filePath = QFileInfo(filePath).absoluteFilePath();
+    loadedBox.occBrepFile = occ.value("brepFile").toString();
+    loadedBox.occStepFile = occ.value("stepFile").toString();
+    if (loadedBox.occBrepFile.isEmpty()) {
+        loadedBox.occBrepFile = QDir("geometry").filePath(QFileInfo(filePath).completeBaseName() + ".brep");
+    }
+    if (loadedBox.occStepFile.isEmpty()) {
+        loadedBox.occStepFile = QDir("geometry").filePath(QFileInfo(filePath).completeBaseName() + ".step");
+    }
 
     *box = loadedBox;
     return true;

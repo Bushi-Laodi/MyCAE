@@ -1,5 +1,7 @@
 #include "VtkRenderCanvas.h"
 
+#include "occ/OCCShapeConverter.h"
+
 #include <algorithm>
 #include <QSizePolicy>
 #include <QVBoxLayout>
@@ -9,6 +11,7 @@
 #include <vtkCubeSource.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkNew.h>
+#include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkProperty.h>
 #include <vtkRenderer.h>
@@ -63,6 +66,33 @@ void VtkRenderCanvas::showBoxGeometry(const BoxGeometry &box)
 
     m_renderer->RemoveAllViewProps();
     m_renderer->AddActor(actor);
+    resetCamera();
+    m_renderWindow->Render();
+}
+
+void VtkRenderCanvas::showOccShape(const TopoDS_Shape &shape)
+{
+    OCCShapeConverter converter;
+    vtkSmartPointer<vtkPolyData> polyData = converter.toPolyData(shape);
+
+    vtkNew<vtkPolyDataMapper> mapper;
+    mapper->SetInputData(polyData);
+
+    vtkNew<vtkActor> actor;
+    actor->SetMapper(mapper);
+    actor->GetProperty()->SetColor(0.62, 0.78, 0.95);
+    actor->GetProperty()->SetEdgeColor(0.12, 0.18, 0.24);
+    actor->GetProperty()->EdgeVisibilityOn();
+    actor->GetProperty()->SetLineWidth(1.2);
+
+    m_renderer->RemoveAllViewProps();
+    m_renderer->AddActor(actor);
+    resetCamera();
+    m_renderWindow->Render();
+}
+
+void VtkRenderCanvas::resetCamera()
+{
     m_renderer->ResetCamera();
     m_renderer->GetActiveCamera()->Azimuth(35.0);
     m_renderer->GetActiveCamera()->Elevation(25.0);

@@ -68,3 +68,11 @@ void RenderView::showBoxGeometry(const BoxGeometry &box)
     m_detailLabel->setText("根据长方体参数生成的 VTK 立方体预览。");
     m_canvas->showBoxGeometry(box);
 }
+
+void RenderView::showOccShape(const TopoDS_Shape &shape, const QString &title, const QString &subtitle)
+{
+    m_titleLabel->setText(title);
+    m_subtitleLabel->setText(subtitle);
+    m_detailLabel->setText("Open CASCADE TopoDS_Shape converted to VTK PolyData.");
+    m_canvas->showOccShape(shape);
+}
