@@ -1,0 +1,70 @@
+#include "RenderView.h"
+
+#include "geometry/BoxGeometry.h"
+#include "VtkRenderCanvas.h"
+
+#include <QLabel>
+#include <QString>
+#include <QVBoxLayout>
+
+RenderView::RenderView(QWidget *parent)
+    : QFrame(parent)
+{
+    setFrameShape(QFrame::StyledPanel);
+    setObjectName("renderPlaceholder");
+    setStyleSheet(
+        "#renderPlaceholder {"
+        "background: #20242a;"
+        "border: 1px solid #3a3f46;"
+        "}"
+        "#renderPlaceholder QLabel {"
+        "color: #d7dde5;"
+        "font-size: 18px;"
+        "}"
+    );
+
+    auto *layout = new QVBoxLayout(this);
+    layout->setContentsMargins(24, 24, 24, 24);
+
+    m_titleLabel = new QLabel(this);
+    m_titleLabel->setAlignment(Qt::AlignCenter);
+
+    m_subtitleLabel = new QLabel(this);
+    m_subtitleLabel->setAlignment(Qt::AlignCenter);
+    m_subtitleLabel->setStyleSheet("font-size: 13px; color: #9ba7b4;");
+
+    m_detailLabel = new QLabel(this);
+    m_detailLabel->setAlignment(Qt::AlignCenter);
+    m_detailLabel->setStyleSheet("font-size: 13px; color: #9ba7b4;");
+
+    m_canvas = new VtkRenderCanvas(this);
+
+    layout->addWidget(m_titleLabel);
+    layout->addWidget(m_subtitleLabel);
+    layout->addWidget(m_detailLabel);
+    layout->addWidget(m_canvas, 1);
+
+    showEmpty();
+}
+
+void RenderView::showEmpty()
+{
+    m_titleLabel->setText("三维显示窗口");
+    m_subtitleLabel->setText("请选择一个几何对象进行预览。");
+    m_detailLabel->setText("VTK 渲染窗口已就绪。");
+    m_canvas->showEmpty();
+}
+
+void RenderView::showBoxGeometry(const BoxGeometry &box)
+{
+    const QString sizeText = QString("%1 %4 x %2 %4 x %3 %4")
+        .arg(box.length)
+        .arg(box.width)
+        .arg(box.height)
+        .arg(box.unit);
+
+    m_titleLabel->setText(box.name);
+    m_subtitleLabel->setText(sizeText);
+    m_detailLabel->setText("根据长方体参数生成的 VTK 立方体预览。");
+    m_canvas->showBoxGeometry(box);
+}
