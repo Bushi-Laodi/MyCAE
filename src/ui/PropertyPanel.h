@@ -4,6 +4,7 @@
 
 class QLabel;
 struct BoxGeometry;
+struct MeshObject;
 
 class PropertyPanel final : public QWidget
 {
@@ -12,6 +13,7 @@ public:
 
     void showEmptySelection();
     void showBoxGeometry(const BoxGeometry &box);
+    void showMeshObject(const MeshObject &meshObject);
 
 private:
     QLabel *m_selectionValue = nullptr;
@@ -20,4 +22,9 @@ private:
     QLabel *m_lengthValue = nullptr;
     QLabel *m_widthValue = nullptr;
     QLabel *m_heightValue = nullptr;
+    QLabel *m_sourceGeometryValue = nullptr;
+    QLabel *m_meshFileValue = nullptr;
+    QLabel *m_nodeCountValue = nullptr;
+    QLabel *m_tetraCountValue = nullptr;
+    QLabel *m_createdAtValue = nullptr;
 };

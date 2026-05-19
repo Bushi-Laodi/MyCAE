@@ -16,9 +16,11 @@ public:
 
     void showProject(const QString &projectName, const QString &projectPath);
     void setGeometryItems(const QStringList &geometryNames);
+    void setMeshItems(const QStringList &meshNames);
 
 signals:
     void geometrySelected(const QString &geometryName);
+    void meshSelected(const QString &meshName);
 
 private:
     void buildInitialTree();
@@ -27,4 +29,5 @@ private:
 
     QTreeWidget *m_tree = nullptr;
     QTreeWidgetItem *m_geometryRoot = nullptr;
+    QTreeWidgetItem *m_meshRoot = nullptr;
 };

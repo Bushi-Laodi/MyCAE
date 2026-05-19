@@ -3,6 +3,7 @@
 #include "BoxDialog.h"
 #include "LogPanel.h"
 #include "mesh/GmshRunner.h"
+#include "mesh/MeshManager.h"
 #include "mesh/MeshToVtkConverter.h"
 #include "mesh/MshReader.h"
 #include "occ/OCCGeometryFactory.h"
@@ -16,6 +17,7 @@
 #include <vtkUnstructuredGrid.h>
 
 #include <QAction>
+#include <QDateTime>
 #include <QDockWidget>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -131,6 +133,7 @@ void MainWindow::createDockWidgets()
     auto *projectDock = new QDockWidget("工程 / 模型", this);
     m_projectTreePanel = new ProjectTreePanel(projectDock);
     connect(m_projectTreePanel, &ProjectTreePanel::geometrySelected, this, &MainWindow::showGeometryProperties);
+    connect(m_projectTreePanel, &ProjectTreePanel::meshSelected, this, &MainWindow::showMeshObject);
     projectDock->setWidget(m_projectTreePanel);
     addDockWidget(Qt::LeftDockWidgetArea, projectDock);
 
@@ -169,8 +172,11 @@ void MainWindow::newProject()
 
     setCurrentProject(project);
     m_boxes.clear();
+    m_meshObjects.clear();
     m_selectedBoxIndex = -1;
+    m_selectedMeshIndex = -1;
     refreshGeometryTree();
+    refreshMeshTree();
     writeLog("工程已创建：" + project.rootPath);
 }
 
@@ -198,6 +204,7 @@ void MainWindow::openProject()
 
     setCurrentProject(project);
     loadProjectGeometries();
+    loadProjectMeshes();
     writeLog("工程已打开：" + project.rootPath);
 }
 
@@ -297,6 +304,44 @@ void MainWindow::generateMesh()
 
     if (result.success) {
         writeLog("网格生成成功：" + meshRelativePath);
+        MeshData meshData;
+        QString errorMessage;
+        if (!MshReader::readMsh2(meshAbsPath, meshData, &errorMessage)) {
+            writeLog("MeshObject 保存失败：读取新生成的 MSH 失败：" + errorMessage);
+            return;
+        }
+
+        MeshObject meshObject;
+        meshObject.name = box.name + "_Mesh";
+        meshObject.sourceGeometryName = box.name;
+        meshObject.mshFile = meshRelativePath;
+        meshObject.type = "tetra4";
+        meshObject.nodeCount = meshData.nodeCount();
+        meshObject.tetraCount = meshData.tetraCount();
+        meshObject.createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);
+
+        MeshManager meshManager(m_currentProject.rootPath);
+        if (!meshManager.saveMeshObject(meshObject, &errorMessage)) {
+            writeLog("MeshObject 保存失败：" + errorMessage);
+            return;
+        }
+
+        bool replaced = false;
+        for (int meshIndex = 0; meshIndex < m_meshObjects.size(); ++meshIndex) {
+            MeshObject &existingMesh = m_meshObjects[meshIndex];
+            if (existingMesh.sourceGeometryName == meshObject.sourceGeometryName) {
+                existingMesh = meshObject;
+                m_selectedMeshIndex = meshIndex;
+                replaced = true;
+                break;
+            }
+        }
+        if (!replaced) {
+            m_meshObjects.append(meshObject);
+            m_selectedMeshIndex = m_meshObjects.size() - 1;
+        }
+        refreshMeshTree();
+        writeLog("MeshObject 保存成功：mesh/" + box.name.toLower() + "_mesh.json");
     } else {
         writeLog(result.errorMessage.isEmpty() ? "网格生成失败：未知错误。" : result.errorMessage);
     }
@@ -430,6 +475,28 @@ void MainWindow::loadProjectGeometries()
     writeLog(QString("已加载 %1 个长方体几何对象。").arg(m_boxes.size()));
 }
 
+void MainWindow::loadProjectMeshes()
+{
+    m_meshObjects.clear();
+
+    MeshManager meshManager(m_currentProject.rootPath);
+    std::vector<MeshObject> loadedMeshes;
+    QString errorMessage;
+    if (!meshManager.loadMeshObjects(loadedMeshes, &errorMessage)) {
+        QMessageBox::warning(this, "加载网格失败", errorMessage);
+        writeLog("加载网格失败：" + errorMessage);
+        return;
+    }
+
+    for (const MeshObject &meshObject : loadedMeshes) {
+        m_meshObjects.append(meshObject);
+    }
+
+    refreshMeshTree();
+    m_selectedMeshIndex = -1;
+    writeLog(QString("已加载 %1 个网格对象。").arg(m_meshObjects.size()));
+}
+
 void MainWindow::refreshGeometryTree()
 {
     if (!m_projectTreePanel) {
@@ -443,17 +510,45 @@ void MainWindow::refreshGeometryTree()
     m_projectTreePanel->setGeometryItems(geometryNames);
 }
 
+void MainWindow::refreshMeshTree()
+{
+    if (!m_projectTreePanel) {
+        return;
+    }
+
+    QStringList meshNames;
+    for (const MeshObject &meshObject : m_meshObjects) {
+        meshNames.append(meshObject.name);
+    }
+    m_projectTreePanel->setMeshItems(meshNames);
+}
+
 void MainWindow::showGeometryProperties(const QString &geometryName)
 {
     for (int index = 0; index < m_boxes.size(); ++index) {
         const BoxGeometry &box = m_boxes.at(index);
         if (box.name == geometryName) {
             m_selectedBoxIndex = index;
+            m_selectedMeshIndex = -1;
             displayBoxGeometry(box);
             return;
         }
     }
     m_selectedBoxIndex = -1;
+}
+
+void MainWindow::showMeshObject(const QString &meshName)
+{
+    for (int index = 0; index < m_meshObjects.size(); ++index) {
+        const MeshObject &meshObject = m_meshObjects.at(index);
+        if (meshObject.name == meshName) {
+            m_selectedMeshIndex = index;
+            m_selectedBoxIndex = -1;
+            displayMeshObject(meshObject);
+            return;
+        }
+    }
+    m_selectedMeshIndex = -1;
 }
 
 void MainWindow::displayBoxGeometry(const BoxGeometry &box)
@@ -507,6 +602,46 @@ void MainWindow::displayBoxGeometry(const BoxGeometry &box)
         writeLog(QString("OCC Box 显示失败：%1；已回退到 vtkCubeSource。").arg(error.what()));
         m_renderView->showBoxGeometry(box);
     }
+}
+
+void MainWindow::displayMeshObject(const MeshObject &meshObject)
+{
+    if (m_propertyPanel) {
+        m_propertyPanel->showMeshObject(meshObject);
+    }
+
+    if (!m_renderView) {
+        return;
+    }
+
+    const QString meshAbsPath = QFileInfo(meshObject.mshFile).isAbsolute()
+        ? meshObject.mshFile
+        : QDir(m_currentProject.rootPath).filePath(meshObject.mshFile);
+
+    if (!QFileInfo::exists(meshAbsPath)) {
+        writeLog("显示网格失败：MSH 文件不存在：" + meshObject.mshFile);
+        return;
+    }
+
+    MeshData meshData;
+    meshData.sourceGeometryName = meshObject.sourceGeometryName;
+    QString errorMessage;
+    if (!MshReader::readMsh2(meshAbsPath, meshData, &errorMessage)) {
+        writeLog("显示网格失败：读取 MSH 失败：" + errorMessage);
+        return;
+    }
+
+    vtkSmartPointer<vtkUnstructuredGrid> grid = MeshToVtkConverter::toUnstructuredGrid(meshData, &errorMessage);
+    if (!grid) {
+        writeLog("VTK 网格转换失败：" + errorMessage);
+        return;
+    }
+
+    const QString subtitle = QString("%1 nodes, %2 tetrahedra")
+        .arg(meshData.nodeCount())
+        .arg(meshData.tetraCount());
+    m_renderView->showMeshGrid(grid, meshObject.name, subtitle);
+    writeLog("网格显示成功：" + meshObject.name);
 }
 
 void MainWindow::writeLog(const QString &message)

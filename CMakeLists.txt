@@ -84,6 +84,9 @@ qt_add_executable(MyCAE
     src/mesh/GmshRunner.cpp
     src/mesh/GmshRunner.h
     src/mesh/MeshData.h
+    src/mesh/MeshManager.cpp
+    src/mesh/MeshManager.h
+    src/mesh/MeshObject.h
     src/mesh/MeshToVtkConverter.cpp
     src/mesh/MeshToVtkConverter.h
     src/mesh/MshReader.cpp

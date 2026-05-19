@@ -9,7 +9,9 @@ namespace
 {
 constexpr int ItemTypeRole = Qt::UserRole + 1;
 constexpr int GeometryNameRole = Qt::UserRole + 2;
+constexpr int MeshNameRole = Qt::UserRole + 3;
 constexpr int GeometryItemType = 1;
+constexpr int MeshItemType = 2;
 }
 
 ProjectTreePanel::ProjectTreePanel(QWidget *parent)
@@ -52,6 +54,25 @@ void ProjectTreePanel::setGeometryItems(const QStringList &geometryNames)
     m_tree->expandAll();
 }
 
+void ProjectTreePanel::setMeshItems(const QStringList &meshNames)
+{
+    if (!m_meshRoot) {
+        return;
+    }
+
+    while (m_meshRoot->childCount() > 0) {
+        delete m_meshRoot->takeChild(0);
+    }
+    for (const QString &meshName : meshNames) {
+        auto *item = new QTreeWidgetItem(QStringList{meshName});
+        item->setData(0, ItemTypeRole, MeshItemType);
+        item->setData(0, MeshNameRole, meshName);
+        m_meshRoot->addChild(item);
+    }
+
+    m_tree->expandAll();
+}
+
 void ProjectTreePanel::buildInitialTree()
 {
     buildProjectTree("未命名工程", "");
@@ -67,11 +88,12 @@ void ProjectTreePanel::buildProjectTree(const QString &projectName, const QStrin
 
     m_tree->clear();
     m_geometryRoot = new QTreeWidgetItem(QStringList{"几何"});
+    m_meshRoot = new QTreeWidgetItem(QStringList{"Mesh"});
     projectRoot->addChild(m_geometryRoot);
     projectRoot->addChild(new QTreeWidgetItem(QStringList{"材料"}));
     projectRoot->addChild(new QTreeWidgetItem(QStringList{"边界条件"}));
     projectRoot->addChild(new QTreeWidgetItem(QStringList{"载荷"}));
-    projectRoot->addChild(new QTreeWidgetItem(QStringList{"网格"}));
+    projectRoot->addChild(m_meshRoot);
     projectRoot->addChild(new QTreeWidgetItem(QStringList{"求解器"}));
 
     m_tree->addTopLevelItem(projectRoot);
@@ -86,5 +108,7 @@ void ProjectTreePanel::handleCurrentItemChanged(QTreeWidgetItem *current)
 
     if (current->data(0, ItemTypeRole).toInt() == GeometryItemType) {
         emit geometrySelected(current->data(0, GeometryNameRole).toString());
+    } else if (current->data(0, ItemTypeRole).toInt() == MeshItemType) {
+        emit meshSelected(current->data(0, MeshNameRole).toString());
     }
 }

@@ -2,6 +2,7 @@
 
 #include "geometry/BoxGeometry.h"
 #include "geometry/GeometryManager.h"
+#include "mesh/MeshObject.h"
 #include "project/ProjectManager.h"
 
 #include <QMainWindow>
@@ -36,9 +37,13 @@ private:
     void showMesh();
     void setCurrentProject(const Project &project);
     void loadProjectGeometries();
+    void loadProjectMeshes();
     void refreshGeometryTree();
+    void refreshMeshTree();
     void showGeometryProperties(const QString &geometryName);
+    void showMeshObject(const QString &meshName);
     void displayBoxGeometry(const BoxGeometry &box);
+    void displayMeshObject(const MeshObject &meshObject);
     void writeLog(const QString &message);
 
     QAction *m_newProjectAction = nullptr;
@@ -57,5 +62,7 @@ private:
     GeometryManager m_geometryManager;
     Project m_currentProject;
     QVector<BoxGeometry> m_boxes;
+    QVector<MeshObject> m_meshObjects;
     int m_selectedBoxIndex = -1;
+    int m_selectedMeshIndex = -1;
 };
