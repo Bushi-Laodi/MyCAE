@@ -11,6 +11,7 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 Testing/
+CMakeUserPresets.json
 
 # Qt Creator local files
 *.user

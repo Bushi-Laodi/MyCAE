@@ -14,7 +14,11 @@ GmshRunner::GmshRunner(QString gmshExecutablePath)
 
 QString GmshRunner::defaultGmshExecutablePath()
 {
+#ifdef MYCAE_GMSH_EXECUTABLE_PATH
+    return QString::fromUtf8(MYCAE_GMSH_EXECUTABLE_PATH);
+#else
     return QStringLiteral("D:/cpp_lib/Gmsh/gmsh-4.15.2-Windows64/gmsh.exe");
+#endif
 }
 
 QString GmshRunner::gmshExecutablePath() const

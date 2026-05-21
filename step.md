@@ -789,3 +789,81 @@ VTK / Qt / CMake 相关英文 API 名称
 ```
 
 原因是这些内容属于代码接口、文件格式或第三方库 API，直接翻译会影响兼容性和后续开发。
+
+## 17. 阶段 8A / 8B / 8C 数据结构设计
+
+本阶段参考“流体 Pipe 算例说明”，先只建立求解前处理的数据结构，不直接实现完整求解器导出。
+
+算例中的关键数据是：
+
+```text
+几何：
+  圆柱1：origin=(0, 0, 0), direction=Z, length=0.4, radius=0.05
+  圆柱2：origin=(0, -0.4, 0), direction=Y, length=1.5, radius=0.075
+  Bool 合并结果：Pipe
+  面组：Inlet1 / Inlet2 / Outlet
+
+网格：
+  minimumSize=0
+  maximumSize=1
+  AutoSize=true
+  localFaceGroup=pipe.Default
+  划分后自动导入网格文件
+  Mesh -> Boundary 显示边界
+
+求解：
+  -> SIMPLE 求解器
+  -> k-Omega SST 湍流模型
+  -> 默认边界：Wall
+  -> Inlet1：速度入口，值=0.8
+  -> Inlet2：压力入口，值=1
+  -> Outlet：压力出口
+  -> 求解时间：400
+  -> 取消求解文件清除
+
+后处理：
+  ParaView
+```
+
+对应代码结构：
+
+```text
+src/solver/Material.h
+  阶段 8A：材料数据结构。
+
+src/solver/BoundaryCondition.h
+  阶段 8B：边界条件数据结构，描述边界类型和作用目标。
+
+src/solver/Load.h
+  阶段 8C：载荷数据结构，描述速度、压力等具体数值。
+
+src/solver/SimulationCase.h
+  将几何设置、网格设置、材料、边界条件、载荷、求解器、湍流模型、运行控制和后处理组合成一个算例。
+
+src/solver/PipeCaseExample.h
+  按 Pipe 算例创建一个最小示例。
+```
+
+当前有意将边界条件和载荷分开：
+
+```text
+BoundaryCondition:
+  pipe.Inlet1 是速度入口
+  pipe.Inlet2 是压力入口
+  pipe.Outlet 是压力出口
+  pipe.Default 是壁面
+
+Load:
+  Inlet1 velocity = 0.8
+  Inlet2 pressure = 1
+```
+
+这样后续导出求解器文件时，可以按稳定顺序传输：
+
+```text
+Material
+  -> BoundaryCondition
+  -> Load
+  -> RunControl
+  -> Solver writer
+```

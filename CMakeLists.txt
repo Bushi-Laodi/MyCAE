@@ -51,6 +51,11 @@ foreach(MYCAE_OCC_CMAKE_DIR IN LISTS MYCAE_OCC_CMAKE_CANDIDATES)
     endif()
 endforeach()
 
+set(MYCAE_GMSH_EXECUTABLE
+    "D:/cpp_lib/Gmsh/gmsh-4.15.2-Windows64/gmsh.exe"
+    CACHE FILEPATH "Path to the local Gmsh executable"
+)
+
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(VTK REQUIRED COMPONENTS
     FiltersSources
@@ -65,6 +70,30 @@ message(STATUS "Using VTK_DIR=${VTK_DIR}")
 message(STATUS "Using OpenCASCADE_DIR=${OpenCASCADE_DIR}")
 message(STATUS "Using OpenCASCADE_INCLUDE_DIR=${OpenCASCADE_INCLUDE_DIR}")
 message(STATUS "Using OpenCASCADE_BINARY_DIR=${OpenCASCADE_BINARY_DIR}")
+message(STATUS "Using MYCAE_GMSH_EXECUTABLE=${MYCAE_GMSH_EXECUTABLE}")
+
+get_filename_component(MYCAE_OCC_INSTALL_ROOT "${OpenCASCADE_BINARY_DIR}/../../.." ABSOLUTE)
+set(MYCAE_OCC_THIRDPARTY_ROOT
+    "${MYCAE_OCC_INSTALL_ROOT}/../3rdparty-vc14-64"
+    CACHE PATH "Root directory of Open CASCADE third-party runtime dependencies"
+)
+message(STATUS "Using MYCAE_OCC_THIRDPARTY_ROOT=${MYCAE_OCC_THIRDPARTY_ROOT}")
+
+set(MYCAE_OCC_LIBRARIES
+    TKernel
+    TKMath
+    TKG2d
+    TKG3d
+    TKGeomBase
+    TKBRep
+    TKGeomAlgo
+    TKTopAlgo
+    TKPrim
+    TKMesh
+    TKXSBase
+    TKDE
+    TKDESTEP
+)
 
 get_target_property(QT_QMAKE_EXECUTABLE Qt6::qmake IMPORTED_LOCATION)
 get_filename_component(QT_BIN_DIR "${QT_QMAKE_EXECUTABLE}" DIRECTORY)
@@ -102,6 +131,12 @@ qt_add_executable(MyCAE
     src/project/Project.h
     src/project/ProjectManager.cpp
     src/project/ProjectManager.h
+    src/solver/BoundaryCondition.h
+    src/solver/Load.h
+    src/solver/Material.h
+    src/solver/PipeCaseExample.h
+    src/solver/SimulationCase.cpp
+    src/solver/SimulationCase.h
     src/ui/BoxDialog.cpp
     src/ui/BoxDialog.h
     src/ui/LogPanel.cpp
@@ -119,7 +154,8 @@ qt_add_executable(MyCAE
 )
 
 target_include_directories(MyCAE PRIVATE src ${OpenCASCADE_INCLUDE_DIR})
-target_link_libraries(MyCAE PRIVATE Qt6::Widgets ${VTK_LIBRARIES} ${OpenCASCADE_LIBRARIES})
+target_compile_definitions(MyCAE PRIVATE MYCAE_GMSH_EXECUTABLE_PATH="${MYCAE_GMSH_EXECUTABLE}")
+target_link_libraries(MyCAE PRIVATE Qt6::Widgets ${VTK_LIBRARIES} ${MYCAE_OCC_LIBRARIES})
 
 vtk_module_autoinit(
     TARGETS MyCAE
@@ -154,6 +190,23 @@ if (WIN32)
         add_custom_command(TARGET MyCAE POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 ${MYCAE_OCC_RUNTIME_DLLS}
+                $<TARGET_FILE_DIR:MyCAE>
+            COMMAND_EXPAND_LISTS
+        )
+    endif()
+
+    if (EXISTS "${MYCAE_OCC_THIRDPARTY_ROOT}")
+        file(GLOB MYCAE_OCC_THIRDPARTY_RUNTIME_DLLS
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/ffmpeg-3.3.4-64/bin/*.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/freeimage-3.18.0-x64/bin/*.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/freetype-2.13.3-x64/bin/*.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/jemalloc-vc14-64/bin/*.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/openvr-1.14.15-64/bin/win64/*.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/tbb-2021.13.0-x64/bin/*.dll"
+        )
+        add_custom_command(TARGET MyCAE POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${MYCAE_OCC_THIRDPARTY_RUNTIME_DLLS}
                 $<TARGET_FILE_DIR:MyCAE>
             COMMAND_EXPAND_LISTS
         )
