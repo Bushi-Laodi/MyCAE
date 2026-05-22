@@ -79,8 +79,16 @@ qt_standard_project_setup()
 qt_add_executable(MyCAE
     src/main.cpp
     src/geometry/BoxGeometry.h
+    src/geometry/CylinderGeometry.h
+    src/geometry/GeometryCreationController.cpp
+    src/geometry/GeometryCreationController.h
+    src/geometry/GeometryDisplayController.cpp
+    src/geometry/GeometryDisplayController.h
     src/geometry/GeometryManager.cpp
     src/geometry/GeometryManager.h
+    src/geometry/GeometryObject.h
+    src/geometry/GeometryPropertyController.cpp
+    src/geometry/GeometryPropertyController.h
     src/mesh/GmshRunner.cpp
     src/mesh/GmshRunner.h
     src/mesh/MeshData.h
@@ -93,6 +101,8 @@ qt_add_executable(MyCAE
     src/mesh/MshReader.h
     src/occ/OCCBoxBuilder.cpp
     src/occ/OCCBoxBuilder.h
+    src/occ/OCCCylinderBuilder.cpp
+    src/occ/OCCCylinderBuilder.h
     src/occ/OCCGeometryFactory.cpp
     src/occ/OCCGeometryFactory.h
     src/occ/OCCShapeConverter.cpp
@@ -100,10 +110,16 @@ qt_add_executable(MyCAE
     src/occ/OCCShapeIO.cpp
     src/occ/OCCShapeIO.h
     src/project/Project.h
+    src/project/ProjectModel.cpp
+    src/project/ProjectModel.h
+    src/project/ProjectModelLoader.cpp
+    src/project/ProjectModelLoader.h
     src/project/ProjectManager.cpp
     src/project/ProjectManager.h
     src/ui/BoxDialog.cpp
     src/ui/BoxDialog.h
+    src/ui/CylinderDialog.cpp
+    src/ui/CylinderDialog.h
     src/ui/LogPanel.cpp
     src/ui/LogPanel.h
     src/ui/MainWindow.cpp
