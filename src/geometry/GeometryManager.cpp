@@ -118,6 +118,154 @@ bool GeometryManager::loadBoxGeometries(const Project &project, QVector<BoxGeome
     return true;
 }
 
+bool GeometryManager::createCylinder(const Project &project, const CylinderGeometry &parameters, CylinderGeometry *cylinder, QString *errorMessage) const
+{
+    if (!cylinder) {
+        if (errorMessage) {
+            *errorMessage = "Internal error: cylinder output object is null.";
+        }
+        return false;
+    }
+
+    if (project.rootPath.isEmpty()) {
+        if (errorMessage) {
+            *errorMessage = "Please create or open a project before creating geometry.";
+        }
+        return false;
+    }
+
+    const QString geometryDirPath = geometryDirectory(project);
+    if (!QDir().mkpath(geometryDirPath)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to create geometry directory: " + geometryDirPath;
+        }
+        return false;
+    }
+
+    CylinderGeometry createdCylinder;
+    createdCylinder.name = nextCylinderName(geometryDirPath);
+    createdCylinder.radius = parameters.radius;
+    createdCylinder.height = parameters.height;
+    createdCylinder.unit = parameters.unit;
+    createdCylinder.filePath = QDir(geometryDirPath).filePath(createdCylinder.name.toLower() + ".json");
+    createdCylinder.occBrepFile = QDir(project.rootPath).relativeFilePath(
+        QDir(geometryDirPath).filePath(createdCylinder.name.toLower() + ".brep")
+    );
+    createdCylinder.occStepFile = QDir(project.rootPath).relativeFilePath(
+        QDir(geometryDirPath).filePath(createdCylinder.name.toLower() + ".step")
+    );
+
+    try {
+        OCCGeometryFactory factory;
+        OCCShapeIO shapeIO;
+        const TopoDS_Shape shape = factory.createShape(createdCylinder);
+
+        createdCylinder.occBrepSaved = shapeIO.saveBREP(
+            shape,
+            QDir(project.rootPath).filePath(createdCylinder.occBrepFile),
+            &createdCylinder.occBrepErrorMessage
+        );
+        createdCylinder.occStepSaved = shapeIO.saveSTEP(
+            shape,
+            QDir(project.rootPath).filePath(createdCylinder.occStepFile),
+            &createdCylinder.occStepErrorMessage
+        );
+    } catch (const std::exception &error) {
+        createdCylinder.occBrepErrorMessage = error.what();
+        createdCylinder.occStepErrorMessage = error.what();
+    } catch (...) {
+        createdCylinder.occBrepErrorMessage = "Unknown OCC export error.";
+        createdCylinder.occStepErrorMessage = "Unknown OCC export error.";
+    }
+
+    if (!writeCylinderFile(createdCylinder, errorMessage)) {
+        return false;
+    }
+
+    *cylinder = createdCylinder;
+    return true;
+}
+
+bool GeometryManager::loadCylinderGeometries(const Project &project, QVector<CylinderGeometry> *cylinders, QString *errorMessage) const
+{
+    if (!cylinders) {
+        if (errorMessage) {
+            *errorMessage = "Internal error: cylinder output list is null.";
+        }
+        return false;
+    }
+
+    cylinders->clear();
+
+    const QDir geometryDir(geometryDirectory(project));
+    if (!geometryDir.exists()) {
+        return true;
+    }
+
+    const QFileInfoList files = geometryDir.entryInfoList(QStringList{"cylinder_*.json"}, QDir::Files, QDir::Name);
+    for (const QFileInfo &fileInfo : files) {
+        CylinderGeometry cylinder;
+        if (!readCylinderFile(fileInfo.absoluteFilePath(), &cylinder, errorMessage)) {
+            return false;
+        }
+        cylinders->append(cylinder);
+    }
+
+    return true;
+}
+
+bool GeometryManager::loadGeometryObjects(const Project &project, std::vector<GeometryObject> &geometries, QString *errorMessage) const
+{
+    geometries.clear();
+
+    const QDir geometryDir(geometryDirectory(project));
+    if (!geometryDir.exists()) {
+        return true;
+    }
+
+    const QFileInfoList files = geometryDir.entryInfoList(QStringList{"*.json"}, QDir::Files, QDir::Name);
+    for (const QFileInfo &fileInfo : files) {
+        QFile file(fileInfo.absoluteFilePath());
+        if (!file.open(QIODevice::ReadOnly)) {
+            if (errorMessage) {
+                *errorMessage = "Failed to open geometry JSON: " + file.errorString();
+            }
+            return false;
+        }
+
+        const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+        if (!document.isObject()) {
+            if (errorMessage) {
+                *errorMessage = "Invalid geometry JSON: root is not an object: " + fileInfo.fileName();
+            }
+            return false;
+        }
+
+        const QJsonObject object = document.object();
+        const QString type = object.value("type").toString();
+        if (type != "box" && type != "cylinder") {
+            continue;
+        }
+
+        const QJsonObject occ = object.value("occ").toObject();
+        GeometryObject geometry;
+        geometry.name = object.value("name").toString(fileInfo.completeBaseName());
+        geometry.type = type;
+        geometry.jsonFile = QDir(project.rootPath).relativeFilePath(fileInfo.absoluteFilePath());
+        geometry.brepFile = occ.value("brepFile").toString();
+        geometry.stepFile = occ.value("stepFile").toString();
+        if (geometry.brepFile.isEmpty()) {
+            geometry.brepFile = QDir("geometry").filePath(fileInfo.completeBaseName() + ".brep");
+        }
+        if (geometry.stepFile.isEmpty()) {
+            geometry.stepFile = QDir("geometry").filePath(fileInfo.completeBaseName() + ".step");
+        }
+        geometries.push_back(geometry);
+    }
+
+    return true;
+}
+
 QString GeometryManager::geometryDirectory(const Project &project) const
 {
     return QDir(project.rootPath).filePath("geometry");
@@ -131,6 +279,16 @@ QString GeometryManager::nextBoxName(const QString &geometryDirPath) const
         ++index;
     }
     return QString("Box_%1").arg(index);
+}
+
+QString GeometryManager::nextCylinderName(const QString &geometryDirPath) const
+{
+    const QDir geometryDir(geometryDirPath);
+    int index = 1;
+    while (QFileInfo::exists(geometryDir.filePath(QString("cylinder_%1.json").arg(index)))) {
+        ++index;
+    }
+    return QString("Cylinder_%1").arg(index);
 }
 
 bool GeometryManager::writeBoxFile(const BoxGeometry &box, QString *errorMessage) const
@@ -210,5 +368,83 @@ bool GeometryManager::readBoxFile(const QString &filePath, BoxGeometry *box, QSt
     }
 
     *box = loadedBox;
+    return true;
+}
+
+bool GeometryManager::writeCylinderFile(const CylinderGeometry &cylinder, QString *errorMessage) const
+{
+    QJsonObject dimensions;
+    dimensions.insert("radius", cylinder.radius);
+    dimensions.insert("height", cylinder.height);
+    dimensions.insert("unit", cylinder.unit);
+
+    QJsonObject occ;
+    occ.insert("brepFile", cylinder.occBrepFile);
+    occ.insert("stepFile", cylinder.occStepFile);
+
+    QJsonObject object;
+    object.insert("type", "cylinder");
+    object.insert("name", cylinder.name);
+    object.insert("dimensions", dimensions);
+    object.insert("occ", occ);
+    object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
+
+    QFile file(cylinder.filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to write cylinder file: " + file.errorString();
+        }
+        return false;
+    }
+
+    file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
+    return true;
+}
+
+bool GeometryManager::readCylinderFile(const QString &filePath, CylinderGeometry *cylinder, QString *errorMessage) const
+{
+    if (!cylinder) {
+        if (errorMessage) {
+            *errorMessage = "Internal error: cylinder output object is null.";
+        }
+        return false;
+    }
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to open cylinder file: " + file.errorString();
+        }
+        return false;
+    }
+
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+    if (!document.isObject()) {
+        if (errorMessage) {
+            *errorMessage = "Invalid cylinder file: root is not a JSON object.";
+        }
+        return false;
+    }
+
+    const QJsonObject object = document.object();
+    const QJsonObject dimensions = object.value("dimensions").toObject();
+    const QJsonObject occ = object.value("occ").toObject();
+
+    CylinderGeometry loadedCylinder;
+    loadedCylinder.name = object.value("name").toString(QFileInfo(filePath).baseName());
+    loadedCylinder.radius = dimensions.value("radius").toDouble(50.0);
+    loadedCylinder.height = dimensions.value("height").toDouble(200.0);
+    loadedCylinder.unit = dimensions.value("unit").toString("mm");
+    loadedCylinder.filePath = QFileInfo(filePath).absoluteFilePath();
+    loadedCylinder.occBrepFile = occ.value("brepFile").toString();
+    loadedCylinder.occStepFile = occ.value("stepFile").toString();
+    if (loadedCylinder.occBrepFile.isEmpty()) {
+        loadedCylinder.occBrepFile = QDir("geometry").filePath(QFileInfo(filePath).completeBaseName() + ".brep");
+    }
+    if (loadedCylinder.occStepFile.isEmpty()) {
+        loadedCylinder.occStepFile = QDir("geometry").filePath(QFileInfo(filePath).completeBaseName() + ".step");
+    }
+
+    *cylinder = loadedCylinder;
     return true;
 }

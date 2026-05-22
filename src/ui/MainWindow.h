@@ -1,8 +1,12 @@
 #pragma once
 
+#include "geometry/GeometryCreationController.h"
 #include "geometry/BoxGeometry.h"
+#include "geometry/CylinderGeometry.h"
 #include "geometry/GeometryManager.h"
+#include "geometry/GeometryObject.h"
 #include "mesh/MeshObject.h"
+#include "project/ProjectModel.h"
 #include "project/ProjectManager.h"
 
 #include <QMainWindow>
@@ -28,9 +32,10 @@ private:
     void createMenus();
     void createToolBar();
     void createDockWidgets();
+
     void newProject();
     void openProject();
-    void createBox();
+    void createGeometry(GeometryCreateType type);
     void checkGmsh();
     void generateMesh();
     void readMeshInfo();
@@ -40,15 +45,17 @@ private:
     void loadProjectMeshes();
     void refreshGeometryTree();
     void refreshMeshTree();
+    bool selectGeometryByName(const QString &geometryName);
     void showGeometryProperties(const QString &geometryName);
     void showMeshObject(const QString &meshName);
-    void displayBoxGeometry(const BoxGeometry &box);
+    void displayGeometry(const GeometryObject &geometry);
     void displayMeshObject(const MeshObject &meshObject);
     void writeLog(const QString &message);
 
     QAction *m_newProjectAction = nullptr;
     QAction *m_openProjectAction = nullptr;
     QAction *m_createBoxAction = nullptr;
+    QAction *m_createCylinderAction = nullptr;
     QAction *m_checkGmshAction = nullptr;
     QAction *m_generateMeshAction = nullptr;
     QAction *m_readMeshInfoAction = nullptr;
@@ -58,11 +65,8 @@ private:
     PropertyPanel *m_propertyPanel = nullptr;
     LogPanel *m_logPanel = nullptr;
     RenderView *m_renderView = nullptr;
+
     ProjectManager m_projectManager;
     GeometryManager m_geometryManager;
-    Project m_currentProject;
-    QVector<BoxGeometry> m_boxes;
-    QVector<MeshObject> m_meshObjects;
-    int m_selectedBoxIndex = -1;
-    int m_selectedMeshIndex = -1;
+    ProjectModel m_projectModel;
 };

@@ -12,7 +12,15 @@ namespace
 {
 QString geometryFileStem(const QString &geometryName)
 {
-    return geometryName.toLower();
+    QString result = geometryName.toLower();
+    for (QChar &ch : result) {
+        if (ch.isSpace()) {
+            ch = '_';
+        } else if (!ch.isLetterOrNumber() && ch != '_') {
+            ch = '_';
+        }
+    }
+    return result.isEmpty() ? QString("geometry") : result;
 }
 }
 
@@ -35,6 +43,8 @@ bool MeshManager::saveMeshObject(const MeshObject &meshObject, QString *errorMes
     object.insert("name", meshObject.name);
     object.insert("type", meshObject.type);
     object.insert("sourceGeometry", meshObject.sourceGeometryName);
+    object.insert("sourceGeometryType", meshObject.sourceGeometryType);
+    object.insert("sourceStepFile", meshObject.sourceStepFile);
     object.insert("mshFile", meshObject.mshFile);
     object.insert("nodeCount", meshObject.nodeCount);
     object.insert("tetraCount", meshObject.tetraCount);
@@ -110,6 +120,8 @@ bool MeshManager::readMeshObject(const QString &filePath, MeshObject &meshObject
     meshObject.name = object.value("name").toString(QFileInfo(filePath).completeBaseName());
     meshObject.type = object.value("type").toString("tetra4");
     meshObject.sourceGeometryName = object.value("sourceGeometry").toString();
+    meshObject.sourceGeometryType = object.value("sourceGeometryType").toString();
+    meshObject.sourceStepFile = object.value("sourceStepFile").toString();
     meshObject.mshFile = object.value("mshFile").toString();
     meshObject.nodeCount = object.value("nodeCount").toInt();
     meshObject.tetraCount = object.value("tetraCount").toInt();
