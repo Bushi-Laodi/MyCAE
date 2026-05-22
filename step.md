@@ -867,3 +867,74 @@ Material
   -> RunControl
   -> Solver writer
 ```
+
+## 18. 阶段 8A / 8B / 8C UI 集成
+
+本阶段为材料、边界条件、载荷数据结构添加了对应的 UI 交互界面。
+
+新增文件：
+
+```text
+src/ui/MaterialDialog.h / .cpp
+  材料创建/编辑对话框
+  支持：名称、域（Fluid/Solid）、粘度模型、密度、动力粘度、运动粘度
+
+src/ui/BoundaryConditionDialog.h / .cpp
+  边界条件创建/编辑对话框
+  支持：名称、类型（Wall/VelocityInlet/PressureInlet/PressureOutlet/Symmetry）、
+        目标几何、面组、材料ID
+
+src/ui/LoadDialog.h / .cpp
+  载荷创建/编辑对话框
+  支持：名称、类型（Velocity/Pressure/BodyForce）、
+        关联边界条件ID、场名、数值、单位
+```
+
+修改文件：
+
+```text
+src/ui/ProjectTreePanel.h / .cpp
+  工程树新增信号：
+    materialCategorySelected()
+    boundaryConditionCategorySelected()
+    loadCategorySelected()
+    solverCategorySelected()
+  点击"Materials"、"Boundary Conditions"、"Loads"、"Solver"节点时触发对应信号
+
+src/ui/PropertyPanel.h / .cpp
+  新增方法：
+    showMaterialCategory() - 显示所有材料列表及参数
+    showBoundaryConditionCategory() - 显示所有边界条件列表及参数
+    showLoadCategory() - 显示所有载荷列表及参数
+    showSolverCategory() - 显示求解器设置概览
+  使用动态区域（m_dynamicArea）展示列表内容
+
+src/ui/MainWindow.h / .cpp
+  新增菜单：Solver Setup -> Create Material / Create Boundary Condition / Create Load
+  新增成员变量：m_materials, m_boundaryConditions, m_loads（临时内存存储）
+  新增处理函数：onMaterialCategorySelected, onBoundaryConditionCategorySelected,
+               onLoadCategorySelected, onSolverCategorySelected
+               createMaterial, createBoundaryCondition, createLoad
+```
+
+当前限制：
+
+```text
+材料/边界条件/载荷数据仅保存在内存中（m_materials 等 vector）
+尚未实现 JSON 序列化保存到工程目录
+尚未实现工程树子节点显示（如 Materials -> Water）
+尚未实现 PipeCaseExample 的自动加载
+```
+
+下一步建议：
+
+```text
+阶段 9A：SimulationCase JSON 序列化
+  将 SimulationCase（含材料/边界条件/载荷）保存到工程目录 solver/ 下
+
+阶段 9B：工程树子节点显示
+  在 Materials / Boundary Conditions / Loads 节点下显示具体条目
+
+阶段 9C：求解器文件导出
+  根据 SimulationCase 数据导出 OpenFOAM / CalculiX 输入文件
+```

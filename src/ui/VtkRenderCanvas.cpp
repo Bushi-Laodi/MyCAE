@@ -35,7 +35,15 @@ VtkRenderCanvas::VtkRenderCanvas(QWidget *parent)
     m_vtkWidget->setRenderWindow(m_renderWindow);
 
     m_renderer->SetBackground(0.125, 0.141, 0.165);
-    showEmpty();
+
+    // NOTE: Do NOT call showEmpty() / Render() here!
+    // The OpenGL context is not fully ready during widget construction.
+    // Calling Render() at this point can cause a crash in MSVCP140.dll
+    // (0xc0000005 - access violation) because the underlying OpenGL
+    // context may not be fully initialized yet.
+    //
+    // showEmpty() will be called lazily from RenderView::showEmpty()
+    // or from the first paint event.
 }
 
 void VtkRenderCanvas::showEmpty()

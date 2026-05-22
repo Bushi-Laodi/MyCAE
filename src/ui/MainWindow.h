@@ -8,9 +8,14 @@
 #include "mesh/MeshObject.h"
 #include "project/ProjectModel.h"
 #include "project/ProjectManager.h"
+#include "solver/BoundaryCondition.h"
+#include "solver/Load.h"
+#include "solver/Material.h"
 
 #include <QMainWindow>
 #include <QVector>
+
+#include <vector>
 
 class QAction;
 class QString;
@@ -33,6 +38,13 @@ private:
     void createToolBar();
     void createDockWidgets();
 
+    // Delayed initialization: VTK OpenGL context may not be ready
+    // during the constructor. We defer the first Render() call
+    // to the first showEvent to avoid a crash in MSVCP140.dll.
+    void initializeVtkRender();
+    void showEvent(QShowEvent *event) override;
+    bool m_vtkInitialized = false;
+
     void newProject();
     void openProject();
     void createGeometry(GeometryCreateType type);
@@ -52,6 +64,15 @@ private:
     void displayMeshObject(const MeshObject &meshObject);
     void writeLog(const QString &message);
 
+    // Solver data UI handlers
+    void onMaterialCategorySelected();
+    void onBoundaryConditionCategorySelected();
+    void onLoadCategorySelected();
+    void onSolverCategorySelected();
+    void createMaterial();
+    void createBoundaryCondition();
+    void createLoad();
+
     QAction *m_newProjectAction = nullptr;
     QAction *m_openProjectAction = nullptr;
     QAction *m_createBoxAction = nullptr;
@@ -61,6 +82,12 @@ private:
     QAction *m_readMeshInfoAction = nullptr;
     QAction *m_showMeshAction = nullptr;
     QAction *m_exitAction = nullptr;
+
+    // Solver data actions
+    QAction *m_createMaterialAction = nullptr;
+    QAction *m_createBoundaryConditionAction = nullptr;
+    QAction *m_createLoadAction = nullptr;
+
     ProjectTreePanel *m_projectTreePanel = nullptr;
     PropertyPanel *m_propertyPanel = nullptr;
     LogPanel *m_logPanel = nullptr;
@@ -69,4 +96,9 @@ private:
     ProjectManager m_projectManager;
     GeometryManager m_geometryManager;
     ProjectModel m_projectModel;
+
+    // Solver data storage (temporary, will be replaced by SimulationCase serialization)
+    std::vector<Material> m_materials;
+    std::vector<BoundaryCondition> m_boundaryConditions;
+    std::vector<Load> m_loads;
 };

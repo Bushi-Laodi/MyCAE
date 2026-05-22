@@ -1,6 +1,12 @@
 #pragma once
 
+#include "solver/BoundaryCondition.h"
+#include "solver/Load.h"
+#include "solver/Material.h"
+
 #include <QWidget>
+
+#include <vector>
 
 class QLabel;
 struct BoxGeometry;
@@ -17,7 +23,15 @@ public:
     void showCylinderGeometry(const CylinderGeometry &cylinder);
     void showMeshObject(const MeshObject &meshObject);
 
+    void showMaterialCategory(const std::vector<Material> &materials);
+    void showBoundaryConditionCategory(const std::vector<BoundaryCondition> &boundaryConditions);
+    void showLoadCategory(const std::vector<Load> &loads);
+    void showSolverCategory();
+
 private:
+    void clearAll();
+    void addLabelRow(const QString &label, const QString &value);
+
     QLabel *m_selectionValue = nullptr;
     QLabel *m_typeValue = nullptr;
     QLabel *m_nameValue = nullptr;
@@ -32,4 +46,7 @@ private:
     QLabel *m_nodeCountValue = nullptr;
     QLabel *m_tetraCountValue = nullptr;
     QLabel *m_createdAtValue = nullptr;
+
+    // Dynamic content area for solver data
+    QWidget *m_dynamicArea = nullptr;
 };

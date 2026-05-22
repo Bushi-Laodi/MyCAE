@@ -6,15 +6,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(MYCAE_QT_ROOT "D:/Qt/6.6.3/msvc2019_64" CACHE PATH "Root directory of the local Qt 6 installation")
+set(MYCAE_QT_ROOT "D:/Tools/Qt/6.5.3/msvc2019_64" CACHE PATH "Root directory of the local Qt 6 installation")
 if (EXISTS "${MYCAE_QT_ROOT}/lib/cmake/Qt6/Qt6Config.cmake")
     list(PREPEND CMAKE_PREFIX_PATH "${MYCAE_QT_ROOT}")
 endif()
 
-set(MYCAE_VTK_ROOT "D:/VTK" CACHE PATH "Root directory of the local VTK installation")
-set(MYCAE_VTK_RELEASE_DIR "${MYCAE_VTK_ROOT}/vtk-9.4.2-qt-release/lib/cmake/vtk-9.4")
-set(MYCAE_VTK_DEBUG_DIR "${MYCAE_VTK_ROOT}/vtk-9.4.2-qt-debug/lib/cmake/vtk-9.4")
-set(MYCAE_VTK_FALLBACK_DIR "${MYCAE_VTK_ROOT}/install/lib/cmake/vtk-9.4")
+set(MYCAE_VTK_ROOT "D:/Tools/VTK" CACHE PATH "Root directory of the local VTK installation")
+set(MYCAE_VTK_RELEASE_DIR "${MYCAE_VTK_ROOT}/vtk-9.5.2-qt-release/lib/cmake/vtk-9.5")
+set(MYCAE_VTK_DEBUG_DIR "${MYCAE_VTK_ROOT}/vtk-9.5.2-qt-debug/lib/cmake/vtk-9.5")
+set(MYCAE_VTK_FALLBACK_DIR "${MYCAE_VTK_ROOT}/install/lib/cmake/vtk-9.5")
 
 set(MYCAE_USE_DEBUG_VTK OFF)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -33,8 +33,9 @@ if (NOT DEFINED VTK_DIR OR NOT EXISTS "${VTK_DIR}/vtk-config.cmake")
     endif()
 endif()
 
-set(MYCAE_OCC_ROOT "D:/cpp_lib/OCC" CACHE PATH "Root directory of the local Open CASCADE installation")
+set(MYCAE_OCC_ROOT "D:/Tools/cbb_lib/OCC" CACHE PATH "Root directory of the local Open CASCADE installation")
 set(MYCAE_OCC_CMAKE_CANDIDATES
+    "${MYCAE_OCC_ROOT}/opencascade-8.0.0-vc14-64-with-debug/opencascade-8.0.0-vc14-64/cmake"
     "${MYCAE_OCC_ROOT}/OCC/cmake"
     "${MYCAE_OCC_ROOT}/cmake"
     "${MYCAE_OCC_ROOT}/lib/cmake"
@@ -52,7 +53,7 @@ foreach(MYCAE_OCC_CMAKE_DIR IN LISTS MYCAE_OCC_CMAKE_CANDIDATES)
 endforeach()
 
 set(MYCAE_GMSH_EXECUTABLE
-    "D:/cpp_lib/Gmsh/gmsh-4.15.2-Windows64/gmsh.exe"
+    "D:/Tools/cbb_lib/Gmesh/gmsh-4.15.2-Windows64/gmsh.exe"
     CACHE FILEPATH "Path to the local Gmsh executable"
 )
 
@@ -153,12 +154,18 @@ qt_add_executable(MyCAE
     src/solver/SimulationCase.h
     src/ui/BoxDialog.cpp
     src/ui/BoxDialog.h
+    src/ui/BoundaryConditionDialog.cpp
+    src/ui/BoundaryConditionDialog.h
     src/ui/CylinderDialog.cpp
     src/ui/CylinderDialog.h
+    src/ui/LoadDialog.cpp
+    src/ui/LoadDialog.h
     src/ui/LogPanel.cpp
     src/ui/LogPanel.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
+    src/ui/MaterialDialog.cpp
+    src/ui/MaterialDialog.h
     src/ui/ProjectTreePanel.cpp
     src/ui/ProjectTreePanel.h
     src/ui/PropertyPanel.cpp
@@ -219,10 +226,29 @@ if (WIN32)
             "${MYCAE_OCC_THIRDPARTY_ROOT}/jemalloc-vc14-64/bin/*.dll"
             "${MYCAE_OCC_THIRDPARTY_ROOT}/openvr-1.14.15-64/bin/win64/*.dll"
             "${MYCAE_OCC_THIRDPARTY_ROOT}/tbb-2021.13.0-x64/bin/*.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/angle-gles2-2.1.0-vc14-64/bin/libEGL.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/angle-gles2-2.1.0-vc14-64/bin/libGLESv2.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/angle-gles2-2.1.0-vc14-64/bin/d3dcompiler_47.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/tcltk-8.6.15-x64/bin/tcl86.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/tcltk-8.6.15-x64/bin/tk86.dll"
         )
         add_custom_command(TARGET MyCAE POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 ${MYCAE_OCC_THIRDPARTY_RUNTIME_DLLS}
+                $<TARGET_FILE_DIR:MyCAE>
+            COMMAND_EXPAND_LISTS
+        )
+    endif()
+    
+    # Copy additional Qt DLLs that may be needed by VTK plugins
+    if (QT_BIN_DIR)
+        file(GLOB MYCAE_EXTRA_QT_DLLS
+            "${QT_BIN_DIR}/Qt6Quick.dll"
+            "${QT_BIN_DIR}/Qt6Sql.dll"
+        )
+        add_custom_command(TARGET MyCAE POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${MYCAE_EXTRA_QT_DLLS}
                 $<TARGET_FILE_DIR:MyCAE>
             COMMAND_EXPAND_LISTS
         )
