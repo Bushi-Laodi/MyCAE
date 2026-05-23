@@ -44,7 +44,14 @@ RenderView::RenderView(QWidget *parent)
     layout->addWidget(m_detailLabel);
     layout->addWidget(m_canvas, 1);
 
-    showEmpty();
+    // NOTE: Do NOT call showEmpty() here!
+    // showEmpty() triggers VtkRenderCanvas::showEmpty() which calls
+    // m_renderWindow->Render(). The OpenGL context may not be fully
+    // ready during widget construction, causing a crash in MSVCP140.dll
+    // (0xc0000005 - access violation).
+    //
+    // showEmpty() will be called lazily from the first paint event
+    // or when the user first interacts with the render view.
 }
 
 void RenderView::showEmpty()

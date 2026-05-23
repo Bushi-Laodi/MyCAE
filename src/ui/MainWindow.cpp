@@ -1,9 +1,12 @@
 #include "MainWindow.h"
 
+#include "BoundaryConditionDialog.h"
 #include "geometry/GeometryCreationController.h"
 #include "geometry/GeometryDisplayController.h"
 #include "geometry/GeometryPropertyController.h"
+#include "LoadDialog.h"
 #include "LogPanel.h"
+#include "MaterialDialog.h"
 #include "mesh/GmshRunner.h"
 #include "mesh/MeshManager.h"
 #include "mesh/MeshToVtkConverter.h"
@@ -25,6 +28,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QShowEvent>
 #include <QStatusBar>
 #include <QStringList>
 #include <QToolBar>
@@ -59,8 +63,33 @@ MainWindow::MainWindow(QWidget *parent)
     setCentralWidget(m_renderView);
     createDockWidgets();
 
+    // NOTE: Do NOT call m_renderView->showEmpty() here!
+    // The VTK OpenGL context is not fully ready during widget construction.
+    // The first Render() call is deferred to showEvent() to avoid a crash
+    // in MSVCP140.dll (0xc0000005 - access violation).
+
     statusBar()->showMessage("Ready");
     writeLog("MyCAE started.");
+}
+
+void MainWindow::showEvent(QShowEvent *event)
+{
+    QMainWindow::showEvent(event);
+
+    if (!m_vtkInitialized) {
+        initializeVtkRender();
+    }
+}
+
+void MainWindow::initializeVtkRender()
+{
+    // Defer the first VTK Render() call until the window is actually shown.
+    // The OpenGL context is guaranteed to be ready at this point.
+    if (m_renderView) {
+        m_renderView->showEmpty();
+    }
+    m_vtkInitialized = true;
+    writeLog("VTK renderer initialized.");
 }
 
 void MainWindow::createActions()
@@ -103,6 +132,19 @@ void MainWindow::createActions()
 
     m_exitAction = new QAction("Exit", this);
     connect(m_exitAction, &QAction::triggered, this, &QWidget::close);
+
+    // Solver data actions
+    m_createMaterialAction = new QAction("Create Material", this);
+    m_createMaterialAction->setStatusTip("Create a new material");
+    connect(m_createMaterialAction, &QAction::triggered, this, &MainWindow::createMaterial);
+
+    m_createBoundaryConditionAction = new QAction("Create Boundary Condition", this);
+    m_createBoundaryConditionAction->setStatusTip("Create a new boundary condition");
+    connect(m_createBoundaryConditionAction, &QAction::triggered, this, &MainWindow::createBoundaryCondition);
+
+    m_createLoadAction = new QAction("Create Load", this);
+    m_createLoadAction->setStatusTip("Create a new load");
+    connect(m_createLoadAction, &QAction::triggered, this, &MainWindow::createLoad);
 }
 
 void MainWindow::createMenus()
@@ -119,6 +161,11 @@ void MainWindow::createMenus()
     geometryMenu->addAction("Import STEP", this, [this]() {
         writeLog("STEP import is reserved for a later stage.");
     });
+
+    auto *solverMenu = menuBar()->addMenu("Solver Setup");
+    solverMenu->addAction(m_createMaterialAction);
+    solverMenu->addAction(m_createBoundaryConditionAction);
+    solverMenu->addAction(m_createLoadAction);
 
     auto *meshMenu = menuBar()->addMenu("Mesh");
     meshMenu->addAction(m_checkGmshAction);
@@ -164,6 +211,10 @@ void MainWindow::createDockWidgets()
     m_projectTreePanel = new ProjectTreePanel(projectDock);
     connect(m_projectTreePanel, &ProjectTreePanel::geometrySelected, this, &MainWindow::showGeometryProperties);
     connect(m_projectTreePanel, &ProjectTreePanel::meshSelected, this, &MainWindow::showMeshObject);
+    connect(m_projectTreePanel, &ProjectTreePanel::materialCategorySelected, this, &MainWindow::onMaterialCategorySelected);
+    connect(m_projectTreePanel, &ProjectTreePanel::boundaryConditionCategorySelected, this, &MainWindow::onBoundaryConditionCategorySelected);
+    connect(m_projectTreePanel, &ProjectTreePanel::loadCategorySelected, this, &MainWindow::onLoadCategorySelected);
+    connect(m_projectTreePanel, &ProjectTreePanel::solverCategorySelected, this, &MainWindow::onSolverCategorySelected);
     projectDock->setWidget(m_projectTreePanel);
     addDockWidget(Qt::LeftDockWidgetArea, projectDock);
 
@@ -674,4 +725,95 @@ void MainWindow::writeLog(const QString &message)
     if (m_logPanel) {
         m_logPanel->appendMessage(message);
     }
+}
+
+// ============================================================
+// Solver data UI handlers
+// ============================================================
+
+void MainWindow::onMaterialCategorySelected()
+{
+    if (m_propertyPanel) {
+        m_propertyPanel->showMaterialCategory(m_materials);
+    }
+    writeLog(QString("Materials: %1 defined.").arg(m_materials.size()));
+}
+
+void MainWindow::onBoundaryConditionCategorySelected()
+{
+    if (m_propertyPanel) {
+        m_propertyPanel->showBoundaryConditionCategory(m_boundaryConditions);
+    }
+    writeLog(QString("Boundary conditions: %1 defined.").arg(m_boundaryConditions.size()));
+}
+
+void MainWindow::onLoadCategorySelected()
+{
+    if (m_propertyPanel) {
+        m_propertyPanel->showLoadCategory(m_loads);
+    }
+    writeLog(QString("Loads: %1 defined.").arg(m_loads.size()));
+}
+
+void MainWindow::onSolverCategorySelected()
+{
+    if (m_propertyPanel) {
+        m_propertyPanel->showSolverCategory();
+    }
+    writeLog("Solver settings displayed.");
+}
+
+void MainWindow::createMaterial()
+{
+    if (!m_projectModel.hasProject()) {
+        writeLog("Create material failed: create or open a project first.");
+        return;
+    }
+
+    const Material newMaterial = MaterialDialog::createMaterial(this);
+    if (newMaterial.id.isEmpty()) {
+        writeLog("Create material canceled.");
+        return;
+    }
+
+    m_materials.push_back(newMaterial);
+    writeLog(QString("Material created: %1 (ID: %2)").arg(newMaterial.name, newMaterial.id));
+    onMaterialCategorySelected();
+}
+
+void MainWindow::createBoundaryCondition()
+{
+    if (!m_projectModel.hasProject()) {
+        writeLog("Create boundary condition failed: create or open a project first.");
+        return;
+    }
+
+    const BoundaryCondition newBC = BoundaryConditionDialog::createBoundaryCondition(this);
+    if (newBC.id.isEmpty()) {
+        writeLog("Create boundary condition canceled.");
+        return;
+    }
+
+    m_boundaryConditions.push_back(newBC);
+    writeLog(QString("Boundary condition created: %1 (Type: %2)")
+        .arg(newBC.name, toString(newBC.type)));
+    onBoundaryConditionCategorySelected();
+}
+
+void MainWindow::createLoad()
+{
+    if (!m_projectModel.hasProject()) {
+        writeLog("Create load failed: create or open a project first.");
+        return;
+    }
+
+    const Load newLoad = LoadDialog::createLoad(this);
+    if (newLoad.id.isEmpty()) {
+        writeLog("Create load canceled.");
+        return;
+    }
+
+    m_loads.push_back(newLoad);
+    writeLog(QString("Load created: %1 (Value: %2)").arg(newLoad.name).arg(newLoad.value.x));
+    onLoadCategorySelected();
 }

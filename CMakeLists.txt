@@ -163,12 +163,18 @@ qt_add_executable(MyCAE
     src/solver/plugin/SolverPluginManager.h
     src/ui/BoxDialog.cpp
     src/ui/BoxDialog.h
+    src/ui/BoundaryConditionDialog.cpp
+    src/ui/BoundaryConditionDialog.h
     src/ui/CylinderDialog.cpp
     src/ui/CylinderDialog.h
+    src/ui/LoadDialog.cpp
+    src/ui/LoadDialog.h
     src/ui/LogPanel.cpp
     src/ui/LogPanel.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
+    src/ui/MaterialDialog.cpp
+    src/ui/MaterialDialog.h
     src/ui/ProjectTreePanel.cpp
     src/ui/ProjectTreePanel.h
     src/ui/PropertyPanel.cpp
@@ -237,10 +243,29 @@ if (WIN32)
             "${MYCAE_OCC_THIRDPARTY_ROOT}/jemalloc-vc14-64/bin/*.dll"
             "${MYCAE_OCC_THIRDPARTY_ROOT}/openvr-1.14.15-64/bin/win64/*.dll"
             "${MYCAE_OCC_THIRDPARTY_ROOT}/tbb-2021.13.0-x64/bin/*.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/angle-gles2-2.1.0-vc14-64/bin/libEGL.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/angle-gles2-2.1.0-vc14-64/bin/libGLESv2.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/angle-gles2-2.1.0-vc14-64/bin/d3dcompiler_47.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/tcltk-8.6.15-x64/bin/tcl86.dll"
+            "${MYCAE_OCC_THIRDPARTY_ROOT}/tcltk-8.6.15-x64/bin/tk86.dll"
         )
         add_custom_command(TARGET MyCAE POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 ${MYCAE_OCC_THIRDPARTY_RUNTIME_DLLS}
+                $<TARGET_FILE_DIR:MyCAE>
+            COMMAND_EXPAND_LISTS
+        )
+    endif()
+    
+    # Copy additional Qt DLLs that may be needed by VTK plugins
+    if (QT_BIN_DIR)
+        file(GLOB MYCAE_EXTRA_QT_DLLS
+            "${QT_BIN_DIR}/Qt6Quick.dll"
+            "${QT_BIN_DIR}/Qt6Sql.dll"
+        )
+        add_custom_command(TARGET MyCAE POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${MYCAE_EXTRA_QT_DLLS}
                 $<TARGET_FILE_DIR:MyCAE>
             COMMAND_EXPAND_LISTS
         )
