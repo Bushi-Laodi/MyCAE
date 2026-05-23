@@ -16,6 +16,7 @@
 #include "project/ProjectModelLoader.h"
 #include "RenderView.h"
 #include "solver/SimulationCaseBuilder.h"
+#include "solver/SimulationCaseManager.h"
 
 #include <vtkUnstructuredGrid.h>
 
@@ -286,6 +287,7 @@ void MainWindow::newProject()
     setCurrentProject(project);
     refreshGeometryTree();
     refreshMeshTree();
+    saveProjectSimulationCase();
     writeLog("Project created: " + project.rootPath);
 }
 
@@ -314,6 +316,7 @@ void MainWindow::openProject()
     setCurrentProject(project);
     loadProjectGeometries();
     loadProjectMeshes();
+    loadProjectSimulationCase();
     writeLog("Project opened: " + project.rootPath);
 }
 
@@ -339,6 +342,7 @@ void MainWindow::createGeometry(GeometryCreateType type)
     if (!selectGeometryByName(createdGeometryName)) {
         writeLog("Created geometry was saved but could not be selected: " + createdGeometryName);
     }
+    saveProjectSimulationCase();
 }
 
 void MainWindow::checkGmsh()
@@ -453,6 +457,7 @@ void MainWindow::generateMesh()
     }
 
     refreshMeshTree();
+    saveProjectSimulationCase();
     writeLog("MeshObject saved: mesh/" + safeGeometryName + "_mesh.json");
 }
 
@@ -540,6 +545,10 @@ void MainWindow::runSolverPlugin(const QString &pluginId)
 {
     if (!m_projectModel.hasProject()) {
         writeLog("Run solver failed: create or open a project first.");
+        return;
+    }
+
+    if (!saveProjectSimulationCase()) {
         return;
     }
 
@@ -634,6 +643,35 @@ void MainWindow::loadProjectMeshes()
 
     refreshMeshTree();
     writeLog(QString("Loaded %1 mesh objects.").arg(m_projectModel.meshObjects().size()));
+}
+
+void MainWindow::loadProjectSimulationCase()
+{
+    QString errorMessage;
+    ProjectModelLoader loader(m_geometryManager);
+    if (!loader.loadSimulationCase(m_projectModel, &errorMessage)) {
+        QMessageBox::warning(this, "Load simulation case failed", errorMessage);
+        writeLog("Load simulation case failed: " + errorMessage);
+        return;
+    }
+
+    writeLog(QString("Loaded simulation case data: %1 materials, %2 boundary conditions, %3 loads.")
+        .arg(m_projectModel.materials().size())
+        .arg(m_projectModel.boundaryConditions().size())
+        .arg(m_projectModel.loads().size()));
+}
+
+bool MainWindow::saveProjectSimulationCase()
+{
+    QString errorMessage;
+    const SimulationCaseManager simulationCaseManager;
+    if (!simulationCaseManager.save(m_projectModel, &errorMessage)) {
+        writeLog("Save simulation case failed: " + errorMessage);
+        return false;
+    }
+
+    writeLog("Simulation case saved: " + SimulationCaseManager::relativeCaseFilePath());
+    return true;
 }
 
 void MainWindow::refreshGeometryTree()
@@ -818,6 +856,7 @@ void MainWindow::createMaterial()
 
     m_projectModel.materials().push_back(*newMaterial);
     writeLog(QString("Material created: %1 (ID: %2)").arg(newMaterial->name, newMaterial->id));
+    saveProjectSimulationCase();
     onMaterialCategorySelected();
 }
 
@@ -841,6 +880,7 @@ void MainWindow::createBoundaryCondition()
     m_projectModel.boundaryConditions().push_back(*newBC);
     writeLog(QString("Boundary condition created: %1 (Type: %2)")
         .arg(newBC->name, toString(newBC->type)));
+    saveProjectSimulationCase();
     onBoundaryConditionCategorySelected();
 }
 
@@ -863,5 +903,6 @@ void MainWindow::createLoad()
 
     m_projectModel.loads().push_back(*newLoad);
     writeLog(QString("Load created: %1 (Value: %2)").arg(newLoad->name).arg(newLoad->value.x));
+    saveProjectSimulationCase();
     onLoadCategorySelected();
 }

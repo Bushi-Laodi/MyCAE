@@ -26,6 +26,9 @@ QString selectedOrFirstGeometryName(const ProjectModel &projectModel)
     if (const GeometryObject *geometry = projectModel.selectedGeometry()) {
         return geometry->name;
     }
+    if (const MeshObject *meshObject = projectModel.selectedMesh()) {
+        return meshObject->sourceGeometryName;
+    }
     if (!projectModel.geometryObjects().isEmpty()) {
         return projectModel.geometryObjects().front().name;
     }

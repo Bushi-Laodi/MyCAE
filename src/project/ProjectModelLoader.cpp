@@ -2,6 +2,7 @@
 
 #include "mesh/MeshManager.h"
 #include "project/ProjectModel.h"
+#include "solver/SimulationCaseManager.h"
 
 #include <vector>
 
@@ -52,5 +53,26 @@ bool ProjectModelLoader::loadMeshes(ProjectModel &projectModel, QString *errorMe
     }
 
     projectModel.clearSelectedMesh();
+    return true;
+}
+
+bool ProjectModelLoader::loadSimulationCase(ProjectModel &projectModel, QString *errorMessage) const
+{
+    SimulationCaseManager simulationCaseManager;
+    if (!simulationCaseManager.exists(projectModel.project())) {
+        projectModel.materials().clear();
+        projectModel.boundaryConditions().clear();
+        projectModel.loads().clear();
+        return true;
+    }
+
+    SimulationCase simulationCase;
+    if (!simulationCaseManager.load(projectModel.project(), simulationCase, errorMessage)) {
+        return false;
+    }
+
+    projectModel.materials() = simulationCase.materials;
+    projectModel.boundaryConditions() = simulationCase.boundaryConditions;
+    projectModel.loads() = simulationCase.loads;
     return true;
 }

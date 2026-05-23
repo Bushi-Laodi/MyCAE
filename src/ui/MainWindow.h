@@ -49,6 +49,8 @@ private:
     void setCurrentProject(const Project &project);
     void loadProjectGeometries();
     void loadProjectMeshes();
+    void loadProjectSimulationCase();
+    bool saveProjectSimulationCase();
     void refreshGeometryTree();
     void refreshMeshTree();
     bool selectGeometryByName(const QString &geometryName);

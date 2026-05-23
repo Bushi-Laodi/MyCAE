@@ -154,8 +154,12 @@ qt_add_executable(MyCAE
     src/solver/SimulationCase.h
     src/solver/SimulationCaseBuilder.cpp
     src/solver/SimulationCaseBuilder.h
+    src/solver/SimulationCaseJsonReader.cpp
+    src/solver/SimulationCaseJsonReader.h
     src/solver/SimulationCaseJsonWriter.cpp
     src/solver/SimulationCaseJsonWriter.h
+    src/solver/SimulationCaseManager.cpp
+    src/solver/SimulationCaseManager.h
     src/solver/plugin/ExternalProcessSolverPlugin.cpp
     src/solver/plugin/ExternalProcessSolverPlugin.h
     src/solver/plugin/ExternalSolverPluginConfig.cpp
