@@ -89,6 +89,7 @@ set(MYCAE_OCC_LIBRARIES
     TKBRep
     TKGeomAlgo
     TKTopAlgo
+    TKBO
     TKPrim
     TKMesh
     TKXSBase
@@ -111,6 +112,9 @@ qt_add_executable(MyCAE
     src/geometry/BoxGeometry.h
     src/geometry/CylinderGeometry.h
     src/geometry/FaceGroup.h
+    src/geometry/GeometryBooleanController.cpp
+    src/geometry/GeometryBooleanController.h
+    src/geometry/GeometryBooleanOperation.h
     src/geometry/GeometryCreationController.cpp
     src/geometry/GeometryCreationController.h
     src/geometry/GeometryDisplayController.cpp
@@ -134,6 +138,8 @@ qt_add_executable(MyCAE
     src/mesh/MshReader.h
     src/occ/OCCBoxBuilder.cpp
     src/occ/OCCBoxBuilder.h
+    src/occ/OCCBooleanBuilder.cpp
+    src/occ/OCCBooleanBuilder.h
     src/occ/OCCCylinderBuilder.cpp
     src/occ/OCCCylinderBuilder.h
     src/occ/OCCGeometryFactory.cpp
@@ -170,6 +176,8 @@ qt_add_executable(MyCAE
     src/solver/plugin/SolverPluginManager.h
     src/ui/BoxDialog.cpp
     src/ui/BoxDialog.h
+    src/ui/BooleanOperationDialog.cpp
+    src/ui/BooleanOperationDialog.h
     src/ui/BoundaryConditionDialog.cpp
     src/ui/BoundaryConditionDialog.h
     src/ui/CylinderDialog.cpp

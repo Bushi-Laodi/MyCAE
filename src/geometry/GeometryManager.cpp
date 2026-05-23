@@ -1,5 +1,6 @@
 #include "GeometryManager.h"
 
+#include "occ/OCCBooleanBuilder.h"
 #include "occ/OCCGeometryFactory.h"
 #include "occ/OCCShapeIO.h"
 
@@ -12,9 +13,86 @@
 #include <QIODevice>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
+#include <QRegularExpression>
 #include <QStringList>
 
 #include <exception>
+
+namespace
+{
+QString absoluteProjectFilePath(const Project &project, const QString &filePath)
+{
+    return QFileInfo(filePath).isAbsolute()
+        ? filePath
+        : QDir(project.rootPath).filePath(filePath);
+}
+
+QString sanitizedFileBase(const QString &name)
+{
+    QString fileBase = name.trimmed().toLower();
+    fileBase.replace(QRegularExpression("[^a-z0-9_]+"), "_");
+    fileBase.replace(QRegularExpression("_+"), "_");
+    fileBase = fileBase.trimmed();
+    while (fileBase.startsWith('_')) {
+        fileBase.remove(0, 1);
+    }
+    while (fileBase.endsWith('_')) {
+        fileBase.chop(1);
+    }
+    return fileBase.isEmpty() ? "geometry" : fileBase;
+}
+
+bool loadGeometryShape(const Project &project, const GeometryObject &geometry, TopoDS_Shape *shape, QString *errorMessage)
+{
+    if (!shape) {
+        if (errorMessage) {
+            *errorMessage = "Internal error: shape output is null.";
+        }
+        return false;
+    }
+
+    OCCShapeIO shapeIO;
+    QString loadError;
+    if (!geometry.brepFile.isEmpty()) {
+        const QString brepPath = absoluteProjectFilePath(project, geometry.brepFile);
+        if (QFileInfo::exists(brepPath) && shapeIO.loadBREP(brepPath, *shape, &loadError)) {
+            return true;
+        }
+    }
+
+    if (!geometry.stepFile.isEmpty()) {
+        const QString stepPath = absoluteProjectFilePath(project, geometry.stepFile);
+        if (QFileInfo::exists(stepPath) && shapeIO.loadSTEP(stepPath, *shape, &loadError)) {
+            return true;
+        }
+    }
+
+    if (errorMessage) {
+        *errorMessage = QString("Failed to load shape for geometry \"%1\". %2").arg(geometry.name, loadError);
+    }
+    return false;
+}
+
+bool geometryNameExists(const Project &project, const QString &geometryDirPath, const QString &name)
+{
+    const QDir geometryDir(geometryDirPath);
+    const QFileInfoList files = geometryDir.entryInfoList(QStringList{"*.json"}, QDir::Files, QDir::Name);
+    for (const QFileInfo &fileInfo : files) {
+        QFile file(fileInfo.absoluteFilePath());
+        if (!file.open(QIODevice::ReadOnly)) {
+            continue;
+        }
+        const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+        if (document.isObject() && document.object().value("name").toString() == name) {
+            return true;
+        }
+    }
+
+    Q_UNUSED(project);
+    return false;
+}
+}
 
 bool GeometryManager::createDefaultBox(const Project &project, BoxGeometry *box, QString *errorMessage) const
 {
@@ -186,6 +264,111 @@ bool GeometryManager::createCylinder(const Project &project, const CylinderGeome
     return true;
 }
 
+bool GeometryManager::createBooleanGeometry(
+    const Project &project,
+    const GeometryObject &leftGeometry,
+    const GeometryObject &rightGeometry,
+    GeometryBooleanOperationType operationType,
+    const QString &requestedName,
+    GeometryObject *geometry,
+    QString *errorMessage
+) const
+{
+    if (!geometry) {
+        if (errorMessage) {
+            *errorMessage = "Internal error: boolean geometry output object is null.";
+        }
+        return false;
+    }
+    if (project.rootPath.isEmpty()) {
+        if (errorMessage) {
+            *errorMessage = "Please create or open a project before creating geometry.";
+        }
+        return false;
+    }
+    if (leftGeometry.name == rightGeometry.name) {
+        if (errorMessage) {
+            *errorMessage = "Boolean operation inputs must be different geometry objects.";
+        }
+        return false;
+    }
+
+    const QString geometryDirPath = geometryDirectory(project);
+    if (!QDir().mkpath(geometryDirPath)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to create geometry directory: " + geometryDirPath;
+        }
+        return false;
+    }
+
+    const QString resultName = requestedName.trimmed().isEmpty()
+        ? nextBooleanName(geometryDirPath, operationType)
+        : requestedName.trimmed();
+    if (geometryNameExists(project, geometryDirPath, resultName)) {
+        if (errorMessage) {
+            *errorMessage = "Geometry name already exists: " + resultName;
+        }
+        return false;
+    }
+
+    const QString fileBase = sanitizedFileBase(resultName);
+    const QString jsonPath = QDir(geometryDirPath).filePath(fileBase + ".json");
+    if (QFileInfo::exists(jsonPath)) {
+        if (errorMessage) {
+            *errorMessage = "Geometry file already exists: " + jsonPath;
+        }
+        return false;
+    }
+
+    TopoDS_Shape leftShape;
+    QString loadError;
+    if (!loadGeometryShape(project, leftGeometry, &leftShape, &loadError)) {
+        if (errorMessage) {
+            *errorMessage = loadError;
+        }
+        return false;
+    }
+
+    TopoDS_Shape rightShape;
+    if (!loadGeometryShape(project, rightGeometry, &rightShape, &loadError)) {
+        if (errorMessage) {
+            *errorMessage = loadError;
+        }
+        return false;
+    }
+
+    TopoDS_Shape resultShape;
+    OCCBooleanBuilder booleanBuilder;
+    if (!booleanBuilder.build(leftShape, rightShape, operationType, &resultShape, errorMessage)) {
+        return false;
+    }
+
+    GeometryObject createdGeometry;
+    createdGeometry.name = resultName;
+    createdGeometry.type = "boolean";
+    createdGeometry.jsonFile = QDir(project.rootPath).relativeFilePath(jsonPath);
+    createdGeometry.brepFile = QDir(project.rootPath).relativeFilePath(
+        QDir(geometryDirPath).filePath(fileBase + ".brep")
+    );
+    createdGeometry.stepFile = QDir(project.rootPath).relativeFilePath(
+        QDir(geometryDirPath).filePath(fileBase + ".step")
+    );
+
+    OCCShapeIO shapeIO;
+    if (!shapeIO.saveBREP(resultShape, absoluteProjectFilePath(project, createdGeometry.brepFile), errorMessage)) {
+        return false;
+    }
+    if (!shapeIO.saveSTEP(resultShape, absoluteProjectFilePath(project, createdGeometry.stepFile), errorMessage)) {
+        return false;
+    }
+    if (!writeBooleanGeometryFile(project, createdGeometry, leftGeometry, rightGeometry, operationType, errorMessage)) {
+        return false;
+    }
+
+    *geometry = createdGeometry;
+    return true;
+}
+
 bool GeometryManager::loadCylinderGeometries(const Project &project, QVector<CylinderGeometry> *cylinders, QString *errorMessage) const
 {
     if (!cylinders) {
@@ -243,7 +426,7 @@ bool GeometryManager::loadGeometryObjects(const Project &project, std::vector<Ge
 
         const QJsonObject object = document.object();
         const QString type = object.value("type").toString();
-        if (type != "box" && type != "cylinder") {
+        if (type != "box" && type != "cylinder" && type != "boolean") {
             continue;
         }
 
@@ -289,6 +472,20 @@ QString GeometryManager::nextCylinderName(const QString &geometryDirPath) const
         ++index;
     }
     return QString("Cylinder_%1").arg(index);
+}
+
+QString GeometryManager::nextBooleanName(
+    const QString &geometryDirPath,
+    GeometryBooleanOperationType operationType
+) const
+{
+    const QDir geometryDir(geometryDirPath);
+    const QString prefix = toDisplayString(operationType);
+    int index = 1;
+    while (QFileInfo::exists(geometryDir.filePath(QString("%1_%2.json").arg(prefix.toLower()).arg(index)))) {
+        ++index;
+    }
+    return QString("%1_%2").arg(prefix).arg(index);
 }
 
 bool GeometryManager::writeBoxFile(const BoxGeometry &box, QString *errorMessage) const
@@ -446,5 +643,47 @@ bool GeometryManager::readCylinderFile(const QString &filePath, CylinderGeometry
     }
 
     *cylinder = loadedCylinder;
+    return true;
+}
+
+bool GeometryManager::writeBooleanGeometryFile(
+    const Project &project,
+    const GeometryObject &geometry,
+    const GeometryObject &leftGeometry,
+    const GeometryObject &rightGeometry,
+    GeometryBooleanOperationType operationType,
+    QString *errorMessage
+) const
+{
+    QJsonArray operands;
+    operands.append(leftGeometry.name);
+    operands.append(rightGeometry.name);
+
+    QJsonObject operation;
+    operation.insert("type", toStorageString(operationType));
+    operation.insert("leftGeometry", leftGeometry.name);
+    operation.insert("rightGeometry", rightGeometry.name);
+    operation.insert("operands", operands);
+
+    QJsonObject occ;
+    occ.insert("brepFile", geometry.brepFile);
+    occ.insert("stepFile", geometry.stepFile);
+
+    QJsonObject object;
+    object.insert("type", geometry.type);
+    object.insert("name", geometry.name);
+    object.insert("operation", operation);
+    object.insert("occ", occ);
+    object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
+
+    QFile file(absoluteProjectFilePath(project, geometry.jsonFile));
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to write boolean geometry file: " + file.errorString();
+        }
+        return false;
+    }
+
+    file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
     return true;
 }

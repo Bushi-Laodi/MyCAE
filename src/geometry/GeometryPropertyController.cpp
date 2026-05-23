@@ -37,6 +37,12 @@ GeometryPropertyResult GeometryPropertyController::showGeometryProperties(
         return result;
     }
 
+    if (geometry.type == "boolean") {
+        propertyPanel->showGeometryObject(geometry);
+        result.success = true;
+        return result;
+    }
+
     result.errorMessage = "Property display failed: unsupported geometry type " + geometry.type;
     return result;
 }

@@ -43,6 +43,7 @@ private:
     void newProject();
     void openProject();
     void createGeometry(GeometryCreateType type);
+    void createBooleanGeometry();
     void checkGmsh();
     void generateMesh();
     void readMeshInfo();
@@ -86,6 +87,7 @@ private:
     QAction *m_openProjectAction = nullptr;
     QAction *m_createBoxAction = nullptr;
     QAction *m_createCylinderAction = nullptr;
+    QAction *m_booleanOperationAction = nullptr;
     QAction *m_checkGmshAction = nullptr;
     QAction *m_generateMeshAction = nullptr;
     QAction *m_readMeshInfoAction = nullptr;

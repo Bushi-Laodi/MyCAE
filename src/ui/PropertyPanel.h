@@ -14,6 +14,7 @@ class QVBoxLayout;
 struct BoxGeometry;
 struct CylinderGeometry;
 struct FaceGroup;
+struct GeometryObject;
 struct MeshObject;
 
 class PropertyPanel final : public QWidget
@@ -24,6 +25,7 @@ public:
     void showEmptySelection();
     void showBoxGeometry(const BoxGeometry &box);
     void showCylinderGeometry(const CylinderGeometry &cylinder);
+    void showGeometryObject(const GeometryObject &geometry);
     void showMeshObject(const MeshObject &meshObject);
     void showFaceGroup(const FaceGroup &faceGroup);
 

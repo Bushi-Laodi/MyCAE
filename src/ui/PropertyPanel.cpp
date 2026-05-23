@@ -3,6 +3,7 @@
 #include "geometry/BoxGeometry.h"
 #include "geometry/CylinderGeometry.h"
 #include "geometry/FaceGroup.h"
+#include "geometry/GeometryObject.h"
 #include "mesh/MeshObject.h"
 
 #include <QFormLayout>
@@ -130,6 +131,23 @@ void PropertyPanel::showCylinderGeometry(const CylinderGeometry &cylinder)
     m_createdAtValue->setText("-");
 
     resetDynamicArea();
+}
+
+void PropertyPanel::showGeometryObject(const GeometryObject &geometry)
+{
+    clearAll();
+    m_selectionValue->setText(geometry.name);
+    m_typeValue->setText(geometry.type);
+    m_nameValue->setText(geometry.name);
+    m_sourceStepFileValue->setText(geometry.stepFile);
+
+    resetDynamicArea();
+    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
+    auto *form = new QFormLayout;
+    form->addRow("JSON File:", new QLabel(geometry.jsonFile, m_dynamicArea));
+    form->addRow("BREP File:", new QLabel(geometry.brepFile, m_dynamicArea));
+    form->addRow("STEP File:", new QLabel(geometry.stepFile, m_dynamicArea));
+    dynamicLayout->addLayout(form);
 }
 
 void PropertyPanel::showMeshObject(const MeshObject &meshObject)
