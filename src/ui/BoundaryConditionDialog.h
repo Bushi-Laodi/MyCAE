@@ -3,31 +3,53 @@
 #include "solver/BoundaryCondition.h"
 
 #include <QDialog>
+#include <QMap>
+#include <QStringList>
 
 #include <optional>
 
 class QLineEdit;
 class QComboBox;
 
+struct BoundaryConditionDialogOptions
+{
+    QStringList geometryNames;
+    QMap<QString, QStringList> faceGroupsByGeometry;
+    QStringList materialIds;
+};
+
 class BoundaryConditionDialog final : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit BoundaryConditionDialog(QWidget *parent = nullptr);
+    explicit BoundaryConditionDialog(
+        BoundaryConditionDialogOptions options = {},
+        QWidget *parent = nullptr
+    );
 
     BoundaryCondition boundaryCondition() const;
     void setBoundaryCondition(const BoundaryCondition &bc);
 
-    static std::optional<BoundaryCondition> createBoundaryCondition(QWidget *parent);
-    static std::optional<BoundaryCondition> editBoundaryCondition(QWidget *parent, const BoundaryCondition &existing);
+    static std::optional<BoundaryCondition> createBoundaryCondition(
+        QWidget *parent,
+        BoundaryConditionDialogOptions options = {}
+    );
+    static std::optional<BoundaryCondition> editBoundaryCondition(
+        QWidget *parent,
+        const BoundaryCondition &existing,
+        BoundaryConditionDialogOptions options = {}
+    );
 
 private:
     void setupUi();
+    void updateFaceGroupItems(const QString &geometryName);
+    void setComboCurrentText(QComboBox *combo, const QString &text);
 
+    BoundaryConditionDialogOptions m_options;
     QLineEdit *m_nameEdit = nullptr;
     QComboBox *m_typeCombo = nullptr;
-    QLineEdit *m_geometryNameEdit = nullptr;
-    QLineEdit *m_faceGroupNameEdit = nullptr;
-    QLineEdit *m_materialIdEdit = nullptr;
+    QComboBox *m_geometryNameCombo = nullptr;
+    QComboBox *m_faceGroupNameCombo = nullptr;
+    QComboBox *m_materialIdCombo = nullptr;
 };

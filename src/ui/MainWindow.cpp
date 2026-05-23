@@ -1,31 +1,22 @@
 #include "MainWindow.h"
 
-#include "BoundaryConditionDialog.h"
 #include "geometry/GeometryCreationController.h"
 #include "geometry/GeometryDisplayController.h"
 #include "geometry/GeometryPropertyController.h"
-#include "LoadDialog.h"
 #include "LogPanel.h"
-#include "MaterialDialog.h"
-#include "mesh/GmshRunner.h"
-#include "mesh/MeshManager.h"
-#include "mesh/MeshToVtkConverter.h"
-#include "mesh/MshReader.h"
+#include "mesh/MeshWorkflowController.h"
 #include "ProjectTreePanel.h"
 #include "PropertyPanel.h"
 #include "project/ProjectModelLoader.h"
 #include "RenderView.h"
 #include "solver/SimulationCaseBuilder.h"
 #include "solver/SimulationCaseManager.h"
-
-#include <vtkUnstructuredGrid.h>
+#include "SolverDataController.h"
 
 #include <QAction>
-#include <QDateTime>
 #include <QDir>
 #include <QDockWidget>
 #include <QFileDialog>
-#include <QFileInfo>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -33,54 +24,6 @@
 #include <QStatusBar>
 #include <QStringList>
 #include <QToolBar>
-
-#include <optional>
-
-namespace
-{
-QString makeSafeFileBaseName(const QString &name)
-{
-    QString result = name.toLower();
-    for (QChar &ch : result) {
-        if (ch.isSpace()) {
-            ch = '_';
-        } else if (!ch.isLetterOrNumber() && ch != '_') {
-            ch = '_';
-        }
-    }
-    return result.isEmpty() ? QString("geometry") : result;
-}
-
-bool hasMaterialId(const std::vector<Material> &materials, const QString &id)
-{
-    for (const Material &material : materials) {
-        if (material.id == id) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool hasBoundaryConditionId(const std::vector<BoundaryCondition> &boundaryConditions, const QString &id)
-{
-    for (const BoundaryCondition &boundaryCondition : boundaryConditions) {
-        if (boundaryCondition.id == id) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool hasLoadId(const std::vector<Load> &loads, const QString &id)
-{
-    for (const Load &load : loads) {
-        if (load.id == id) {
-            return true;
-        }
-    }
-    return false;
-}
-}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -178,6 +121,14 @@ void MainWindow::createActions()
     m_createLoadAction = new QAction("Create Load", this);
     m_createLoadAction->setStatusTip("Create a new load");
     connect(m_createLoadAction, &QAction::triggered, this, &MainWindow::createLoad);
+
+    m_editSolverDataAction = new QAction("Edit Selected Solver Data", this);
+    m_editSolverDataAction->setStatusTip("Edit the selected material, boundary condition, or load");
+    connect(m_editSolverDataAction, &QAction::triggered, this, &MainWindow::editSelectedSolverData);
+
+    m_deleteSolverDataAction = new QAction("Delete Selected Solver Data", this);
+    m_deleteSolverDataAction->setStatusTip("Delete the selected material, boundary condition, or load");
+    connect(m_deleteSolverDataAction, &QAction::triggered, this, &MainWindow::deleteSelectedSolverData);
 }
 
 void MainWindow::createMenus()
@@ -199,6 +150,9 @@ void MainWindow::createMenus()
     solverMenu->addAction(m_createMaterialAction);
     solverMenu->addAction(m_createBoundaryConditionAction);
     solverMenu->addAction(m_createLoadAction);
+    solverMenu->addSeparator();
+    solverMenu->addAction(m_editSolverDataAction);
+    solverMenu->addAction(m_deleteSolverDataAction);
 
     auto *meshMenu = menuBar()->addMenu("Mesh");
     meshMenu->addAction(m_checkGmshAction);
@@ -244,6 +198,9 @@ void MainWindow::createDockWidgets()
     m_projectTreePanel = new ProjectTreePanel(projectDock);
     connect(m_projectTreePanel, &ProjectTreePanel::geometrySelected, this, &MainWindow::showGeometryProperties);
     connect(m_projectTreePanel, &ProjectTreePanel::meshSelected, this, &MainWindow::showMeshObject);
+    connect(m_projectTreePanel, &ProjectTreePanel::materialSelected, this, &MainWindow::showMaterial);
+    connect(m_projectTreePanel, &ProjectTreePanel::boundaryConditionSelected, this, &MainWindow::showBoundaryCondition);
+    connect(m_projectTreePanel, &ProjectTreePanel::loadSelected, this, &MainWindow::showLoad);
     connect(m_projectTreePanel, &ProjectTreePanel::materialCategorySelected, this, &MainWindow::onMaterialCategorySelected);
     connect(m_projectTreePanel, &ProjectTreePanel::boundaryConditionCategorySelected, this, &MainWindow::onBoundaryConditionCategorySelected);
     connect(m_projectTreePanel, &ProjectTreePanel::loadCategorySelected, this, &MainWindow::onLoadCategorySelected);
@@ -287,6 +244,7 @@ void MainWindow::newProject()
     setCurrentProject(project);
     refreshGeometryTree();
     refreshMeshTree();
+    refreshSolverDataTree();
     saveProjectSimulationCase();
     writeLog("Project created: " + project.rootPath);
 }
@@ -317,6 +275,7 @@ void MainWindow::openProject()
     loadProjectGeometries();
     loadProjectMeshes();
     loadProjectSimulationCase();
+    refreshSolverDataTree();
     writeLog("Project opened: " + project.rootPath);
 }
 
@@ -347,198 +306,26 @@ void MainWindow::createGeometry(GeometryCreateType type)
 
 void MainWindow::checkGmsh()
 {
-    const GmshRunner gmshRunner;
-    const GmshRunResult result = gmshRunner.checkVersion();
-
-    writeLog("Gmsh path: " + gmshRunner.gmshExecutablePath());
-    writeLog("Gmsh command: " + gmshRunner.gmshExecutablePath() + " --version");
-    writeLog(QString("Gmsh exitCode: %1").arg(result.exitCode));
-    writeLog("Gmsh stdout: " + (result.standardOutput.isEmpty() ? QString("<empty>") : result.standardOutput));
-    writeLog("Gmsh stderr: " + (result.standardError.isEmpty() ? QString("<empty>") : result.standardError));
-
-    if (result.success) {
-        writeLog("Gmsh environment check succeeded.");
-    } else {
-        writeLog(result.errorMessage.isEmpty() ? "Gmsh environment check failed: unknown error." : result.errorMessage);
-    }
+    const MeshWorkflowController controller;
+    handleMeshWorkflowResult(controller.checkGmsh());
 }
 
 void MainWindow::generateMesh()
 {
-    if (!m_projectModel.hasProject()) {
-        writeLog("Generate mesh failed: create or open a project first.");
-        return;
-    }
-
-    const GeometryObject *selectedGeometry = m_projectModel.selectedGeometry();
-    if (!selectedGeometry) {
-        writeLog("Please select a geometry object in the project tree first.");
-        return;
-    }
-
-    const GeometryObject &geometry = *selectedGeometry;
-    if (geometry.stepFile.isEmpty()) {
-        writeLog("Current geometry has no STEP file.");
-        return;
-    }
-
-    const QString stepAbsPath = QFileInfo(geometry.stepFile).isAbsolute()
-        ? geometry.stepFile
-        : QDir(m_projectModel.project().rootPath).filePath(geometry.stepFile);
-    if (!QFileInfo::exists(stepAbsPath)) {
-        writeLog("Generate mesh failed: STEP file does not exist: " + stepAbsPath);
-        return;
-    }
-
-    const QString safeGeometryName = makeSafeFileBaseName(geometry.name);
-    const QString meshRelativePath = QDir("mesh").filePath(safeGeometryName + ".msh");
-    const QString meshAbsPath = QDir(m_projectModel.project().rootPath).filePath(meshRelativePath);
-
-    const GmshRunner gmshRunner;
-    const GmshRunResult result = gmshRunner.generate3DMesh(stepAbsPath, meshAbsPath);
-
-    writeLog("Geometry name: " + geometry.name);
-    writeLog("Geometry type: " + geometry.type);
-    writeLog("Gmsh path: " + gmshRunner.gmshExecutablePath());
-    writeLog("Gmsh command: " + gmshRunner.gmshExecutablePath()
-             + " " + stepAbsPath
-             + " -3 -format msh2 -o " + meshAbsPath);
-    writeLog("Gmsh input: " + stepAbsPath);
-    writeLog("Gmsh output: " + meshAbsPath);
-    writeLog(QString("Gmsh exitCode: %1").arg(result.exitCode));
-    writeLog("Gmsh stdout: " + (result.standardOutput.isEmpty() ? QString("<empty>") : result.standardOutput));
-    writeLog("Gmsh stderr: " + (result.standardError.isEmpty() ? QString("<empty>") : result.standardError));
-
-    if (!result.success) {
-        writeLog(result.errorMessage.isEmpty() ? "Generate mesh failed: unknown error." : result.errorMessage);
-        return;
-    }
-
-    writeLog("Mesh generated: " + meshRelativePath);
-
-    MeshData meshData;
-    QString errorMessage;
-    if (!MshReader::readMsh2(meshAbsPath, meshData, &errorMessage)) {
-        writeLog("MeshObject save failed: cannot read generated MSH: " + errorMessage);
-        return;
-    }
-
-    MeshObject meshObject;
-    meshObject.name = geometry.name + "_Mesh";
-    meshObject.sourceGeometryName = geometry.name;
-    meshObject.sourceGeometryType = geometry.type;
-    meshObject.sourceStepFile = geometry.stepFile;
-    meshObject.mshFile = meshRelativePath;
-    meshObject.type = "tetra4";
-    meshObject.nodeCount = meshData.nodeCount();
-    meshObject.tetraCount = meshData.tetraCount();
-    meshObject.createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);
-
-    MeshManager meshManager(m_projectModel.project().rootPath);
-    if (!meshManager.saveMeshObject(meshObject, &errorMessage)) {
-        writeLog("MeshObject save failed: " + errorMessage);
-        return;
-    }
-
-    bool replaced = false;
-    QVector<MeshObject> &meshObjects = m_projectModel.meshObjects();
-    for (int meshIndex = 0; meshIndex < meshObjects.size(); ++meshIndex) {
-        MeshObject &existingMesh = meshObjects[meshIndex];
-        if (existingMesh.sourceGeometryName == meshObject.sourceGeometryName) {
-            existingMesh = meshObject;
-            m_projectModel.setSelectedMeshName(meshObject.name);
-            replaced = true;
-            break;
-        }
-    }
-    if (!replaced) {
-        meshObjects.append(meshObject);
-        m_projectModel.setSelectedMeshName(meshObject.name);
-    }
-
-    refreshMeshTree();
-    saveProjectSimulationCase();
-    writeLog("MeshObject saved: mesh/" + safeGeometryName + "_mesh.json");
+    const MeshWorkflowController controller;
+    handleMeshWorkflowResult(controller.generateMesh(m_projectModel));
 }
 
 void MainWindow::readMeshInfo()
 {
-    if (!m_projectModel.hasProject()) {
-        writeLog("Read mesh failed: create or open a project first.");
-        return;
-    }
-
-    const GeometryObject *selectedGeometry = m_projectModel.selectedGeometry();
-    if (!selectedGeometry) {
-        writeLog("Please select a geometry object in the project tree first.");
-        return;
-    }
-
-    const GeometryObject &geometry = *selectedGeometry;
-    const QString meshRelativePath = QDir("mesh").filePath(makeSafeFileBaseName(geometry.name) + ".msh");
-    const QString meshAbsPath = QDir(m_projectModel.project().rootPath).filePath(meshRelativePath);
-
-    writeLog("MSH file: " + meshAbsPath);
-    if (!QFileInfo::exists(meshAbsPath)) {
-        writeLog("Read mesh failed: MSH file does not exist.");
-        return;
-    }
-
-    MeshData meshData;
-    meshData.sourceGeometryName = geometry.name;
-    QString errorMessage;
-    if (!MshReader::readMsh2(meshAbsPath, meshData, &errorMessage)) {
-        writeLog("Read mesh failed: " + errorMessage);
-        return;
-    }
-
-    writeLog("Read mesh succeeded.");
-    writeLog(QString("Node count: %1").arg(meshData.nodeCount()));
-    writeLog(QString("Tetra count: %1").arg(meshData.tetraCount()));
+    const MeshWorkflowController controller;
+    handleMeshWorkflowResult(controller.readMeshInfo(m_projectModel));
 }
 
 void MainWindow::showMesh()
 {
-    if (!m_projectModel.hasProject()) {
-        writeLog("Show mesh failed: create or open a project first.");
-        return;
-    }
-
-    const GeometryObject *selectedGeometry = m_projectModel.selectedGeometry();
-    if (!selectedGeometry) {
-        writeLog("Please select a geometry object in the project tree first.");
-        return;
-    }
-
-    const GeometryObject &geometry = *selectedGeometry;
-    const QString meshRelativePath = QDir("mesh").filePath(makeSafeFileBaseName(geometry.name) + ".msh");
-    const QString meshAbsPath = QDir(m_projectModel.project().rootPath).filePath(meshRelativePath);
-
-    writeLog("MSH file: " + meshAbsPath);
-    if (!QFileInfo::exists(meshAbsPath)) {
-        writeLog("Show mesh failed: MSH file does not exist.");
-        return;
-    }
-
-    MeshData meshData;
-    meshData.sourceGeometryName = geometry.name;
-    QString errorMessage;
-    if (!MshReader::readMsh2(meshAbsPath, meshData, &errorMessage)) {
-        writeLog("Show mesh failed: cannot read MSH: " + errorMessage);
-        return;
-    }
-
-    vtkSmartPointer<vtkUnstructuredGrid> grid = MeshToVtkConverter::toUnstructuredGrid(meshData, &errorMessage);
-    if (!grid) {
-        writeLog("VTK mesh conversion failed: " + errorMessage);
-        return;
-    }
-
-    const QString subtitle = QString("%1 nodes, %2 tetrahedra")
-        .arg(meshData.nodeCount())
-        .arg(meshData.tetraCount());
-    m_renderView->showMeshGrid(grid, geometry.name + " Mesh", subtitle);
-    writeLog("Mesh displayed.");
+    const MeshWorkflowController controller;
+    handleMeshWorkflowResult(controller.showSelectedGeometryMesh(m_projectModel, m_renderView));
 }
 
 void MainWindow::runSolverPlugin(const QString &pluginId)
@@ -700,6 +487,17 @@ void MainWindow::refreshMeshTree()
     m_projectTreePanel->setMeshItems(meshNames);
 }
 
+void MainWindow::refreshSolverDataTree()
+{
+    if (!m_projectTreePanel) {
+        return;
+    }
+
+    m_projectTreePanel->setMaterialItems(m_projectModel.materials());
+    m_projectTreePanel->setBoundaryConditionItems(m_projectModel.boundaryConditions());
+    m_projectTreePanel->setLoadItems(m_projectModel.loads());
+}
+
 bool MainWindow::selectGeometryByName(const QString &geometryName)
 {
     showGeometryProperties(geometryName);
@@ -740,6 +538,28 @@ void MainWindow::showMeshObject(const QString &meshName)
     m_projectModel.clearSelectedMesh();
 }
 
+void MainWindow::showMaterial(const QString &materialId)
+{
+    for (const QString &message : SolverDataController::showMaterial(m_projectModel, m_propertyPanel, materialId)) {
+        writeLog(message);
+    }
+}
+
+void MainWindow::showBoundaryCondition(const QString &boundaryConditionId)
+{
+    for (const QString &message :
+         SolverDataController::showBoundaryCondition(m_projectModel, m_propertyPanel, boundaryConditionId)) {
+        writeLog(message);
+    }
+}
+
+void MainWindow::showLoad(const QString &loadId)
+{
+    for (const QString &message : SolverDataController::showLoad(m_projectModel, m_propertyPanel, loadId)) {
+        writeLog(message);
+    }
+}
+
 void MainWindow::displayGeometry(const GeometryObject &geometry)
 {
     const GeometryDisplayController displayController;
@@ -760,38 +580,8 @@ void MainWindow::displayMeshObject(const MeshObject &meshObject)
         m_propertyPanel->showMeshObject(meshObject);
     }
 
-    if (!m_renderView) {
-        return;
-    }
-
-    const QString meshAbsPath = QFileInfo(meshObject.mshFile).isAbsolute()
-        ? meshObject.mshFile
-        : QDir(m_projectModel.project().rootPath).filePath(meshObject.mshFile);
-
-    if (!QFileInfo::exists(meshAbsPath)) {
-        writeLog("Show mesh failed: MSH file does not exist: " + meshObject.mshFile);
-        return;
-    }
-
-    MeshData meshData;
-    meshData.sourceGeometryName = meshObject.sourceGeometryName;
-    QString errorMessage;
-    if (!MshReader::readMsh2(meshAbsPath, meshData, &errorMessage)) {
-        writeLog("Show mesh failed: cannot read MSH: " + errorMessage);
-        return;
-    }
-
-    vtkSmartPointer<vtkUnstructuredGrid> grid = MeshToVtkConverter::toUnstructuredGrid(meshData, &errorMessage);
-    if (!grid) {
-        writeLog("VTK mesh conversion failed: " + errorMessage);
-        return;
-    }
-
-    const QString subtitle = QString("%1 nodes, %2 tetrahedra")
-        .arg(meshData.nodeCount())
-        .arg(meshData.tetraCount());
-    m_renderView->showMeshGrid(grid, meshObject.name, subtitle);
-    writeLog("Mesh displayed: " + meshObject.name);
+    const MeshWorkflowController controller;
+    handleMeshWorkflowResult(controller.displayMeshObject(m_projectModel, meshObject, m_renderView));
 }
 
 void MainWindow::writeLog(const QString &message)
@@ -801,36 +591,88 @@ void MainWindow::writeLog(const QString &message)
     }
 }
 
+void MainWindow::handleMeshWorkflowResult(const MeshWorkflowResult &result)
+{
+    for (const QString &message : result.logMessages) {
+        writeLog(message);
+    }
+
+    if (result.meshTreeChanged) {
+        refreshMeshTree();
+    }
+    if (result.simulationCaseChanged) {
+        saveProjectSimulationCase();
+    }
+}
+
+void MainWindow::handleSolverDataResult(const SolverDataControllerResult &result)
+{
+    for (const QString &message : result.logMessages) {
+        writeLog(message);
+    }
+
+    if (!result.changed) {
+        return;
+    }
+
+    saveProjectSimulationCase();
+    refreshSolverDataTree();
+
+    switch (result.selectionKind) {
+    case SolverDataSelectionKind::MaterialCategory:
+        onMaterialCategorySelected();
+        break;
+    case SolverDataSelectionKind::BoundaryConditionCategory:
+        onBoundaryConditionCategorySelected();
+        break;
+    case SolverDataSelectionKind::LoadCategory:
+        onLoadCategorySelected();
+        break;
+    case SolverDataSelectionKind::Material:
+        showMaterial(result.selectionId);
+        break;
+    case SolverDataSelectionKind::BoundaryCondition:
+        showBoundaryCondition(result.selectionId);
+        break;
+    case SolverDataSelectionKind::Load:
+        showLoad(result.selectionId);
+        break;
+    case SolverDataSelectionKind::None:
+        break;
+    }
+}
+
 // ============================================================
 // Solver data UI handlers
 // ============================================================
 
 void MainWindow::onMaterialCategorySelected()
 {
-    if (m_propertyPanel) {
-        m_propertyPanel->showMaterialCategory(m_projectModel.materials());
+    for (const QString &message : SolverDataController::showMaterialCategory(m_projectModel, m_propertyPanel)) {
+        writeLog(message);
     }
-    writeLog(QString("Materials: %1 defined.").arg(m_projectModel.materials().size()));
 }
 
 void MainWindow::onBoundaryConditionCategorySelected()
 {
-    if (m_propertyPanel) {
-        m_propertyPanel->showBoundaryConditionCategory(m_projectModel.boundaryConditions());
+    for (const QString &message :
+         SolverDataController::showBoundaryConditionCategory(m_projectModel, m_propertyPanel)) {
+        writeLog(message);
     }
-    writeLog(QString("Boundary conditions: %1 defined.").arg(m_projectModel.boundaryConditions().size()));
 }
 
 void MainWindow::onLoadCategorySelected()
 {
-    if (m_propertyPanel) {
-        m_propertyPanel->showLoadCategory(m_projectModel.loads());
+    for (const QString &message : SolverDataController::showLoadCategory(m_projectModel, m_propertyPanel)) {
+        writeLog(message);
     }
-    writeLog(QString("Loads: %1 defined.").arg(m_projectModel.loads().size()));
 }
 
 void MainWindow::onSolverCategorySelected()
 {
+    m_projectModel.clearSelectedGeometry();
+    m_projectModel.clearSelectedMesh();
+    m_projectModel.clearSelectedSolverData();
     if (m_propertyPanel) {
         m_propertyPanel->showSolverCategory(SimulationCaseBuilder::fromProjectModel(m_projectModel));
     }
@@ -839,70 +681,25 @@ void MainWindow::onSolverCategorySelected()
 
 void MainWindow::createMaterial()
 {
-    if (!m_projectModel.hasProject()) {
-        writeLog("Create material failed: create or open a project first.");
-        return;
-    }
-
-    const std::optional<Material> newMaterial = MaterialDialog::createMaterial(this);
-    if (!newMaterial) {
-        writeLog("Create material canceled.");
-        return;
-    }
-    if (hasMaterialId(m_projectModel.materials(), newMaterial->id)) {
-        writeLog("Create material failed: duplicated material ID: " + newMaterial->id);
-        return;
-    }
-
-    m_projectModel.materials().push_back(*newMaterial);
-    writeLog(QString("Material created: %1 (ID: %2)").arg(newMaterial->name, newMaterial->id));
-    saveProjectSimulationCase();
-    onMaterialCategorySelected();
+    handleSolverDataResult(SolverDataController::createMaterial(this, m_projectModel));
 }
 
 void MainWindow::createBoundaryCondition()
 {
-    if (!m_projectModel.hasProject()) {
-        writeLog("Create boundary condition failed: create or open a project first.");
-        return;
-    }
-
-    const std::optional<BoundaryCondition> newBC = BoundaryConditionDialog::createBoundaryCondition(this);
-    if (!newBC) {
-        writeLog("Create boundary condition canceled.");
-        return;
-    }
-    if (hasBoundaryConditionId(m_projectModel.boundaryConditions(), newBC->id)) {
-        writeLog("Create boundary condition failed: duplicated boundary condition ID: " + newBC->id);
-        return;
-    }
-
-    m_projectModel.boundaryConditions().push_back(*newBC);
-    writeLog(QString("Boundary condition created: %1 (Type: %2)")
-        .arg(newBC->name, toString(newBC->type)));
-    saveProjectSimulationCase();
-    onBoundaryConditionCategorySelected();
+    handleSolverDataResult(SolverDataController::createBoundaryCondition(this, m_projectModel));
 }
 
 void MainWindow::createLoad()
 {
-    if (!m_projectModel.hasProject()) {
-        writeLog("Create load failed: create or open a project first.");
-        return;
-    }
+    handleSolverDataResult(SolverDataController::createLoad(this, m_projectModel));
+}
 
-    const std::optional<Load> newLoad = LoadDialog::createLoad(this);
-    if (!newLoad) {
-        writeLog("Create load canceled.");
-        return;
-    }
-    if (hasLoadId(m_projectModel.loads(), newLoad->id)) {
-        writeLog("Create load failed: duplicated load ID: " + newLoad->id);
-        return;
-    }
+void MainWindow::editSelectedSolverData()
+{
+    handleSolverDataResult(SolverDataController::editSelected(this, m_projectModel));
+}
 
-    m_projectModel.loads().push_back(*newLoad);
-    writeLog(QString("Load created: %1 (Value: %2)").arg(newLoad->name).arg(newLoad->value.x));
-    saveProjectSimulationCase();
-    onLoadCategorySelected();
+void MainWindow::deleteSelectedSolverData()
+{
+    handleSolverDataResult(SolverDataController::deleteSelected(this, m_projectModel));
 }

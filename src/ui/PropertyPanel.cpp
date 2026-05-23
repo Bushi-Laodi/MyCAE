@@ -256,6 +256,88 @@ void PropertyPanel::showLoadCategory(const std::vector<Load> &loads)
     }
 }
 
+void PropertyPanel::showMaterial(const Material &material)
+{
+    clearAll();
+    m_selectionValue->setText(material.name);
+    m_typeValue->setText("Material");
+    m_nameValue->setText(material.name);
+
+    resetDynamicArea();
+    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
+    auto *form = new QFormLayout;
+    form->addRow("ID:", new QLabel(material.id, m_dynamicArea));
+    form->addRow("Domain:", new QLabel(toString(material.domain), m_dynamicArea));
+    form->addRow("Viscosity Model:", new QLabel(toString(material.viscosityModel), m_dynamicArea));
+    form->addRow("Density Enabled:", new QLabel(material.hasDensity ? "Yes" : "No", m_dynamicArea));
+    form->addRow("Density:", new QLabel(
+        QString::number(material.density) + " " + material.densityUnit, m_dynamicArea));
+    form->addRow("Dynamic Viscosity Enabled:", new QLabel(
+        material.hasDynamicViscosity ? "Yes" : "No", m_dynamicArea));
+    form->addRow("Dynamic Viscosity:", new QLabel(
+        QString::number(material.dynamicViscosity) + " " + material.dynamicViscosityUnit, m_dynamicArea));
+    form->addRow("Kinematic Viscosity Enabled:", new QLabel(
+        material.hasKinematicViscosity ? "Yes" : "No", m_dynamicArea));
+    form->addRow("Kinematic Viscosity:", new QLabel(
+        QString::number(material.kinematicViscosity) + " " + material.kinematicViscosityUnit, m_dynamicArea));
+    dynamicLayout->addLayout(form);
+}
+
+void PropertyPanel::showBoundaryCondition(const BoundaryCondition &boundaryCondition)
+{
+    clearAll();
+    m_selectionValue->setText(boundaryCondition.name);
+    m_typeValue->setText("Boundary Condition");
+    m_nameValue->setText(boundaryCondition.name);
+    m_sourceGeometryValue->setText(boundaryCondition.target.geometryName);
+
+    resetDynamicArea();
+    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
+    auto *form = new QFormLayout;
+    form->addRow("ID:", new QLabel(boundaryCondition.id, m_dynamicArea));
+    form->addRow("Type:", new QLabel(toString(boundaryCondition.type), m_dynamicArea));
+    form->addRow("Target Kind:", new QLabel(toString(boundaryCondition.target.kind), m_dynamicArea));
+    form->addRow("Geometry:", new QLabel(boundaryCondition.target.geometryName, m_dynamicArea));
+    form->addRow("Face Group:", new QLabel(boundaryCondition.target.faceGroupName, m_dynamicArea));
+    form->addRow("Mesh Boundary:", new QLabel(boundaryCondition.target.meshBoundaryName, m_dynamicArea));
+    form->addRow("Material ID:", new QLabel(boundaryCondition.materialId, m_dynamicArea));
+    form->addRow("Enabled:", new QLabel(boundaryCondition.enabled ? "Yes" : "No", m_dynamicArea));
+    dynamicLayout->addLayout(form);
+}
+
+void PropertyPanel::showLoad(const Load &load)
+{
+    clearAll();
+    m_selectionValue->setText(load.name);
+    m_typeValue->setText("Load");
+    m_nameValue->setText(load.name);
+
+    QString valueText;
+    if (load.value.kind == LoadValueKind::Vector3) {
+        valueText = QString("(%1, %2, %3)")
+            .arg(load.value.x)
+            .arg(load.value.y)
+            .arg(load.value.z);
+    } else {
+        valueText = QString::number(load.value.x);
+    }
+    if (!load.value.unit.isEmpty()) {
+        valueText += " " + load.value.unit;
+    }
+
+    resetDynamicArea();
+    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
+    auto *form = new QFormLayout;
+    form->addRow("ID:", new QLabel(load.id, m_dynamicArea));
+    form->addRow("Type:", new QLabel(toString(load.type), m_dynamicArea));
+    form->addRow("Boundary Condition ID:", new QLabel(load.boundaryConditionId, m_dynamicArea));
+    form->addRow("Field Name:", new QLabel(load.fieldName, m_dynamicArea));
+    form->addRow("Value Kind:", new QLabel(toString(load.value.kind), m_dynamicArea));
+    form->addRow("Value:", new QLabel(valueText, m_dynamicArea));
+    form->addRow("Enabled:", new QLabel(load.enabled ? "Yes" : "No", m_dynamicArea));
+    dynamicLayout->addLayout(form);
+}
+
 void PropertyPanel::showSolverCategory(const SimulationCase &simulationCase)
 {
     clearAll();

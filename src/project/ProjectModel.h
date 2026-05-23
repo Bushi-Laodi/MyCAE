@@ -48,10 +48,24 @@ public:
     void clearSelectedMesh();
     const MeshObject *selectedMesh() const;
 
+    void setSelectedMaterialId(const QString &id);
+    const QString &selectedMaterialId() const;
+    void setSelectedBoundaryConditionId(const QString &id);
+    const QString &selectedBoundaryConditionId() const;
+    void setSelectedLoadId(const QString &id);
+    const QString &selectedLoadId() const;
+    void clearSelectedSolverData();
+
     const GeometryObject *findGeometryByName(const QString &name) const;
     const BoxGeometry *findBoxByName(const QString &name) const;
     const CylinderGeometry *findCylinderByName(const QString &name) const;
     const MeshObject *findMeshByName(const QString &name) const;
+    Material *findMaterialById(const QString &id);
+    const Material *findMaterialById(const QString &id) const;
+    BoundaryCondition *findBoundaryConditionById(const QString &id);
+    const BoundaryCondition *findBoundaryConditionById(const QString &id) const;
+    Load *findLoadById(const QString &id);
+    const Load *findLoadById(const QString &id) const;
 
 private:
     Project m_project;
@@ -64,4 +78,7 @@ private:
     std::vector<Load> m_loads;
     QString m_selectedGeometryName;
     QString m_selectedMeshName;
+    QString m_selectedMaterialId;
+    QString m_selectedBoundaryConditionId;
+    QString m_selectedLoadId;
 };

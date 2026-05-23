@@ -28,6 +28,9 @@ public:
     void showMaterialCategory(const std::vector<Material> &materials);
     void showBoundaryConditionCategory(const std::vector<BoundaryCondition> &boundaryConditions);
     void showLoadCategory(const std::vector<Load> &loads);
+    void showMaterial(const Material &material);
+    void showBoundaryCondition(const BoundaryCondition &boundaryCondition);
+    void showLoad(const Load &load);
     void showSolverCategory(const SimulationCase &simulationCase);
 
 private:

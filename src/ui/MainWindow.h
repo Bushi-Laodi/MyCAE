@@ -4,9 +4,11 @@
 #include "geometry/GeometryManager.h"
 #include "geometry/GeometryObject.h"
 #include "mesh/MeshObject.h"
+#include "mesh/MeshWorkflowController.h"
 #include "project/ProjectModel.h"
 #include "project/ProjectManager.h"
 #include "solver/plugin/SolverPluginManager.h"
+#include "ui/SolverDataController.h"
 
 #include <QMainWindow>
 
@@ -53,11 +55,17 @@ private:
     bool saveProjectSimulationCase();
     void refreshGeometryTree();
     void refreshMeshTree();
+    void refreshSolverDataTree();
     bool selectGeometryByName(const QString &geometryName);
     void showGeometryProperties(const QString &geometryName);
     void showMeshObject(const QString &meshName);
+    void showMaterial(const QString &materialId);
+    void showBoundaryCondition(const QString &boundaryConditionId);
+    void showLoad(const QString &loadId);
     void displayGeometry(const GeometryObject &geometry);
     void displayMeshObject(const MeshObject &meshObject);
+    void handleMeshWorkflowResult(const MeshWorkflowResult &result);
+    void handleSolverDataResult(const SolverDataControllerResult &result);
     void writeLog(const QString &message);
 
     // Solver data UI handlers
@@ -68,6 +76,8 @@ private:
     void createMaterial();
     void createBoundaryCondition();
     void createLoad();
+    void editSelectedSolverData();
+    void deleteSelectedSolverData();
 
     QAction *m_newProjectAction = nullptr;
     QAction *m_openProjectAction = nullptr;
@@ -83,6 +93,8 @@ private:
     QAction *m_createMaterialAction = nullptr;
     QAction *m_createBoundaryConditionAction = nullptr;
     QAction *m_createLoadAction = nullptr;
+    QAction *m_editSolverDataAction = nullptr;
+    QAction *m_deleteSolverDataAction = nullptr;
 
     ProjectTreePanel *m_projectTreePanel = nullptr;
     PropertyPanel *m_propertyPanel = nullptr;

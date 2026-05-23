@@ -127,6 +127,8 @@ qt_add_executable(MyCAE
     src/mesh/MeshObject.h
     src/mesh/MeshToVtkConverter.cpp
     src/mesh/MeshToVtkConverter.h
+    src/mesh/MeshWorkflowController.cpp
+    src/mesh/MeshWorkflowController.h
     src/mesh/MshReader.cpp
     src/mesh/MshReader.h
     src/occ/OCCBoxBuilder.cpp
@@ -187,6 +189,8 @@ qt_add_executable(MyCAE
     src/ui/PropertyPanel.h
     src/ui/RenderView.cpp
     src/ui/RenderView.h
+    src/ui/SolverDataController.cpp
+    src/ui/SolverDataController.h
     src/ui/VtkRenderCanvas.cpp
     src/ui/VtkRenderCanvas.h
 )

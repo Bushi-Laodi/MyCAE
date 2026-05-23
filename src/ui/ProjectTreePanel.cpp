@@ -1,5 +1,9 @@
 #include "ProjectTreePanel.h"
 
+#include "solver/BoundaryCondition.h"
+#include "solver/Load.h"
+#include "solver/Material.h"
+
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QVariant>
@@ -10,9 +14,14 @@ namespace
 constexpr int ItemTypeRole = Qt::UserRole + 1;
 constexpr int GeometryNameRole = Qt::UserRole + 2;
 constexpr int MeshNameRole = Qt::UserRole + 3;
+constexpr int SolverDataIdRole = Qt::UserRole + 4;
+constexpr int CategoryRole = Qt::UserRole + 10;
 constexpr int GeometryItemType = 1;
 constexpr int MeshItemType = 2;
 constexpr int CategoryItemType = 3;
+constexpr int MaterialItemType = 4;
+constexpr int BoundaryConditionItemType = 5;
+constexpr int LoadItemType = 6;
 
 enum class CategoryType
 {
@@ -21,6 +30,17 @@ enum class CategoryType
     Load = 3,
     Solver = 4
 };
+
+void clearChildren(QTreeWidgetItem *root)
+{
+    if (!root) {
+        return;
+    }
+
+    while (root->childCount() > 0) {
+        delete root->takeChild(0);
+    }
+}
 }
 
 ProjectTreePanel::ProjectTreePanel(QWidget *parent)
@@ -50,9 +70,7 @@ void ProjectTreePanel::setGeometryItems(const QStringList &geometryNames)
         return;
     }
 
-    while (m_geometryRoot->childCount() > 0) {
-        delete m_geometryRoot->takeChild(0);
-    }
+    clearChildren(m_geometryRoot);
     for (const QString &geometryName : geometryNames) {
         auto *item = new QTreeWidgetItem(QStringList{geometryName});
         item->setData(0, ItemTypeRole, GeometryItemType);
@@ -69,14 +87,66 @@ void ProjectTreePanel::setMeshItems(const QStringList &meshNames)
         return;
     }
 
-    while (m_meshRoot->childCount() > 0) {
-        delete m_meshRoot->takeChild(0);
-    }
+    clearChildren(m_meshRoot);
     for (const QString &meshName : meshNames) {
         auto *item = new QTreeWidgetItem(QStringList{meshName});
         item->setData(0, ItemTypeRole, MeshItemType);
         item->setData(0, MeshNameRole, meshName);
         m_meshRoot->addChild(item);
+    }
+
+    m_tree->expandAll();
+}
+
+void ProjectTreePanel::setMaterialItems(const std::vector<Material> &materials)
+{
+    if (!m_materialRoot) {
+        return;
+    }
+
+    clearChildren(m_materialRoot);
+    for (const Material &material : materials) {
+        auto *item = new QTreeWidgetItem(QStringList{material.name});
+        item->setData(0, ItemTypeRole, MaterialItemType);
+        item->setData(0, SolverDataIdRole, material.id);
+        item->setToolTip(0, material.id);
+        m_materialRoot->addChild(item);
+    }
+
+    m_tree->expandAll();
+}
+
+void ProjectTreePanel::setBoundaryConditionItems(const std::vector<BoundaryCondition> &boundaryConditions)
+{
+    if (!m_boundaryConditionRoot) {
+        return;
+    }
+
+    clearChildren(m_boundaryConditionRoot);
+    for (const BoundaryCondition &boundaryCondition : boundaryConditions) {
+        auto *item = new QTreeWidgetItem(QStringList{boundaryCondition.name});
+        item->setData(0, ItemTypeRole, BoundaryConditionItemType);
+        item->setData(0, SolverDataIdRole, boundaryCondition.id);
+        item->setToolTip(0, boundaryCondition.id);
+        m_boundaryConditionRoot->addChild(item);
+    }
+
+    m_tree->expandAll();
+}
+
+void ProjectTreePanel::setLoadItems(const std::vector<Load> &loads)
+{
+    if (!m_loadRoot) {
+        return;
+    }
+
+    clearChildren(m_loadRoot);
+    for (const Load &load : loads) {
+        auto *item = new QTreeWidgetItem(QStringList{load.name});
+        item->setData(0, ItemTypeRole, LoadItemType);
+        item->setData(0, SolverDataIdRole, load.id);
+        item->setToolTip(0, load.id);
+        m_loadRoot->addChild(item);
     }
 
     m_tree->expandAll();
@@ -101,17 +171,17 @@ void ProjectTreePanel::buildProjectTree(const QString &projectName, const QStrin
 
     m_materialRoot = new QTreeWidgetItem(QStringList{"Materials"});
     m_materialRoot->setData(0, ItemTypeRole, CategoryItemType);
-    m_materialRoot->setData(0, Qt::UserRole + 10, static_cast<int>(CategoryType::Material));
+    m_materialRoot->setData(0, CategoryRole, static_cast<int>(CategoryType::Material));
     projectRoot->addChild(m_materialRoot);
 
     m_boundaryConditionRoot = new QTreeWidgetItem(QStringList{"Boundary Conditions"});
     m_boundaryConditionRoot->setData(0, ItemTypeRole, CategoryItemType);
-    m_boundaryConditionRoot->setData(0, Qt::UserRole + 10, static_cast<int>(CategoryType::BoundaryCondition));
+    m_boundaryConditionRoot->setData(0, CategoryRole, static_cast<int>(CategoryType::BoundaryCondition));
     projectRoot->addChild(m_boundaryConditionRoot);
 
     m_loadRoot = new QTreeWidgetItem(QStringList{"Loads"});
     m_loadRoot->setData(0, ItemTypeRole, CategoryItemType);
-    m_loadRoot->setData(0, Qt::UserRole + 10, static_cast<int>(CategoryType::Load));
+    m_loadRoot->setData(0, CategoryRole, static_cast<int>(CategoryType::Load));
     projectRoot->addChild(m_loadRoot);
 
     m_meshRoot = new QTreeWidgetItem(QStringList{"Mesh"});
@@ -119,7 +189,7 @@ void ProjectTreePanel::buildProjectTree(const QString &projectName, const QStrin
 
     m_solverRoot = new QTreeWidgetItem(QStringList{"Solver"});
     m_solverRoot->setData(0, ItemTypeRole, CategoryItemType);
-    m_solverRoot->setData(0, Qt::UserRole + 10, static_cast<int>(CategoryType::Solver));
+    m_solverRoot->setData(0, CategoryRole, static_cast<int>(CategoryType::Solver));
     projectRoot->addChild(m_solverRoot);
 
     m_tree->addTopLevelItem(projectRoot);
@@ -132,12 +202,19 @@ void ProjectTreePanel::handleCurrentItemChanged(QTreeWidgetItem *current)
         return;
     }
 
-    if (current->data(0, ItemTypeRole).toInt() == GeometryItemType) {
+    const int itemType = current->data(0, ItemTypeRole).toInt();
+    if (itemType == GeometryItemType) {
         emit geometrySelected(current->data(0, GeometryNameRole).toString());
-    } else if (current->data(0, ItemTypeRole).toInt() == MeshItemType) {
+    } else if (itemType == MeshItemType) {
         emit meshSelected(current->data(0, MeshNameRole).toString());
-    } else if (current->data(0, ItemTypeRole).toInt() == CategoryItemType) {
-        const int categoryType = current->data(0, Qt::UserRole + 10).toInt();
+    } else if (itemType == MaterialItemType) {
+        emit materialSelected(current->data(0, SolverDataIdRole).toString());
+    } else if (itemType == BoundaryConditionItemType) {
+        emit boundaryConditionSelected(current->data(0, SolverDataIdRole).toString());
+    } else if (itemType == LoadItemType) {
+        emit loadSelected(current->data(0, SolverDataIdRole).toString());
+    } else if (itemType == CategoryItemType) {
+        const int categoryType = current->data(0, CategoryRole).toInt();
         switch (static_cast<CategoryType>(categoryType)) {
         case CategoryType::Material:
             emit materialCategorySelected();

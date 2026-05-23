@@ -4,8 +4,13 @@
 #include <QStringList>
 #include <QWidget>
 
+#include <vector>
+
 class QTreeWidget;
 class QTreeWidgetItem;
+struct BoundaryCondition;
+struct Load;
+struct Material;
 
 class ProjectTreePanel final : public QWidget
 {
@@ -17,10 +22,16 @@ public:
     void showProject(const QString &projectName, const QString &projectPath);
     void setGeometryItems(const QStringList &geometryNames);
     void setMeshItems(const QStringList &meshNames);
+    void setMaterialItems(const std::vector<Material> &materials);
+    void setBoundaryConditionItems(const std::vector<BoundaryCondition> &boundaryConditions);
+    void setLoadItems(const std::vector<Load> &loads);
 
 signals:
     void geometrySelected(const QString &geometryName);
     void meshSelected(const QString &meshName);
+    void materialSelected(const QString &materialId);
+    void boundaryConditionSelected(const QString &boundaryConditionId);
+    void loadSelected(const QString &loadId);
     void materialCategorySelected();
     void boundaryConditionCategorySelected();
     void loadCategorySelected();

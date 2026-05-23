@@ -12,6 +12,7 @@ void ProjectModel::clear()
     m_loads.clear();
     m_selectedGeometryName.clear();
     m_selectedMeshName.clear();
+    clearSelectedSolverData();
 }
 
 void ProjectModel::setProject(const Project &project)
@@ -19,6 +20,7 @@ void ProjectModel::setProject(const Project &project)
     m_project = project;
     m_selectedGeometryName.clear();
     m_selectedMeshName.clear();
+    clearSelectedSolverData();
 }
 
 const Project &ProjectModel::project() const
@@ -105,6 +107,7 @@ void ProjectModel::setSelectedGeometryName(const QString &name)
 {
     m_selectedGeometryName = name;
     m_selectedMeshName.clear();
+    clearSelectedSolverData();
 }
 
 const QString &ProjectModel::selectedGeometryName() const
@@ -126,6 +129,7 @@ void ProjectModel::setSelectedMeshName(const QString &name)
 {
     m_selectedMeshName = name;
     m_selectedGeometryName.clear();
+    clearSelectedSolverData();
 }
 
 const QString &ProjectModel::selectedMeshName() const
@@ -141,6 +145,55 @@ void ProjectModel::clearSelectedMesh()
 const MeshObject *ProjectModel::selectedMesh() const
 {
     return findMeshByName(m_selectedMeshName);
+}
+
+void ProjectModel::setSelectedMaterialId(const QString &id)
+{
+    m_selectedMaterialId = id;
+    m_selectedBoundaryConditionId.clear();
+    m_selectedLoadId.clear();
+    m_selectedGeometryName.clear();
+    m_selectedMeshName.clear();
+}
+
+const QString &ProjectModel::selectedMaterialId() const
+{
+    return m_selectedMaterialId;
+}
+
+void ProjectModel::setSelectedBoundaryConditionId(const QString &id)
+{
+    m_selectedBoundaryConditionId = id;
+    m_selectedMaterialId.clear();
+    m_selectedLoadId.clear();
+    m_selectedGeometryName.clear();
+    m_selectedMeshName.clear();
+}
+
+const QString &ProjectModel::selectedBoundaryConditionId() const
+{
+    return m_selectedBoundaryConditionId;
+}
+
+void ProjectModel::setSelectedLoadId(const QString &id)
+{
+    m_selectedLoadId = id;
+    m_selectedMaterialId.clear();
+    m_selectedBoundaryConditionId.clear();
+    m_selectedGeometryName.clear();
+    m_selectedMeshName.clear();
+}
+
+const QString &ProjectModel::selectedLoadId() const
+{
+    return m_selectedLoadId;
+}
+
+void ProjectModel::clearSelectedSolverData()
+{
+    m_selectedMaterialId.clear();
+    m_selectedBoundaryConditionId.clear();
+    m_selectedLoadId.clear();
 }
 
 const GeometryObject *ProjectModel::findGeometryByName(const QString &name) const
@@ -178,6 +231,66 @@ const MeshObject *ProjectModel::findMeshByName(const QString &name) const
     for (const MeshObject &meshObject : m_meshObjects) {
         if (meshObject.name == name) {
             return &meshObject;
+        }
+    }
+    return nullptr;
+}
+
+Material *ProjectModel::findMaterialById(const QString &id)
+{
+    for (Material &material : m_materials) {
+        if (material.id == id) {
+            return &material;
+        }
+    }
+    return nullptr;
+}
+
+const Material *ProjectModel::findMaterialById(const QString &id) const
+{
+    for (const Material &material : m_materials) {
+        if (material.id == id) {
+            return &material;
+        }
+    }
+    return nullptr;
+}
+
+BoundaryCondition *ProjectModel::findBoundaryConditionById(const QString &id)
+{
+    for (BoundaryCondition &boundaryCondition : m_boundaryConditions) {
+        if (boundaryCondition.id == id) {
+            return &boundaryCondition;
+        }
+    }
+    return nullptr;
+}
+
+const BoundaryCondition *ProjectModel::findBoundaryConditionById(const QString &id) const
+{
+    for (const BoundaryCondition &boundaryCondition : m_boundaryConditions) {
+        if (boundaryCondition.id == id) {
+            return &boundaryCondition;
+        }
+    }
+    return nullptr;
+}
+
+Load *ProjectModel::findLoadById(const QString &id)
+{
+    for (Load &load : m_loads) {
+        if (load.id == id) {
+            return &load;
+        }
+    }
+    return nullptr;
+}
+
+const Load *ProjectModel::findLoadById(const QString &id) const
+{
+    for (const Load &load : m_loads) {
+        if (load.id == id) {
+            return &load;
         }
     }
     return nullptr;
