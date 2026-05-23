@@ -5,9 +5,14 @@
 #include "geometry/GeometryObject.h"
 #include "mesh/MeshObject.h"
 #include "project/Project.h"
+#include "solver/BoundaryCondition.h"
+#include "solver/Load.h"
+#include "solver/Material.h"
 
 #include <QString>
 #include <QVector>
+
+#include <vector>
 
 class ProjectModel
 {
@@ -26,6 +31,12 @@ public:
     const QVector<CylinderGeometry> &cylinders() const;
     QVector<MeshObject> &meshObjects();
     const QVector<MeshObject> &meshObjects() const;
+    std::vector<Material> &materials();
+    const std::vector<Material> &materials() const;
+    std::vector<BoundaryCondition> &boundaryConditions();
+    const std::vector<BoundaryCondition> &boundaryConditions() const;
+    std::vector<Load> &loads();
+    const std::vector<Load> &loads() const;
 
     void setSelectedGeometryName(const QString &name);
     const QString &selectedGeometryName() const;
@@ -48,6 +59,9 @@ private:
     QVector<BoxGeometry> m_boxes;
     QVector<CylinderGeometry> m_cylinders;
     QVector<MeshObject> m_meshObjects;
+    std::vector<Material> m_materials;
+    std::vector<BoundaryCondition> m_boundaryConditions;
+    std::vector<Load> m_loads;
     QString m_selectedGeometryName;
     QString m_selectedMeshName;
 };

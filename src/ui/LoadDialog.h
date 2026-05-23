@@ -4,6 +4,8 @@
 
 #include <QDialog>
 
+#include <optional>
+
 class QLineEdit;
 class QComboBox;
 class QDoubleSpinBox;
@@ -18,8 +20,8 @@ public:
     Load load() const;
     void setLoad(const Load &ld);
 
-    static Load createLoad(QWidget *parent);
-    static Load editLoad(QWidget *parent, const Load &existing);
+    static std::optional<Load> createLoad(QWidget *parent);
+    static std::optional<Load> editLoad(QWidget *parent, const Load &existing);
 
 private:
     void setupUi();

@@ -92,17 +92,17 @@ void LoadDialog::setLoad(const Load &ld)
     m_unitEdit->setText(ld.value.unit);
 }
 
-Load LoadDialog::createLoad(QWidget *parent)
+std::optional<Load> LoadDialog::createLoad(QWidget *parent)
 {
     LoadDialog dlg(parent);
     dlg.setWindowTitle("Create Load");
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.load();
     }
-    return {};
+    return std::nullopt;
 }
 
-Load LoadDialog::editLoad(QWidget *parent, const Load &existing)
+std::optional<Load> LoadDialog::editLoad(QWidget *parent, const Load &existing)
 {
     LoadDialog dlg(parent);
     dlg.setWindowTitle("Edit Load");
@@ -110,5 +110,5 @@ Load LoadDialog::editLoad(QWidget *parent, const Load &existing)
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.load();
     }
-    return {};
+    return std::nullopt;
 }

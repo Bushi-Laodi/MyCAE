@@ -75,23 +75,28 @@ BoundaryCondition BoundaryConditionDialog::boundaryCondition() const
 void BoundaryConditionDialog::setBoundaryCondition(const BoundaryCondition &bc)
 {
     m_nameEdit->setText(bc.name);
-    m_typeCombo->setCurrentIndex(static_cast<int>(bc.type));
+    for (int i = 0; i < m_typeCombo->count(); ++i) {
+        if (m_typeCombo->itemData(i).toInt() == static_cast<int>(bc.type)) {
+            m_typeCombo->setCurrentIndex(i);
+            break;
+        }
+    }
     m_geometryNameEdit->setText(bc.target.geometryName);
     m_faceGroupNameEdit->setText(bc.target.faceGroupName);
     m_materialIdEdit->setText(bc.materialId);
 }
 
-BoundaryCondition BoundaryConditionDialog::createBoundaryCondition(QWidget *parent)
+std::optional<BoundaryCondition> BoundaryConditionDialog::createBoundaryCondition(QWidget *parent)
 {
     BoundaryConditionDialog dlg(parent);
     dlg.setWindowTitle("Create Boundary Condition");
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.boundaryCondition();
     }
-    return {};
+    return std::nullopt;
 }
 
-BoundaryCondition BoundaryConditionDialog::editBoundaryCondition(QWidget *parent, const BoundaryCondition &existing)
+std::optional<BoundaryCondition> BoundaryConditionDialog::editBoundaryCondition(QWidget *parent, const BoundaryCondition &existing)
 {
     BoundaryConditionDialog dlg(parent);
     dlg.setWindowTitle("Edit Boundary Condition");
@@ -99,5 +104,5 @@ BoundaryCondition BoundaryConditionDialog::editBoundaryCondition(QWidget *parent
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.boundaryCondition();
     }
-    return {};
+    return std::nullopt;
 }

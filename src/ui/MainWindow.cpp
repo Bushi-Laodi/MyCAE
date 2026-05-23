@@ -15,7 +15,7 @@
 #include "PropertyPanel.h"
 #include "project/ProjectModelLoader.h"
 #include "RenderView.h"
-#include "solver/PipeCaseExample.h"
+#include "solver/SimulationCaseBuilder.h"
 
 #include <vtkUnstructuredGrid.h>
 
@@ -33,6 +33,8 @@
 #include <QStringList>
 #include <QToolBar>
 
+#include <optional>
+
 namespace
 {
 QString makeSafeFileBaseName(const QString &name)
@@ -46,6 +48,36 @@ QString makeSafeFileBaseName(const QString &name)
         }
     }
     return result.isEmpty() ? QString("geometry") : result;
+}
+
+bool hasMaterialId(const std::vector<Material> &materials, const QString &id)
+{
+    for (const Material &material : materials) {
+        if (material.id == id) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool hasBoundaryConditionId(const std::vector<BoundaryCondition> &boundaryConditions, const QString &id)
+{
+    for (const BoundaryCondition &boundaryCondition : boundaryConditions) {
+        if (boundaryCondition.id == id) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool hasLoadId(const std::vector<Load> &loads, const QString &id)
+{
+    for (const Load &load : loads) {
+        if (load.id == id) {
+            return true;
+        }
+    }
+    return false;
 }
 }
 
@@ -511,7 +543,7 @@ void MainWindow::runSolverPlugin(const QString &pluginId)
         return;
     }
 
-    const SimulationCase simulationCase = createPipeSimulationCaseExample();
+    const SimulationCase simulationCase = SimulationCaseBuilder::fromProjectModel(m_projectModel);
     const QString caseDirectory = QDir(m_projectModel.project().rootPath).filePath("solver/" + pluginId);
 
     const SolverPlugin *plugin = m_solverPluginManager.pluginById(pluginId);
@@ -523,6 +555,10 @@ void MainWindow::runSolverPlugin(const QString &pluginId)
     QString errorMessage;
     writeLog("Solver plugin: " + plugin->name());
     writeLog("Solver case directory: " + caseDirectory);
+    writeLog(QString("Solver case data: %1 materials, %2 boundary conditions, %3 loads.")
+        .arg(simulationCase.materials.size())
+        .arg(simulationCase.boundaryConditions.size())
+        .arg(simulationCase.loads.size()));
 
     if (!plugin->exportCase(simulationCase, caseDirectory, &errorMessage)) {
         writeLog("Solver export failed: " + errorMessage);
@@ -734,31 +770,31 @@ void MainWindow::writeLog(const QString &message)
 void MainWindow::onMaterialCategorySelected()
 {
     if (m_propertyPanel) {
-        m_propertyPanel->showMaterialCategory(m_materials);
+        m_propertyPanel->showMaterialCategory(m_projectModel.materials());
     }
-    writeLog(QString("Materials: %1 defined.").arg(m_materials.size()));
+    writeLog(QString("Materials: %1 defined.").arg(m_projectModel.materials().size()));
 }
 
 void MainWindow::onBoundaryConditionCategorySelected()
 {
     if (m_propertyPanel) {
-        m_propertyPanel->showBoundaryConditionCategory(m_boundaryConditions);
+        m_propertyPanel->showBoundaryConditionCategory(m_projectModel.boundaryConditions());
     }
-    writeLog(QString("Boundary conditions: %1 defined.").arg(m_boundaryConditions.size()));
+    writeLog(QString("Boundary conditions: %1 defined.").arg(m_projectModel.boundaryConditions().size()));
 }
 
 void MainWindow::onLoadCategorySelected()
 {
     if (m_propertyPanel) {
-        m_propertyPanel->showLoadCategory(m_loads);
+        m_propertyPanel->showLoadCategory(m_projectModel.loads());
     }
-    writeLog(QString("Loads: %1 defined.").arg(m_loads.size()));
+    writeLog(QString("Loads: %1 defined.").arg(m_projectModel.loads().size()));
 }
 
 void MainWindow::onSolverCategorySelected()
 {
     if (m_propertyPanel) {
-        m_propertyPanel->showSolverCategory();
+        m_propertyPanel->showSolverCategory(SimulationCaseBuilder::fromProjectModel(m_projectModel));
     }
     writeLog("Solver settings displayed.");
 }
@@ -770,14 +806,18 @@ void MainWindow::createMaterial()
         return;
     }
 
-    const Material newMaterial = MaterialDialog::createMaterial(this);
-    if (newMaterial.id.isEmpty()) {
+    const std::optional<Material> newMaterial = MaterialDialog::createMaterial(this);
+    if (!newMaterial) {
         writeLog("Create material canceled.");
         return;
     }
+    if (hasMaterialId(m_projectModel.materials(), newMaterial->id)) {
+        writeLog("Create material failed: duplicated material ID: " + newMaterial->id);
+        return;
+    }
 
-    m_materials.push_back(newMaterial);
-    writeLog(QString("Material created: %1 (ID: %2)").arg(newMaterial.name, newMaterial.id));
+    m_projectModel.materials().push_back(*newMaterial);
+    writeLog(QString("Material created: %1 (ID: %2)").arg(newMaterial->name, newMaterial->id));
     onMaterialCategorySelected();
 }
 
@@ -788,15 +828,19 @@ void MainWindow::createBoundaryCondition()
         return;
     }
 
-    const BoundaryCondition newBC = BoundaryConditionDialog::createBoundaryCondition(this);
-    if (newBC.id.isEmpty()) {
+    const std::optional<BoundaryCondition> newBC = BoundaryConditionDialog::createBoundaryCondition(this);
+    if (!newBC) {
         writeLog("Create boundary condition canceled.");
         return;
     }
+    if (hasBoundaryConditionId(m_projectModel.boundaryConditions(), newBC->id)) {
+        writeLog("Create boundary condition failed: duplicated boundary condition ID: " + newBC->id);
+        return;
+    }
 
-    m_boundaryConditions.push_back(newBC);
+    m_projectModel.boundaryConditions().push_back(*newBC);
     writeLog(QString("Boundary condition created: %1 (Type: %2)")
-        .arg(newBC.name, toString(newBC.type)));
+        .arg(newBC->name, toString(newBC->type)));
     onBoundaryConditionCategorySelected();
 }
 
@@ -807,13 +851,17 @@ void MainWindow::createLoad()
         return;
     }
 
-    const Load newLoad = LoadDialog::createLoad(this);
-    if (newLoad.id.isEmpty()) {
+    const std::optional<Load> newLoad = LoadDialog::createLoad(this);
+    if (!newLoad) {
         writeLog("Create load canceled.");
         return;
     }
+    if (hasLoadId(m_projectModel.loads(), newLoad->id)) {
+        writeLog("Create load failed: duplicated load ID: " + newLoad->id);
+        return;
+    }
 
-    m_loads.push_back(newLoad);
-    writeLog(QString("Load created: %1 (Value: %2)").arg(newLoad.name).arg(newLoad.value.x));
+    m_projectModel.loads().push_back(*newLoad);
+    writeLog(QString("Load created: %1 (Value: %2)").arg(newLoad->name).arg(newLoad->value.x));
     onLoadCategorySelected();
 }

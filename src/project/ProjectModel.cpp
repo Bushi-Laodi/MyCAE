@@ -7,6 +7,9 @@ void ProjectModel::clear()
     m_boxes.clear();
     m_cylinders.clear();
     m_meshObjects.clear();
+    m_materials.clear();
+    m_boundaryConditions.clear();
+    m_loads.clear();
     m_selectedGeometryName.clear();
     m_selectedMeshName.clear();
 }
@@ -66,6 +69,36 @@ QVector<MeshObject> &ProjectModel::meshObjects()
 const QVector<MeshObject> &ProjectModel::meshObjects() const
 {
     return m_meshObjects;
+}
+
+std::vector<Material> &ProjectModel::materials()
+{
+    return m_materials;
+}
+
+const std::vector<Material> &ProjectModel::materials() const
+{
+    return m_materials;
+}
+
+std::vector<BoundaryCondition> &ProjectModel::boundaryConditions()
+{
+    return m_boundaryConditions;
+}
+
+const std::vector<BoundaryCondition> &ProjectModel::boundaryConditions() const
+{
+    return m_boundaryConditions;
+}
+
+std::vector<Load> &ProjectModel::loads()
+{
+    return m_loads;
+}
+
+const std::vector<Load> &ProjectModel::loads() const
+{
+    return m_loads;
 }
 
 void ProjectModel::setSelectedGeometryName(const QString &name)

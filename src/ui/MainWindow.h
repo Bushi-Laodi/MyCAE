@@ -7,13 +7,8 @@
 #include "project/ProjectModel.h"
 #include "project/ProjectManager.h"
 #include "solver/plugin/SolverPluginManager.h"
-#include "solver/BoundaryCondition.h"
-#include "solver/Load.h"
-#include "solver/Material.h"
 
 #include <QMainWindow>
-
-#include <vector>
 
 class QAction;
 class QString;
@@ -96,9 +91,4 @@ private:
     GeometryManager m_geometryManager;
     ProjectModel m_projectModel;
     SolverPluginManager m_solverPluginManager;
-
-    // Solver data storage (temporary, will be replaced by SimulationCase serialization)
-    std::vector<Material> m_materials;
-    std::vector<BoundaryCondition> m_boundaryConditions;
-    std::vector<Load> m_loads;
 };

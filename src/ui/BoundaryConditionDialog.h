@@ -4,6 +4,8 @@
 
 #include <QDialog>
 
+#include <optional>
+
 class QLineEdit;
 class QComboBox;
 
@@ -17,8 +19,8 @@ public:
     BoundaryCondition boundaryCondition() const;
     void setBoundaryCondition(const BoundaryCondition &bc);
 
-    static BoundaryCondition createBoundaryCondition(QWidget *parent);
-    static BoundaryCondition editBoundaryCondition(QWidget *parent, const BoundaryCondition &existing);
+    static std::optional<BoundaryCondition> createBoundaryCondition(QWidget *parent);
+    static std::optional<BoundaryCondition> editBoundaryCondition(QWidget *parent, const BoundaryCondition &existing);
 
 private:
     void setupUi();

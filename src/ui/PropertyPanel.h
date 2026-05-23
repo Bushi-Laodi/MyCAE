@@ -3,12 +3,14 @@
 #include "solver/BoundaryCondition.h"
 #include "solver/Load.h"
 #include "solver/Material.h"
+#include "solver/SimulationCase.h"
 
 #include <QWidget>
 
 #include <vector>
 
 class QLabel;
+class QVBoxLayout;
 struct BoxGeometry;
 struct CylinderGeometry;
 struct MeshObject;
@@ -26,12 +28,13 @@ public:
     void showMaterialCategory(const std::vector<Material> &materials);
     void showBoundaryConditionCategory(const std::vector<BoundaryCondition> &boundaryConditions);
     void showLoadCategory(const std::vector<Load> &loads);
-    void showSolverCategory();
+    void showSolverCategory(const SimulationCase &simulationCase);
 
 private:
     void clearAll();
-    void addLabelRow(const QString &label, const QString &value);
+    QWidget *resetDynamicArea();
 
+    QVBoxLayout *m_mainLayout = nullptr;
     QLabel *m_selectionValue = nullptr;
     QLabel *m_typeValue = nullptr;
     QLabel *m_nameValue = nullptr;

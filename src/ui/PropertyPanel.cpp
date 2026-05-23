@@ -12,7 +12,7 @@
 PropertyPanel::PropertyPanel(QWidget *parent)
     : QWidget(parent)
 {
-    auto *mainLayout = new QVBoxLayout(this);
+    m_mainLayout = new QVBoxLayout(this);
 
     auto *form = new QFormLayout;
     m_selectionValue = new QLabel("None", this);
@@ -45,12 +45,12 @@ PropertyPanel::PropertyPanel(QWidget *parent)
     form->addRow("Tetra Count", m_tetraCountValue);
     form->addRow("Created At", m_createdAtValue);
 
-    mainLayout->addLayout(form);
+    m_mainLayout->addLayout(form);
 
     // Dynamic area for solver data (materials, BCs, loads)
     m_dynamicArea = new QWidget(this);
-    mainLayout->addWidget(m_dynamicArea);
-    mainLayout->addStretch();
+    m_mainLayout->addWidget(m_dynamicArea);
+    m_mainLayout->addStretch();
 }
 
 void PropertyPanel::clearAll()
@@ -71,20 +71,22 @@ void PropertyPanel::clearAll()
     m_createdAtValue->setText("-");
 }
 
-void PropertyPanel::addLabelRow(const QString &label, const QString &value)
+QWidget *PropertyPanel::resetDynamicArea()
 {
-    // Used by dynamic content - labels are added directly in show* methods
-    Q_UNUSED(label);
-    Q_UNUSED(value);
+    if (m_dynamicArea) {
+        m_mainLayout->removeWidget(m_dynamicArea);
+        m_dynamicArea->deleteLater();
+    }
+
+    m_dynamicArea = new QWidget(this);
+    m_mainLayout->insertWidget(1, m_dynamicArea);
+    return m_dynamicArea;
 }
 
 void PropertyPanel::showEmptySelection()
 {
     clearAll();
-    // Clear dynamic area
-    delete m_dynamicArea;
-    m_dynamicArea = new QWidget(this);
-    static_cast<QVBoxLayout *>(layout())->insertWidget(1, m_dynamicArea);
+    resetDynamicArea();
 }
 
 void PropertyPanel::showBoxGeometry(const BoxGeometry &box)
@@ -105,10 +107,7 @@ void PropertyPanel::showBoxGeometry(const BoxGeometry &box)
     m_tetraCountValue->setText("-");
     m_createdAtValue->setText("-");
 
-    // Clear dynamic area
-    delete m_dynamicArea;
-    m_dynamicArea = new QWidget(this);
-    static_cast<QVBoxLayout *>(layout())->insertWidget(1, m_dynamicArea);
+    resetDynamicArea();
 }
 
 void PropertyPanel::showCylinderGeometry(const CylinderGeometry &cylinder)
@@ -129,10 +128,7 @@ void PropertyPanel::showCylinderGeometry(const CylinderGeometry &cylinder)
     m_tetraCountValue->setText("-");
     m_createdAtValue->setText("-");
 
-    // Clear dynamic area
-    delete m_dynamicArea;
-    m_dynamicArea = new QWidget(this);
-    static_cast<QVBoxLayout *>(layout())->insertWidget(1, m_dynamicArea);
+    resetDynamicArea();
 }
 
 void PropertyPanel::showMeshObject(const MeshObject &meshObject)
@@ -152,10 +148,7 @@ void PropertyPanel::showMeshObject(const MeshObject &meshObject)
     m_tetraCountValue->setText(QString::number(meshObject.tetraCount));
     m_createdAtValue->setText(meshObject.createdAt);
 
-    // Clear dynamic area
-    delete m_dynamicArea;
-    m_dynamicArea = new QWidget(this);
-    static_cast<QVBoxLayout *>(layout())->insertWidget(1, m_dynamicArea);
+    resetDynamicArea();
 }
 
 void PropertyPanel::showMaterialCategory(const std::vector<Material> &materials)
@@ -163,8 +156,7 @@ void PropertyPanel::showMaterialCategory(const std::vector<Material> &materials)
     clearAll();
     m_selectionValue->setText("Materials");
 
-    delete m_dynamicArea;
-    m_dynamicArea = new QWidget(this);
+    resetDynamicArea();
     auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
 
     if (materials.empty()) {
@@ -197,8 +189,6 @@ void PropertyPanel::showMaterialCategory(const std::vector<Material> &materials)
             dynamicLayout->addLayout(form);
         }
     }
-
-    static_cast<QVBoxLayout *>(layout())->insertWidget(1, m_dynamicArea);
 }
 
 void PropertyPanel::showBoundaryConditionCategory(const std::vector<BoundaryCondition> &boundaryConditions)
@@ -206,8 +196,7 @@ void PropertyPanel::showBoundaryConditionCategory(const std::vector<BoundaryCond
     clearAll();
     m_selectionValue->setText("Boundary Conditions");
 
-    delete m_dynamicArea;
-    m_dynamicArea = new QWidget(this);
+    resetDynamicArea();
     auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
 
     if (boundaryConditions.empty()) {
@@ -230,8 +219,6 @@ void PropertyPanel::showBoundaryConditionCategory(const std::vector<BoundaryCond
             dynamicLayout->addLayout(form);
         }
     }
-
-    static_cast<QVBoxLayout *>(layout())->insertWidget(1, m_dynamicArea);
 }
 
 void PropertyPanel::showLoadCategory(const std::vector<Load> &loads)
@@ -239,8 +226,7 @@ void PropertyPanel::showLoadCategory(const std::vector<Load> &loads)
     clearAll();
     m_selectionValue->setText("Loads");
 
-    delete m_dynamicArea;
-    m_dynamicArea = new QWidget(this);
+    resetDynamicArea();
     auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
 
     if (loads.empty()) {
@@ -268,28 +254,31 @@ void PropertyPanel::showLoadCategory(const std::vector<Load> &loads)
             dynamicLayout->addLayout(form);
         }
     }
-
-    static_cast<QVBoxLayout *>(layout())->insertWidget(1, m_dynamicArea);
 }
 
-void PropertyPanel::showSolverCategory()
+void PropertyPanel::showSolverCategory(const SimulationCase &simulationCase)
 {
     clearAll();
-    m_selectionValue->setText("Solver Settings");
+    m_selectionValue->setText(simulationCase.name);
 
-    delete m_dynamicArea;
-    m_dynamicArea = new QWidget(this);
+    resetDynamicArea();
     auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
 
     auto *form = new QFormLayout;
-    form->addRow("Solver Type:", new QLabel("SIMPLE", m_dynamicArea));
-    form->addRow("Turbulence Model:", new QLabel("k-Omega SST", m_dynamicArea));
-    form->addRow("End Time:", new QLabel("400", m_dynamicArea));
-    form->addRow("Post Processing:", new QLabel("ParaView", m_dynamicArea));
+    form->addRow("Case ID:", new QLabel(simulationCase.id, m_dynamicArea));
+    form->addRow("Source Geometry:", new QLabel(simulationCase.sourceGeometryName, m_dynamicArea));
+    form->addRow("Mesh:", new QLabel(simulationCase.meshName, m_dynamicArea));
+    form->addRow("Solver Type:", new QLabel(toString(simulationCase.solverType), m_dynamicArea));
+    form->addRow("Turbulence Model:", new QLabel(toString(simulationCase.turbulenceModel), m_dynamicArea));
+    form->addRow("End Time:", new QLabel(QString::number(simulationCase.runControl.endTime), m_dynamicArea));
+    form->addRow("Time Step:", new QLabel(QString::number(simulationCase.runControl.timeStep), m_dynamicArea));
+    form->addRow("Write Interval:", new QLabel(QString::number(simulationCase.runControl.writeInterval), m_dynamicArea));
+    form->addRow("Post Processing:", new QLabel(simulationCase.postProcessingTool, m_dynamicArea));
+    form->addRow("Materials:", new QLabel(QString::number(simulationCase.materials.size()), m_dynamicArea));
+    form->addRow("Boundary Conditions:", new QLabel(QString::number(simulationCase.boundaryConditions.size()), m_dynamicArea));
+    form->addRow("Loads:", new QLabel(QString::number(simulationCase.loads.size()), m_dynamicArea));
     dynamicLayout->addLayout(form);
 
     dynamicLayout->addWidget(new QLabel(
-        "<i>Solver export is reserved for a later stage.</i>", m_dynamicArea));
-
-    static_cast<QVBoxLayout *>(layout())->insertWidget(1, m_dynamicArea);
+        "<i>Simulation export uses the current project model.</i>", m_dynamicArea));
 }

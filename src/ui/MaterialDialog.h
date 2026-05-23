@@ -4,6 +4,8 @@
 
 #include <QDialog>
 
+#include <optional>
+
 class QLineEdit;
 class QComboBox;
 class QCheckBox;
@@ -19,8 +21,8 @@ public:
     Material material() const;
     void setMaterial(const Material &mat);
 
-    static Material createMaterial(QWidget *parent);
-    static Material editMaterial(QWidget *parent, const Material &existing);
+    static std::optional<Material> createMaterial(QWidget *parent);
+    static std::optional<Material> editMaterial(QWidget *parent, const Material &existing);
 
 private:
     void setupUi();

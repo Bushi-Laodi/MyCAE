@@ -115,8 +115,18 @@ Material MaterialDialog::material() const
 void MaterialDialog::setMaterial(const Material &mat)
 {
     m_nameEdit->setText(mat.name);
-    m_domainCombo->setCurrentIndex(static_cast<int>(mat.domain));
-    m_viscosityCombo->setCurrentIndex(static_cast<int>(mat.viscosityModel));
+    for (int i = 0; i < m_domainCombo->count(); ++i) {
+        if (m_domainCombo->itemData(i).toInt() == static_cast<int>(mat.domain)) {
+            m_domainCombo->setCurrentIndex(i);
+            break;
+        }
+    }
+    for (int i = 0; i < m_viscosityCombo->count(); ++i) {
+        if (m_viscosityCombo->itemData(i).toInt() == static_cast<int>(mat.viscosityModel)) {
+            m_viscosityCombo->setCurrentIndex(i);
+            break;
+        }
+    }
 
     m_hasDensityCheck->setChecked(mat.hasDensity);
     m_densitySpin->setValue(mat.density);
@@ -128,17 +138,17 @@ void MaterialDialog::setMaterial(const Material &mat)
     m_kinematicViscositySpin->setValue(mat.kinematicViscosity);
 }
 
-Material MaterialDialog::createMaterial(QWidget *parent)
+std::optional<Material> MaterialDialog::createMaterial(QWidget *parent)
 {
     MaterialDialog dlg(parent);
     dlg.setWindowTitle("Create Material");
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.material();
     }
-    return {};
+    return std::nullopt;
 }
 
-Material MaterialDialog::editMaterial(QWidget *parent, const Material &existing)
+std::optional<Material> MaterialDialog::editMaterial(QWidget *parent, const Material &existing)
 {
     MaterialDialog dlg(parent);
     dlg.setWindowTitle("Edit Material");
@@ -146,5 +156,5 @@ Material MaterialDialog::editMaterial(QWidget *parent, const Material &existing)
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.material();
     }
-    return {};
+    return std::nullopt;
 }
