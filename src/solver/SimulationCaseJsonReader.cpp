@@ -144,7 +144,7 @@ FaceGroup faceGroupFromJson(const QJsonObject &object)
     faceGroup.geometryName = stringValue(object, "geometryName");
     faceGroup.role = stringValue(object, "role");
     if (faceGroup.id.isEmpty() && !faceGroup.geometryName.isEmpty() && !faceGroup.name.isEmpty()) {
-        faceGroup.id = faceGroup.geometryName + "." + faceGroup.name;
+        faceGroup.id = FaceGroups::makeId(faceGroup.geometryName, faceGroup.name);
     }
     return faceGroup;
 }

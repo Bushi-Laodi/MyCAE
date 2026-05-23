@@ -243,10 +243,7 @@ void MainWindow::newProject()
     }
 
     setCurrentProject(project);
-    refreshGeometryTree();
-    refreshFaceGroupTree();
-    refreshMeshTree();
-    refreshSolverDataTree();
+    refreshProjectTree();
     saveProjectSimulationCase();
     writeLog("Project created: " + project.rootPath);
 }
@@ -277,8 +274,7 @@ void MainWindow::openProject()
     loadProjectGeometries();
     loadProjectMeshes();
     loadProjectSimulationCase();
-    refreshFaceGroupTree();
-    refreshSolverDataTree();
+    refreshProjectTree();
     writeLog("Project opened: " + project.rootPath);
 }
 
@@ -301,7 +297,7 @@ void MainWindow::createGeometry(GeometryCreateType type)
 
     const QString createdGeometryName = result.geometryObject.name;
     loadProjectGeometries();
-    refreshFaceGroupTree();
+    refreshProjectTree();
     if (!selectGeometryByName(createdGeometryName)) {
         writeLog("Created geometry was saved but could not be selected: " + createdGeometryName);
     }
@@ -412,8 +408,6 @@ void MainWindow::loadProjectGeometries()
         return;
     }
 
-    refreshGeometryTree();
-    refreshFaceGroupTree();
     if (m_propertyPanel) {
         m_propertyPanel->showEmptySelection();
     }
@@ -433,7 +427,6 @@ void MainWindow::loadProjectMeshes()
         return;
     }
 
-    refreshMeshTree();
     writeLog(QString("Loaded %1 mesh objects.").arg(m_projectModel.meshObjects().size()));
 }
 
@@ -451,7 +444,6 @@ void MainWindow::loadProjectSimulationCase()
         .arg(m_projectModel.materials().size())
         .arg(m_projectModel.boundaryConditions().size())
         .arg(m_projectModel.loads().size()));
-    refreshFaceGroupTree();
 }
 
 bool MainWindow::saveProjectSimulationCase()
@@ -465,6 +457,14 @@ bool MainWindow::saveProjectSimulationCase()
 
     writeLog("Simulation case saved: " + SimulationCaseManager::relativeCaseFilePath());
     return true;
+}
+
+void MainWindow::refreshProjectTree()
+{
+    refreshGeometryTree();
+    refreshFaceGroupTree();
+    refreshMeshTree();
+    refreshSolverDataTree();
 }
 
 void MainWindow::refreshGeometryTree()

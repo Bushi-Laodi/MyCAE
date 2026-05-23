@@ -152,8 +152,6 @@ qt_add_executable(MyCAE
     src/solver/BoundaryCondition.h
     src/solver/Load.h
     src/solver/Material.h
-    src/solver/PipeCaseExample.h
-    src/solver/SimulationCase.cpp
     src/solver/SimulationCase.h
     src/solver/SimulationCaseBuilder.cpp
     src/solver/SimulationCaseBuilder.h

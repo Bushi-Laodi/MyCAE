@@ -117,10 +117,10 @@ const std::vector<FaceGroup> &ProjectModel::faceGroups() const
 void ProjectModel::ensureDefaultFaceGroups()
 {
     for (const GeometryObject &geometry : m_geometryObjects) {
-        const QString defaultId = geometry.name + ".Default";
+        const FaceGroup defaultFaceGroup = FaceGroups::makeDefault(geometry.name);
         bool exists = false;
         for (const FaceGroup &faceGroup : m_faceGroups) {
-            if (faceGroup.id == defaultId) {
+            if (faceGroup.id == defaultFaceGroup.id) {
                 exists = true;
                 break;
             }
@@ -129,12 +129,7 @@ void ProjectModel::ensureDefaultFaceGroups()
             continue;
         }
 
-        FaceGroup faceGroup;
-        faceGroup.id = defaultId;
-        faceGroup.name = "Default";
-        faceGroup.geometryName = geometry.name;
-        faceGroup.role = "Default";
-        m_faceGroups.push_back(faceGroup);
+        m_faceGroups.push_back(defaultFaceGroup);
     }
 }
 

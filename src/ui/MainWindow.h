@@ -53,6 +53,7 @@ private:
     void loadProjectMeshes();
     void loadProjectSimulationCase();
     bool saveProjectSimulationCase();
+    void refreshProjectTree();
     void refreshGeometryTree();
     void refreshMeshTree();
     void refreshFaceGroupTree();

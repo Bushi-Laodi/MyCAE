@@ -109,8 +109,7 @@ void ProjectTreePanel::setFaceGroupItems(const std::vector<FaceGroup> &faceGroup
 
     clearChildren(m_faceGroupRoot);
     for (const FaceGroup &faceGroup : faceGroups) {
-        const QString label = faceGroup.geometryName + "." + faceGroup.name;
-        auto *item = new QTreeWidgetItem(QStringList{label});
+        auto *item = new QTreeWidgetItem(QStringList{FaceGroups::displayName(faceGroup)});
         item->setData(0, ItemTypeRole, FaceGroupItemType);
         item->setData(0, FaceGroupIdRole, faceGroup.id);
         item->setToolTip(0, faceGroup.id);

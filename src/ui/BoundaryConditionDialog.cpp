@@ -1,5 +1,7 @@
 #include "BoundaryConditionDialog.h"
 
+#include "geometry/FaceGroup.h"
+
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFormLayout>
@@ -8,14 +10,6 @@
 #include <QVBoxLayout>
 
 #include <utility>
-
-namespace
-{
-QString defaultFaceGroupName()
-{
-    return "Default";
-}
-}
 
 BoundaryConditionDialog::BoundaryConditionDialog(
     BoundaryConditionDialogOptions options,
@@ -32,9 +26,7 @@ void BoundaryConditionDialog::setupUi()
 {
     for (auto it = m_options.faceGroupsByGeometry.cbegin(); it != m_options.faceGroupsByGeometry.cend(); ++it) {
         for (const QString &faceGroupId : it.value()) {
-            const int separatorIndex = faceGroupId.lastIndexOf('.');
-            const QString name = separatorIndex >= 0 ? faceGroupId.mid(separatorIndex + 1) : faceGroupId;
-            m_faceGroupNamesById.insert(faceGroupId, name);
+            m_faceGroupNamesById.insert(faceGroupId, FaceGroups::nameFromId(faceGroupId));
         }
     }
 
@@ -139,13 +131,9 @@ void BoundaryConditionDialog::setBoundaryCondition(const BoundaryCondition &bc)
 void BoundaryConditionDialog::updateFaceGroupItems(const QString &geometryName)
 {
     const QString currentText = m_faceGroupNameCombo->currentText();
-    const QStringList faceGroups = m_options.faceGroupsByGeometry.value(geometryName);
-    QStringList faceGroupLabels;
-    for (const QString &faceGroupId : faceGroups) {
-        faceGroupLabels.append(faceGroupId);
-    }
+    QStringList faceGroupLabels = m_options.faceGroupsByGeometry.value(geometryName);
     if (faceGroupLabels.isEmpty()) {
-        faceGroupLabels.append(defaultFaceGroupName());
+        faceGroupLabels.append(FaceGroups::defaultName());
     }
 
     m_faceGroupNameCombo->blockSignals(true);
@@ -166,7 +154,7 @@ QString BoundaryConditionDialog::selectedFaceGroupId() const
     if (text.contains('.')) {
         return text;
     }
-    return m_geometryNameCombo->currentText().trimmed() + "." + text;
+    return FaceGroups::makeId(m_geometryNameCombo->currentText(), text);
 }
 
 void BoundaryConditionDialog::setComboCurrentText(QComboBox *combo, const QString &text)
