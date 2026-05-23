@@ -13,6 +13,7 @@ class QLabel;
 class QVBoxLayout;
 struct BoxGeometry;
 struct CylinderGeometry;
+struct FaceGroup;
 struct MeshObject;
 
 class PropertyPanel final : public QWidget
@@ -24,6 +25,7 @@ public:
     void showBoxGeometry(const BoxGeometry &box);
     void showCylinderGeometry(const CylinderGeometry &cylinder);
     void showMeshObject(const MeshObject &meshObject);
+    void showFaceGroup(const FaceGroup &faceGroup);
 
     void showMaterialCategory(const std::vector<Material> &materials);
     void showBoundaryConditionCategory(const std::vector<BoundaryCondition> &boundaryConditions);

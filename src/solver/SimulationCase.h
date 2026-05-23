@@ -1,5 +1,6 @@
 #pragma once
 
+#include "geometry/FaceGroup.h"
 #include "solver/BoundaryCondition.h"
 #include "solver/Load.h"
 #include "solver/Material.h"
@@ -55,17 +56,11 @@ struct BooleanOperationDefinition
     QString resultGeometryName;
 };
 
-struct FaceGroupDefinition
-{
-    QString name;
-    QString role;
-};
-
 struct GeometrySetup
 {
     std::vector<CylinderDefinition> cylinders;
     BooleanOperationDefinition booleanOperation;
-    std::vector<FaceGroupDefinition> faceGroups;
+    std::vector<FaceGroup> faceGroups;
 };
 
 struct MeshSetup

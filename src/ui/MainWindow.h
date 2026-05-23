@@ -55,10 +55,12 @@ private:
     bool saveProjectSimulationCase();
     void refreshGeometryTree();
     void refreshMeshTree();
+    void refreshFaceGroupTree();
     void refreshSolverDataTree();
     bool selectGeometryByName(const QString &geometryName);
     void showGeometryProperties(const QString &geometryName);
     void showMeshObject(const QString &meshName);
+    void showFaceGroup(const QString &faceGroupId);
     void showMaterial(const QString &materialId);
     void showBoundaryCondition(const QString &boundaryConditionId);
     void showLoad(const QString &loadId);

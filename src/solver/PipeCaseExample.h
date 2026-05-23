@@ -29,9 +29,10 @@ inline SimulationCase createPipeSimulationCaseExample()
     simulationCase.geometrySetup.booleanOperation.type = BooleanOperationType::Union;
     simulationCase.geometrySetup.booleanOperation.inputGeometryIds = {"cylinder_1", "cylinder_2"};
     simulationCase.geometrySetup.booleanOperation.resultGeometryName = "Pipe";
-    simulationCase.geometrySetup.faceGroups.push_back(FaceGroupDefinition{"Inlet1", "inlet"});
-    simulationCase.geometrySetup.faceGroups.push_back(FaceGroupDefinition{"Inlet2", "inlet"});
-    simulationCase.geometrySetup.faceGroups.push_back(FaceGroupDefinition{"Outlet", "outlet"});
+    simulationCase.geometrySetup.faceGroups.push_back(FaceGroup{"pipe.Default", "Default", "Pipe", "wall"});
+    simulationCase.geometrySetup.faceGroups.push_back(FaceGroup{"pipe.Inlet1", "Inlet1", "Pipe", "inlet"});
+    simulationCase.geometrySetup.faceGroups.push_back(FaceGroup{"pipe.Inlet2", "Inlet2", "Pipe", "inlet"});
+    simulationCase.geometrySetup.faceGroups.push_back(FaceGroup{"pipe.Outlet", "Outlet", "Pipe", "outlet"});
     simulationCase.meshSetup.minimumSize = 0.0;
     simulationCase.meshSetup.maximumSize = 1.0;
     simulationCase.meshSetup.autoSize = true;
@@ -56,6 +57,7 @@ inline SimulationCase createPipeSimulationCaseExample()
     defaultWall.name = "pipe.Default";
     defaultWall.type = BoundaryConditionType::Wall;
     defaultWall.target.geometryName = "Pipe";
+    defaultWall.target.faceGroupId = "pipe.Default";
     defaultWall.target.faceGroupName = "Default";
     defaultWall.materialId = waterLikeFluid.id;
     simulationCase.boundaryConditions.push_back(defaultWall);
@@ -65,6 +67,7 @@ inline SimulationCase createPipeSimulationCaseExample()
     inlet1.name = "pipe.Inlet1";
     inlet1.type = BoundaryConditionType::VelocityInlet;
     inlet1.target.geometryName = "Pipe";
+    inlet1.target.faceGroupId = "pipe.Inlet1";
     inlet1.target.faceGroupName = "Inlet1";
     inlet1.materialId = waterLikeFluid.id;
     simulationCase.boundaryConditions.push_back(inlet1);
@@ -74,6 +77,7 @@ inline SimulationCase createPipeSimulationCaseExample()
     inlet2.name = "pipe.Inlet2";
     inlet2.type = BoundaryConditionType::PressureInlet;
     inlet2.target.geometryName = "Pipe";
+    inlet2.target.faceGroupId = "pipe.Inlet2";
     inlet2.target.faceGroupName = "Inlet2";
     inlet2.materialId = waterLikeFluid.id;
     simulationCase.boundaryConditions.push_back(inlet2);
@@ -83,6 +87,7 @@ inline SimulationCase createPipeSimulationCaseExample()
     outlet.name = "pipe.Outlet";
     outlet.type = BoundaryConditionType::PressureOutlet;
     outlet.target.geometryName = "Pipe";
+    outlet.target.faceGroupId = "pipe.Outlet";
     outlet.target.faceGroupName = "Outlet";
     outlet.materialId = waterLikeFluid.id;
     simulationCase.boundaryConditions.push_back(outlet);

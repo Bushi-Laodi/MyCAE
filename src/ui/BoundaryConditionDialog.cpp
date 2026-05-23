@@ -7,6 +7,8 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
+#include <utility>
+
 namespace
 {
 QString defaultFaceGroupName()
@@ -28,6 +30,14 @@ BoundaryConditionDialog::BoundaryConditionDialog(
 
 void BoundaryConditionDialog::setupUi()
 {
+    for (auto it = m_options.faceGroupsByGeometry.cbegin(); it != m_options.faceGroupsByGeometry.cend(); ++it) {
+        for (const QString &faceGroupId : it.value()) {
+            const int separatorIndex = faceGroupId.lastIndexOf('.');
+            const QString name = separatorIndex >= 0 ? faceGroupId.mid(separatorIndex + 1) : faceGroupId;
+            m_faceGroupNamesById.insert(faceGroupId, name);
+        }
+    }
+
     auto *mainLayout = new QVBoxLayout(this);
 
     auto *form = new QFormLayout;
@@ -99,7 +109,11 @@ BoundaryCondition BoundaryConditionDialog::boundaryCondition() const
     bc.name = m_nameEdit->text().trimmed();
     bc.type = static_cast<BoundaryConditionType>(m_typeCombo->currentData().toInt());
     bc.target.geometryName = m_geometryNameCombo->currentText().trimmed();
-    bc.target.faceGroupName = m_faceGroupNameCombo->currentText().trimmed();
+    bc.target.faceGroupId = selectedFaceGroupId();
+    bc.target.faceGroupName = m_faceGroupNamesById.value(
+        bc.target.faceGroupId,
+        m_faceGroupNameCombo->currentText().trimmed()
+    );
     bc.materialId = m_materialIdCombo->currentText().trimmed();
     return bc;
 }
@@ -115,25 +129,44 @@ void BoundaryConditionDialog::setBoundaryCondition(const BoundaryCondition &bc)
     }
     setComboCurrentText(m_geometryNameCombo, bc.target.geometryName);
     updateFaceGroupItems(m_geometryNameCombo->currentText());
-    setComboCurrentText(m_faceGroupNameCombo, bc.target.faceGroupName);
+    setComboCurrentText(
+        m_faceGroupNameCombo,
+        bc.target.faceGroupId.isEmpty() ? bc.target.faceGroupName : bc.target.faceGroupId
+    );
     setComboCurrentText(m_materialIdCombo, bc.materialId);
 }
 
 void BoundaryConditionDialog::updateFaceGroupItems(const QString &geometryName)
 {
     const QString currentText = m_faceGroupNameCombo->currentText();
-    QStringList faceGroups = m_options.faceGroupsByGeometry.value(geometryName);
-    if (faceGroups.isEmpty()) {
-        faceGroups.append(defaultFaceGroupName());
+    const QStringList faceGroups = m_options.faceGroupsByGeometry.value(geometryName);
+    QStringList faceGroupLabels;
+    for (const QString &faceGroupId : faceGroups) {
+        faceGroupLabels.append(faceGroupId);
+    }
+    if (faceGroupLabels.isEmpty()) {
+        faceGroupLabels.append(defaultFaceGroupName());
     }
 
     m_faceGroupNameCombo->blockSignals(true);
     m_faceGroupNameCombo->clear();
-    m_faceGroupNameCombo->addItems(faceGroups);
+    m_faceGroupNameCombo->addItems(faceGroupLabels);
     if (!currentText.trimmed().isEmpty()) {
         setComboCurrentText(m_faceGroupNameCombo, currentText.trimmed());
     }
     m_faceGroupNameCombo->blockSignals(false);
+}
+
+QString BoundaryConditionDialog::selectedFaceGroupId() const
+{
+    const QString text = m_faceGroupNameCombo->currentText().trimmed();
+    if (m_faceGroupNamesById.contains(text)) {
+        return text;
+    }
+    if (text.contains('.')) {
+        return text;
+    }
+    return m_geometryNameCombo->currentText().trimmed() + "." + text;
 }
 
 void BoundaryConditionDialog::setComboCurrentText(QComboBox *combo, const QString &text)

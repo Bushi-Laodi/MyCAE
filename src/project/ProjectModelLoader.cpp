@@ -34,6 +34,7 @@ bool ProjectModelLoader::loadGeometries(ProjectModel &projectModel, QString *err
     for (const GeometryObject &geometry : loadedGeometries) {
         projectModel.geometryObjects().append(geometry);
     }
+    projectModel.ensureDefaultFaceGroups();
 
     projectModel.clearSelectedGeometry();
     return true;
@@ -63,6 +64,7 @@ bool ProjectModelLoader::loadSimulationCase(ProjectModel &projectModel, QString 
         projectModel.materials().clear();
         projectModel.boundaryConditions().clear();
         projectModel.loads().clear();
+        projectModel.ensureDefaultFaceGroups();
         return true;
     }
 
@@ -74,5 +76,7 @@ bool ProjectModelLoader::loadSimulationCase(ProjectModel &projectModel, QString 
     projectModel.materials() = simulationCase.materials;
     projectModel.boundaryConditions() = simulationCase.boundaryConditions;
     projectModel.loads() = simulationCase.loads;
+    projectModel.faceGroups() = simulationCase.geometrySetup.faceGroups;
+    projectModel.ensureDefaultFaceGroups();
     return true;
 }

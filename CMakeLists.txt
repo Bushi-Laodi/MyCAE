@@ -110,6 +110,7 @@ qt_add_executable(MyCAE
     src/main.cpp
     src/geometry/BoxGeometry.h
     src/geometry/CylinderGeometry.h
+    src/geometry/FaceGroup.h
     src/geometry/GeometryCreationController.cpp
     src/geometry/GeometryCreationController.h
     src/geometry/GeometryDisplayController.cpp

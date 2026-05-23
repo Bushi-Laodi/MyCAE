@@ -136,11 +136,16 @@ CylinderDefinition cylinderFromJson(const QJsonObject &object)
     return cylinder;
 }
 
-FaceGroupDefinition faceGroupFromJson(const QJsonObject &object)
+FaceGroup faceGroupFromJson(const QJsonObject &object)
 {
-    FaceGroupDefinition faceGroup;
+    FaceGroup faceGroup;
+    faceGroup.id = stringValue(object, "id");
     faceGroup.name = stringValue(object, "name");
+    faceGroup.geometryName = stringValue(object, "geometryName");
     faceGroup.role = stringValue(object, "role");
+    if (faceGroup.id.isEmpty() && !faceGroup.geometryName.isEmpty() && !faceGroup.name.isEmpty()) {
+        faceGroup.id = faceGroup.geometryName + "." + faceGroup.name;
+    }
     return faceGroup;
 }
 
@@ -183,6 +188,7 @@ BoundaryCondition boundaryConditionFromJson(const QJsonObject &object)
     boundaryCondition.type = boundaryConditionTypeFromString(stringValue(object, "type"));
     boundaryCondition.target.kind = boundaryTargetKindFromString(stringValue(targetObject, "kind"));
     boundaryCondition.target.geometryName = stringValue(targetObject, "geometryName");
+    boundaryCondition.target.faceGroupId = stringValue(targetObject, "faceGroupId");
     boundaryCondition.target.faceGroupName = stringValue(targetObject, "faceGroupName");
     boundaryCondition.target.meshBoundaryName = stringValue(targetObject, "meshBoundaryName");
     boundaryCondition.materialId = stringValue(object, "materialId");

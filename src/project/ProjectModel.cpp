@@ -10,6 +10,7 @@ void ProjectModel::clear()
     m_materials.clear();
     m_boundaryConditions.clear();
     m_loads.clear();
+    m_faceGroups.clear();
     m_selectedGeometryName.clear();
     m_selectedMeshName.clear();
     clearSelectedSolverData();
@@ -101,6 +102,40 @@ std::vector<Load> &ProjectModel::loads()
 const std::vector<Load> &ProjectModel::loads() const
 {
     return m_loads;
+}
+
+std::vector<FaceGroup> &ProjectModel::faceGroups()
+{
+    return m_faceGroups;
+}
+
+const std::vector<FaceGroup> &ProjectModel::faceGroups() const
+{
+    return m_faceGroups;
+}
+
+void ProjectModel::ensureDefaultFaceGroups()
+{
+    for (const GeometryObject &geometry : m_geometryObjects) {
+        const QString defaultId = geometry.name + ".Default";
+        bool exists = false;
+        for (const FaceGroup &faceGroup : m_faceGroups) {
+            if (faceGroup.id == defaultId) {
+                exists = true;
+                break;
+            }
+        }
+        if (exists) {
+            continue;
+        }
+
+        FaceGroup faceGroup;
+        faceGroup.id = defaultId;
+        faceGroup.name = "Default";
+        faceGroup.geometryName = geometry.name;
+        faceGroup.role = "Default";
+        m_faceGroups.push_back(faceGroup);
+    }
 }
 
 void ProjectModel::setSelectedGeometryName(const QString &name)
@@ -231,6 +266,16 @@ const MeshObject *ProjectModel::findMeshByName(const QString &name) const
     for (const MeshObject &meshObject : m_meshObjects) {
         if (meshObject.name == name) {
             return &meshObject;
+        }
+    }
+    return nullptr;
+}
+
+const FaceGroup *ProjectModel::findFaceGroupById(const QString &id) const
+{
+    for (const FaceGroup &faceGroup : m_faceGroups) {
+        if (faceGroup.id == id) {
+            return &faceGroup;
         }
     }
     return nullptr;

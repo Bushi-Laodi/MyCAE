@@ -1,5 +1,6 @@
 #include "ProjectTreePanel.h"
 
+#include "geometry/FaceGroup.h"
 #include "solver/BoundaryCondition.h"
 #include "solver/Load.h"
 #include "solver/Material.h"
@@ -15,6 +16,7 @@ constexpr int ItemTypeRole = Qt::UserRole + 1;
 constexpr int GeometryNameRole = Qt::UserRole + 2;
 constexpr int MeshNameRole = Qt::UserRole + 3;
 constexpr int SolverDataIdRole = Qt::UserRole + 4;
+constexpr int FaceGroupIdRole = Qt::UserRole + 5;
 constexpr int CategoryRole = Qt::UserRole + 10;
 constexpr int GeometryItemType = 1;
 constexpr int MeshItemType = 2;
@@ -22,6 +24,7 @@ constexpr int CategoryItemType = 3;
 constexpr int MaterialItemType = 4;
 constexpr int BoundaryConditionItemType = 5;
 constexpr int LoadItemType = 6;
+constexpr int FaceGroupItemType = 7;
 
 enum class CategoryType
 {
@@ -98,6 +101,25 @@ void ProjectTreePanel::setMeshItems(const QStringList &meshNames)
     m_tree->expandAll();
 }
 
+void ProjectTreePanel::setFaceGroupItems(const std::vector<FaceGroup> &faceGroups)
+{
+    if (!m_faceGroupRoot) {
+        return;
+    }
+
+    clearChildren(m_faceGroupRoot);
+    for (const FaceGroup &faceGroup : faceGroups) {
+        const QString label = faceGroup.geometryName + "." + faceGroup.name;
+        auto *item = new QTreeWidgetItem(QStringList{label});
+        item->setData(0, ItemTypeRole, FaceGroupItemType);
+        item->setData(0, FaceGroupIdRole, faceGroup.id);
+        item->setToolTip(0, faceGroup.id);
+        m_faceGroupRoot->addChild(item);
+    }
+
+    m_tree->expandAll();
+}
+
 void ProjectTreePanel::setMaterialItems(const std::vector<Material> &materials)
 {
     if (!m_materialRoot) {
@@ -169,6 +191,9 @@ void ProjectTreePanel::buildProjectTree(const QString &projectName, const QStrin
     m_geometryRoot = new QTreeWidgetItem(QStringList{"Geometry"});
     projectRoot->addChild(m_geometryRoot);
 
+    m_faceGroupRoot = new QTreeWidgetItem(QStringList{"Face Groups"});
+    projectRoot->addChild(m_faceGroupRoot);
+
     m_materialRoot = new QTreeWidgetItem(QStringList{"Materials"});
     m_materialRoot->setData(0, ItemTypeRole, CategoryItemType);
     m_materialRoot->setData(0, CategoryRole, static_cast<int>(CategoryType::Material));
@@ -207,6 +232,8 @@ void ProjectTreePanel::handleCurrentItemChanged(QTreeWidgetItem *current)
         emit geometrySelected(current->data(0, GeometryNameRole).toString());
     } else if (itemType == MeshItemType) {
         emit meshSelected(current->data(0, MeshNameRole).toString());
+    } else if (itemType == FaceGroupItemType) {
+        emit faceGroupSelected(current->data(0, FaceGroupIdRole).toString());
     } else if (itemType == MaterialItemType) {
         emit materialSelected(current->data(0, SolverDataIdRole).toString());
     } else if (itemType == BoundaryConditionItemType) {

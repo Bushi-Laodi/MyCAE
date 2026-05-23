@@ -2,6 +2,7 @@
 
 #include "geometry/BoxGeometry.h"
 #include "geometry/CylinderGeometry.h"
+#include "geometry/FaceGroup.h"
 #include "mesh/MeshObject.h"
 
 #include <QFormLayout>
@@ -151,6 +152,24 @@ void PropertyPanel::showMeshObject(const MeshObject &meshObject)
     resetDynamicArea();
 }
 
+void PropertyPanel::showFaceGroup(const FaceGroup &faceGroup)
+{
+    clearAll();
+    m_selectionValue->setText(faceGroup.id);
+    m_typeValue->setText("Face Group");
+    m_nameValue->setText(faceGroup.name);
+    m_sourceGeometryValue->setText(faceGroup.geometryName);
+
+    resetDynamicArea();
+    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
+    auto *form = new QFormLayout;
+    form->addRow("ID:", new QLabel(faceGroup.id, m_dynamicArea));
+    form->addRow("Name:", new QLabel(faceGroup.name, m_dynamicArea));
+    form->addRow("Geometry:", new QLabel(faceGroup.geometryName, m_dynamicArea));
+    form->addRow("Role:", new QLabel(faceGroup.role, m_dynamicArea));
+    dynamicLayout->addLayout(form);
+}
+
 void PropertyPanel::showMaterialCategory(const std::vector<Material> &materials)
 {
     clearAll();
@@ -298,6 +317,7 @@ void PropertyPanel::showBoundaryCondition(const BoundaryCondition &boundaryCondi
     form->addRow("Type:", new QLabel(toString(boundaryCondition.type), m_dynamicArea));
     form->addRow("Target Kind:", new QLabel(toString(boundaryCondition.target.kind), m_dynamicArea));
     form->addRow("Geometry:", new QLabel(boundaryCondition.target.geometryName, m_dynamicArea));
+    form->addRow("Face Group ID:", new QLabel(boundaryCondition.target.faceGroupId, m_dynamicArea));
     form->addRow("Face Group:", new QLabel(boundaryCondition.target.faceGroupName, m_dynamicArea));
     form->addRow("Mesh Boundary:", new QLabel(boundaryCondition.target.meshBoundaryName, m_dynamicArea));
     form->addRow("Material ID:", new QLabel(boundaryCondition.materialId, m_dynamicArea));

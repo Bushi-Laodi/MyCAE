@@ -92,7 +92,9 @@ BoundaryConditionDialogOptions boundaryConditionDialogOptions(const ProjectModel
     BoundaryConditionDialogOptions options;
     for (const GeometryObject &geometry : projectModel.geometryObjects()) {
         options.geometryNames.append(geometry.name);
-        options.faceGroupsByGeometry.insert(geometry.name, {"Default"});
+    }
+    for (const FaceGroup &faceGroup : projectModel.faceGroups()) {
+        options.faceGroupsByGeometry[faceGroup.geometryName].append(faceGroup.id);
     }
 
     for (const Material &material : projectModel.materials()) {

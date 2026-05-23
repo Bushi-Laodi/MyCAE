@@ -9,6 +9,7 @@
 class QTreeWidget;
 class QTreeWidgetItem;
 struct BoundaryCondition;
+struct FaceGroup;
 struct Load;
 struct Material;
 
@@ -22,6 +23,7 @@ public:
     void showProject(const QString &projectName, const QString &projectPath);
     void setGeometryItems(const QStringList &geometryNames);
     void setMeshItems(const QStringList &meshNames);
+    void setFaceGroupItems(const std::vector<FaceGroup> &faceGroups);
     void setMaterialItems(const std::vector<Material> &materials);
     void setBoundaryConditionItems(const std::vector<BoundaryCondition> &boundaryConditions);
     void setLoadItems(const std::vector<Load> &loads);
@@ -29,6 +31,7 @@ public:
 signals:
     void geometrySelected(const QString &geometryName);
     void meshSelected(const QString &meshName);
+    void faceGroupSelected(const QString &faceGroupId);
     void materialSelected(const QString &materialId);
     void boundaryConditionSelected(const QString &boundaryConditionId);
     void loadSelected(const QString &loadId);
@@ -44,6 +47,7 @@ private:
 
     QTreeWidget *m_tree = nullptr;
     QTreeWidgetItem *m_geometryRoot = nullptr;
+    QTreeWidgetItem *m_faceGroupRoot = nullptr;
     QTreeWidgetItem *m_meshRoot = nullptr;
     QTreeWidgetItem *m_materialRoot = nullptr;
     QTreeWidgetItem *m_boundaryConditionRoot = nullptr;

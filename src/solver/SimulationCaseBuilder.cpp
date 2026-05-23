@@ -4,8 +4,6 @@
 #include "mesh/MeshObject.h"
 #include "project/ProjectModel.h"
 
-#include <QSet>
-
 namespace
 {
 QString makeId(QString value)
@@ -46,26 +44,6 @@ QString selectedOrFirstMeshName(const ProjectModel &projectModel)
     return {};
 }
 
-std::vector<FaceGroupDefinition> faceGroupsFromBoundaryConditions(
-    const std::vector<BoundaryCondition> &boundaryConditions
-)
-{
-    QSet<QString> seen;
-    std::vector<FaceGroupDefinition> faceGroups;
-    for (const BoundaryCondition &boundaryCondition : boundaryConditions) {
-        const QString faceGroupName = boundaryCondition.target.faceGroupName.trimmed();
-        if (faceGroupName.isEmpty() || seen.contains(faceGroupName)) {
-            continue;
-        }
-
-        seen.insert(faceGroupName);
-        FaceGroupDefinition faceGroup;
-        faceGroup.name = faceGroupName;
-        faceGroup.role = toString(boundaryCondition.type);
-        faceGroups.push_back(faceGroup);
-    }
-    return faceGroups;
-}
 }
 
 SimulationCase SimulationCaseBuilder::fromProjectModel(const ProjectModel &projectModel)
@@ -81,6 +59,6 @@ SimulationCase SimulationCaseBuilder::fromProjectModel(const ProjectModel &proje
     simulationCase.materials = projectModel.materials();
     simulationCase.boundaryConditions = projectModel.boundaryConditions();
     simulationCase.loads = projectModel.loads();
-    simulationCase.geometrySetup.faceGroups = faceGroupsFromBoundaryConditions(simulationCase.boundaryConditions);
+    simulationCase.geometrySetup.faceGroups = projectModel.faceGroups();
     return simulationCase;
 }

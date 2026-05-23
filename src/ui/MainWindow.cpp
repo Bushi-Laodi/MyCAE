@@ -198,6 +198,7 @@ void MainWindow::createDockWidgets()
     m_projectTreePanel = new ProjectTreePanel(projectDock);
     connect(m_projectTreePanel, &ProjectTreePanel::geometrySelected, this, &MainWindow::showGeometryProperties);
     connect(m_projectTreePanel, &ProjectTreePanel::meshSelected, this, &MainWindow::showMeshObject);
+    connect(m_projectTreePanel, &ProjectTreePanel::faceGroupSelected, this, &MainWindow::showFaceGroup);
     connect(m_projectTreePanel, &ProjectTreePanel::materialSelected, this, &MainWindow::showMaterial);
     connect(m_projectTreePanel, &ProjectTreePanel::boundaryConditionSelected, this, &MainWindow::showBoundaryCondition);
     connect(m_projectTreePanel, &ProjectTreePanel::loadSelected, this, &MainWindow::showLoad);
@@ -243,6 +244,7 @@ void MainWindow::newProject()
 
     setCurrentProject(project);
     refreshGeometryTree();
+    refreshFaceGroupTree();
     refreshMeshTree();
     refreshSolverDataTree();
     saveProjectSimulationCase();
@@ -275,6 +277,7 @@ void MainWindow::openProject()
     loadProjectGeometries();
     loadProjectMeshes();
     loadProjectSimulationCase();
+    refreshFaceGroupTree();
     refreshSolverDataTree();
     writeLog("Project opened: " + project.rootPath);
 }
@@ -298,6 +301,7 @@ void MainWindow::createGeometry(GeometryCreateType type)
 
     const QString createdGeometryName = result.geometryObject.name;
     loadProjectGeometries();
+    refreshFaceGroupTree();
     if (!selectGeometryByName(createdGeometryName)) {
         writeLog("Created geometry was saved but could not be selected: " + createdGeometryName);
     }
@@ -409,6 +413,7 @@ void MainWindow::loadProjectGeometries()
     }
 
     refreshGeometryTree();
+    refreshFaceGroupTree();
     if (m_propertyPanel) {
         m_propertyPanel->showEmptySelection();
     }
@@ -446,6 +451,7 @@ void MainWindow::loadProjectSimulationCase()
         .arg(m_projectModel.materials().size())
         .arg(m_projectModel.boundaryConditions().size())
         .arg(m_projectModel.loads().size()));
+    refreshFaceGroupTree();
 }
 
 bool MainWindow::saveProjectSimulationCase()
@@ -485,6 +491,15 @@ void MainWindow::refreshMeshTree()
         meshNames.append(meshObject.name);
     }
     m_projectTreePanel->setMeshItems(meshNames);
+}
+
+void MainWindow::refreshFaceGroupTree()
+{
+    if (!m_projectTreePanel) {
+        return;
+    }
+
+    m_projectTreePanel->setFaceGroupItems(m_projectModel.faceGroups());
 }
 
 void MainWindow::refreshSolverDataTree()
@@ -536,6 +551,20 @@ void MainWindow::showMeshObject(const QString &meshName)
         return;
     }
     m_projectModel.clearSelectedMesh();
+}
+
+void MainWindow::showFaceGroup(const QString &faceGroupId)
+{
+    const FaceGroup *faceGroup = m_projectModel.findFaceGroupById(faceGroupId);
+    if (!faceGroup) {
+        writeLog("Face group selection failed: not found: " + faceGroupId);
+        return;
+    }
+
+    if (m_propertyPanel) {
+        m_propertyPanel->showFaceGroup(*faceGroup);
+    }
+    writeLog("Face group selected: " + faceGroup->id);
 }
 
 void MainWindow::showMaterial(const QString &materialId)

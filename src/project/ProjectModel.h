@@ -2,6 +2,7 @@
 
 #include "geometry/BoxGeometry.h"
 #include "geometry/CylinderGeometry.h"
+#include "geometry/FaceGroup.h"
 #include "geometry/GeometryObject.h"
 #include "mesh/MeshObject.h"
 #include "project/Project.h"
@@ -37,6 +38,9 @@ public:
     const std::vector<BoundaryCondition> &boundaryConditions() const;
     std::vector<Load> &loads();
     const std::vector<Load> &loads() const;
+    std::vector<FaceGroup> &faceGroups();
+    const std::vector<FaceGroup> &faceGroups() const;
+    void ensureDefaultFaceGroups();
 
     void setSelectedGeometryName(const QString &name);
     const QString &selectedGeometryName() const;
@@ -60,6 +64,7 @@ public:
     const BoxGeometry *findBoxByName(const QString &name) const;
     const CylinderGeometry *findCylinderByName(const QString &name) const;
     const MeshObject *findMeshByName(const QString &name) const;
+    const FaceGroup *findFaceGroupById(const QString &id) const;
     Material *findMaterialById(const QString &id);
     const Material *findMaterialById(const QString &id) const;
     BoundaryCondition *findBoundaryConditionById(const QString &id);
@@ -76,6 +81,7 @@ private:
     std::vector<Material> m_materials;
     std::vector<BoundaryCondition> m_boundaryConditions;
     std::vector<Load> m_loads;
+    std::vector<FaceGroup> m_faceGroups;
     QString m_selectedGeometryName;
     QString m_selectedMeshName;
     QString m_selectedMaterialId;

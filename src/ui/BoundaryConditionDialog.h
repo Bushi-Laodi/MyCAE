@@ -45,8 +45,10 @@ private:
     void setupUi();
     void updateFaceGroupItems(const QString &geometryName);
     void setComboCurrentText(QComboBox *combo, const QString &text);
+    QString selectedFaceGroupId() const;
 
     BoundaryConditionDialogOptions m_options;
+    QMap<QString, QString> m_faceGroupNamesById;
     QLineEdit *m_nameEdit = nullptr;
     QComboBox *m_typeCombo = nullptr;
     QComboBox *m_geometryNameCombo = nullptr;

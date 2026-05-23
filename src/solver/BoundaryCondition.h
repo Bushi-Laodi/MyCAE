@@ -22,6 +22,7 @@ struct BoundaryTarget
 {
     BoundaryTargetKind kind = BoundaryTargetKind::GeometryFaceGroup;
     QString geometryName;
+    QString faceGroupId;
     QString faceGroupName;
     QString meshBoundaryName;
 };

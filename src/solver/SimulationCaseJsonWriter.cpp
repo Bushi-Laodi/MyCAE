@@ -32,10 +32,12 @@ QJsonObject cylinderToJson(const CylinderDefinition &cylinder)
     return object;
 }
 
-QJsonObject faceGroupToJson(const FaceGroupDefinition &faceGroup)
+QJsonObject faceGroupToJson(const FaceGroup &faceGroup)
 {
     QJsonObject object;
+    object.insert("id", faceGroup.id);
     object.insert("name", faceGroup.name);
+    object.insert("geometryName", faceGroup.geometryName);
     object.insert("role", faceGroup.role);
     return object;
 }
@@ -74,6 +76,7 @@ QJsonObject boundaryConditionToJson(const BoundaryCondition &boundaryCondition)
     QJsonObject target;
     target.insert("kind", toString(boundaryCondition.target.kind));
     target.insert("geometryName", boundaryCondition.target.geometryName);
+    target.insert("faceGroupId", boundaryCondition.target.faceGroupId);
     target.insert("faceGroupName", boundaryCondition.target.faceGroupName);
     target.insert("meshBoundaryName", boundaryCondition.target.meshBoundaryName);
 
@@ -127,7 +130,7 @@ QJsonDocument SimulationCaseJsonWriter::toJson(const SimulationCase &simulationC
     booleanOperation.insert("resultGeometryName", simulationCase.geometrySetup.booleanOperation.resultGeometryName);
 
     QJsonArray faceGroups;
-    for (const FaceGroupDefinition &faceGroup : simulationCase.geometrySetup.faceGroups) {
+    for (const FaceGroup &faceGroup : simulationCase.geometrySetup.faceGroups) {
         faceGroups.append(faceGroupToJson(faceGroup));
     }
 
