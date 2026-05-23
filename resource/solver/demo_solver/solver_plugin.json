@@ -1,0 +1,14 @@
+{
+    "id": "demo",
+    "name": "External Demo Solver",
+    "type": "python",
+    "script": "demo_solver.py",
+    "inputFile": "case.json",
+    "outputFile": "result.json",
+    "supportedAnalysisTypes": [
+        "demo",
+        "linearStatic",
+        "cfd"
+    ],
+    "description": "Minimal external solver wrapper demo for validating the MyCAE solver plugin interface."
+}

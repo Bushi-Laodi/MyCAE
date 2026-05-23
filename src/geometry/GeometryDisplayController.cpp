@@ -43,7 +43,7 @@ GeometryDisplayResult GeometryDisplayController::displayGeometry(
                     return result;
                 } catch (const Standard_Failure &failure) {
                     result.logMessages.append(
-                        QString("BREP display failed: %1; rebuilding OCC shape from parameters.").arg(failure.what())
+                        QString("BREP display failed: %1; rebuilding OCC shape from parameters.").arg(failure.GetMessageString())
                     );
                 } catch (const std::exception &error) {
                     result.logMessages.append(
@@ -123,7 +123,7 @@ GeometryDisplayResult GeometryDisplayController::displayBoxGeometry(
                 return result;
             } catch (const Standard_Failure &failure) {
                 result.logMessages.append(
-                    QString("BREP display failed: %1; rebuilding OCC shape from parameters.").arg(failure.what())
+                    QString("BREP display failed: %1; rebuilding OCC shape from parameters.").arg(failure.GetMessageString())
                 );
             } catch (const std::exception &error) {
                 result.logMessages.append(
@@ -144,7 +144,7 @@ GeometryDisplayResult GeometryDisplayController::displayBoxGeometry(
         result.success = true;
     } catch (const Standard_Failure &failure) {
         result.logMessages.append(
-            QString("OCC box display failed: %1; falling back to vtkCubeSource.").arg(failure.what())
+            QString("OCC box display failed: %1; falling back to vtkCubeSource.").arg(failure.GetMessageString())
         );
         renderView->showBoxGeometry(box);
         result.success = true;
@@ -191,7 +191,7 @@ GeometryDisplayResult GeometryDisplayController::displayCylinderGeometry(
                 return result;
             } catch (const Standard_Failure &failure) {
                 result.logMessages.append(
-                    QString("BREP display failed: %1; rebuilding OCC shape from parameters.").arg(failure.what())
+                    QString("BREP display failed: %1; rebuilding OCC shape from parameters.").arg(failure.GetMessageString())
                 );
             } catch (const std::exception &error) {
                 result.logMessages.append(
@@ -211,7 +211,7 @@ GeometryDisplayResult GeometryDisplayController::displayCylinderGeometry(
         renderView->showOccShape(shape, cylinder.name, sizeText);
         result.success = true;
     } catch (const Standard_Failure &failure) {
-        result.logMessages.append(QString("OCC cylinder display failed: %1.").arg(failure.what()));
+        result.logMessages.append(QString("OCC cylinder display failed: %1.").arg(failure.GetMessageString()));
     } catch (const std::exception &error) {
         result.logMessages.append(QString("OCC cylinder display failed: %1.").arg(error.what()));
     }

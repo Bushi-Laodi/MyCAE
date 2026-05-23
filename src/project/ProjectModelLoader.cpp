@@ -12,11 +12,13 @@ ProjectModelLoader::ProjectModelLoader(const GeometryManager &geometryManager)
 
 bool ProjectModelLoader::loadGeometries(ProjectModel &projectModel, QString *errorMessage) const
 {
-    if (!m_geometryManager.loadBoxGeometries(projectModel.project(), &projectModel.boxes(), errorMessage)) {
+    QVector<BoxGeometry> loadedBoxes;
+    if (!m_geometryManager.loadBoxGeometries(projectModel.project(), &loadedBoxes, errorMessage)) {
         return false;
     }
 
-    if (!m_geometryManager.loadCylinderGeometries(projectModel.project(), &projectModel.cylinders(), errorMessage)) {
+    QVector<CylinderGeometry> loadedCylinders;
+    if (!m_geometryManager.loadCylinderGeometries(projectModel.project(), &loadedCylinders, errorMessage)) {
         return false;
     }
 
@@ -25,6 +27,8 @@ bool ProjectModelLoader::loadGeometries(ProjectModel &projectModel, QString *err
         return false;
     }
 
+    projectModel.boxes() = loadedBoxes;
+    projectModel.cylinders() = loadedCylinders;
     projectModel.geometryObjects().clear();
     for (const GeometryObject &geometry : loadedGeometries) {
         projectModel.geometryObjects().append(geometry);
@@ -36,14 +40,13 @@ bool ProjectModelLoader::loadGeometries(ProjectModel &projectModel, QString *err
 
 bool ProjectModelLoader::loadMeshes(ProjectModel &projectModel, QString *errorMessage) const
 {
-    projectModel.meshObjects().clear();
-
     MeshManager meshManager(projectModel.project().rootPath);
     std::vector<MeshObject> loadedMeshes;
     if (!meshManager.loadMeshObjects(loadedMeshes, errorMessage)) {
         return false;
     }
 
+    projectModel.meshObjects().clear();
     for (const MeshObject &meshObject : loadedMeshes) {
         projectModel.meshObjects().append(meshObject);
     }

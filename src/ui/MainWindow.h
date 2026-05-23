@@ -1,16 +1,14 @@
 #pragma once
 
 #include "geometry/GeometryCreationController.h"
-#include "geometry/BoxGeometry.h"
-#include "geometry/CylinderGeometry.h"
 #include "geometry/GeometryManager.h"
 #include "geometry/GeometryObject.h"
 #include "mesh/MeshObject.h"
 #include "project/ProjectModel.h"
 #include "project/ProjectManager.h"
+#include "solver/plugin/SolverPluginManager.h"
 
 #include <QMainWindow>
-#include <QVector>
 
 class QAction;
 class QString;
@@ -40,6 +38,7 @@ private:
     void generateMesh();
     void readMeshInfo();
     void showMesh();
+    void runSolverPlugin(const QString &pluginId);
     void setCurrentProject(const Project &project);
     void loadProjectGeometries();
     void loadProjectMeshes();
@@ -69,4 +68,5 @@ private:
     ProjectManager m_projectManager;
     GeometryManager m_geometryManager;
     ProjectModel m_projectModel;
+    SolverPluginManager m_solverPluginManager;
 };

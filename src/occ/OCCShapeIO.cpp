@@ -52,7 +52,7 @@ bool OCCShapeIO::saveBREP(const TopoDS_Shape &shape, const QString &filePath, QS
         return true;
     } catch (const Standard_Failure &failure) {
         if (errorMessage) {
-            *errorMessage = QString("BRepTools::Write failed: %1").arg(failure.what());
+            *errorMessage = QString("BRepTools::Write failed: %1").arg(failure.GetMessageString());
         }
         return false;
     }
@@ -88,7 +88,7 @@ bool OCCShapeIO::loadBREP(const QString &filePath, TopoDS_Shape &shape, QString 
         return true;
     } catch (const Standard_Failure &failure) {
         if (errorMessage) {
-            *errorMessage = QString("BRepTools::Read failed: %1").arg(failure.what());
+            *errorMessage = QString("BRepTools::Read failed: %1").arg(failure.GetMessageString());
         }
         return false;
     }
@@ -127,7 +127,7 @@ bool OCCShapeIO::saveSTEP(const TopoDS_Shape &shape, const QString &filePath, QS
         return true;
     } catch (const Standard_Failure &failure) {
         if (errorMessage) {
-            *errorMessage = QString("STEP write failed: %1").arg(failure.what());
+            *errorMessage = QString("STEP write failed: %1").arg(failure.GetMessageString());
         }
         return false;
     }
@@ -172,7 +172,7 @@ bool OCCShapeIO::loadSTEP(const QString &filePath, TopoDS_Shape &shape, QString 
         return true;
     } catch (const Standard_Failure &failure) {
         if (errorMessage) {
-            *errorMessage = QString("STEP read failed: %1").arg(failure.what());
+            *errorMessage = QString("STEP read failed: %1").arg(failure.GetMessageString());
         }
         return false;
     }

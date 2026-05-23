@@ -12,6 +12,7 @@
 #include "PropertyPanel.h"
 #include "project/ProjectModelLoader.h"
 #include "RenderView.h"
+#include "solver/PipeCaseExample.h"
 
 #include <vtkUnstructuredGrid.h>
 
@@ -129,9 +130,21 @@ void MainWindow::createMenus()
     simulationMenu->addAction("Generate Mesh", this, [this]() {
         writeLog("Use Mesh -> Generate Mesh for the current external Gmsh flow.");
     });
-    simulationMenu->addAction("Run Solver", this, [this]() {
-        writeLog("Solver integration is reserved for a later stage.");
-    });
+
+    simulationMenu->addSeparator();
+    if (m_solverPluginManager.plugins().empty()) {
+        QAction *noSolverAction = simulationMenu->addAction("No solver plugins found");
+        noSolverAction->setEnabled(false);
+    } else {
+        for (const std::unique_ptr<SolverPlugin> &plugin : m_solverPluginManager.plugins()) {
+            const QString pluginId = plugin->id();
+            QAction *runSolverAction = simulationMenu->addAction("Run " + plugin->name());
+            runSolverAction->setStatusTip("Run solver plugin: " + pluginId);
+            connect(runSolverAction, &QAction::triggered, this, [this, pluginId]() {
+                runSolverPlugin(pluginId);
+            });
+        }
+    }
 }
 
 void MainWindow::createToolBar()
@@ -440,6 +453,49 @@ void MainWindow::showMesh()
     writeLog("Mesh displayed.");
 }
 
+void MainWindow::runSolverPlugin(const QString &pluginId)
+{
+    if (!m_projectModel.hasProject()) {
+        writeLog("Run solver failed: create or open a project first.");
+        return;
+    }
+
+    const SimulationCase simulationCase = createPipeSimulationCaseExample();
+    const QString caseDirectory = QDir(m_projectModel.project().rootPath).filePath("solver/" + pluginId);
+
+    const SolverPlugin *plugin = m_solverPluginManager.pluginById(pluginId);
+    if (!plugin) {
+        writeLog("Run solver failed: plugin is not registered: " + pluginId);
+        return;
+    }
+
+    QString errorMessage;
+    writeLog("Solver plugin: " + plugin->name());
+    writeLog("Solver case directory: " + caseDirectory);
+
+    if (!plugin->exportCase(simulationCase, caseDirectory, &errorMessage)) {
+        writeLog("Solver export failed: " + errorMessage);
+        return;
+    }
+    writeLog("Solver input exported.");
+
+    QString solverLog;
+    if (!plugin->runCase(caseDirectory, &solverLog, &errorMessage)) {
+        writeLog("Solver run failed: " + errorMessage);
+        return;
+    }
+    if (!solverLog.isEmpty()) {
+        writeLog(solverLog);
+    }
+
+    QString resultText;
+    if (!plugin->readResult(caseDirectory, &resultText, &errorMessage)) {
+        writeLog("Solver result read failed: " + errorMessage);
+        return;
+    }
+    writeLog("Solver result: " + resultText);
+}
+
 void MainWindow::setCurrentProject(const Project &project)
 {
     m_projectModel.clear();
@@ -476,9 +532,7 @@ void MainWindow::loadProjectGeometries()
     if (m_renderView) {
         m_renderView->showEmpty();
     }
-    writeLog(QString("Loaded %1 boxes and %2 cylinders.")
-        .arg(m_projectModel.boxes().size())
-        .arg(m_projectModel.cylinders().size()));
+    writeLog(QString("Loaded %1 geometry objects.").arg(m_projectModel.geometryObjects().size()));
 }
 
 void MainWindow::loadProjectMeshes()
