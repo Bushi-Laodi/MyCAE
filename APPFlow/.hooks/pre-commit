@@ -1,0 +1,27 @@
+#!/bin/sh
+#获取当前路径
+currentpath=$(pwd)
+#获取当前.git路径
+git_dir=$(git rev-parse --git-dir)
+#获取hooks路径
+hooks_dir="$git_dir/hooks"
+#获取git状态
+data=$(git status -uall)
+#输出到文件
+echo "$data" > gitStatus.txt
+#获取TaskCommitFile.exe路径
+taskCommitPath="$hooks_dir/TaskCommitFile.exe"
+#执行程序
+"$taskCommitPath" gitStatus.txt 2
+#获取返回值
+exitCode="$?"
+#删除gitStatus.txt文件
+rm gitStatus.txt
+#判断是否为2：
+if [ "$exitCode" -ge 2 ];then
+    echo "请查看$currentpath/NeedCommit.txt！！！"
+    echo "有*.h *.cpp等文件未提交！！！"
+    exit 1
+fi
+rm NeedCommit.txt
+exit 0
