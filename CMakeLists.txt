@@ -66,6 +66,7 @@ find_package(VTK REQUIRED COMPONENTS
     FiltersSources
     GUISupportQt
     InteractionStyle
+    RenderingAnnotation
     RenderingCore
     RenderingOpenGL2
 )
@@ -213,6 +214,8 @@ qt_add_executable(MyCAE
     src/render/VtkHighlightActorFactory.h
     src/render/VtkPickAdapter.cpp
     src/render/VtkPickAdapter.h
+    src/result/ResultDisplayController.cpp
+    src/result/ResultDisplayController.h
     src/result/ResultObject.h
     src/solver/BoundaryCondition.h
     src/solver/Load.h
@@ -242,16 +245,22 @@ qt_add_executable(MyCAE
     src/solver/calculix/CalculiXDeckSectionWriter.cpp
     src/solver/calculix/CalculiXDeckSectionWriter.h
     src/solver/calculix/CalculiXDeckTypes.h
+    src/solver/calculix/CalculiXDatResultReader.cpp
+    src/solver/calculix/CalculiXDatResultReader.h
     src/solver/calculix/CalculiXInputDeck.cpp
     src/solver/calculix/CalculiXInputDeck.h
     src/solver/calculix/CalculiXInputDeckBuilder.cpp
     src/solver/calculix/CalculiXInputDeckBuilder.h
     src/solver/calculix/CalculiXLoadWriter.cpp
     src/solver/calculix/CalculiXLoadWriter.h
+    src/solver/calculix/CalculiXMeshBoundaryResolver.cpp
+    src/solver/calculix/CalculiXMeshBoundaryResolver.h
     src/solver/calculix/CalculiXPlugin.cpp
     src/solver/calculix/CalculiXPlugin.h
     src/solver/calculix/CalculiXResultReader.cpp
     src/solver/calculix/CalculiXResultReader.h
+    src/solver/calculix/CalculiXResultGridBuilder.cpp
+    src/solver/calculix/CalculiXResultGridBuilder.h
     src/solver/calculix/CalculiXRunner.cpp
     src/solver/calculix/CalculiXRunner.h
     src/solver/calculix/CalculiXSurfaceMapper.cpp

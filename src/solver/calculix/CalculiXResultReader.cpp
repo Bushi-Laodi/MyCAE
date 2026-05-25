@@ -49,7 +49,8 @@ bool containsCompletionMarker(const QString &text)
     const QString upper = text.toUpper();
     return upper.contains("COMPLETED")
         || upper.contains("THE ANALYSIS HAS BEEN COMPLETED")
-        || upper.contains("TOTAL TIME COMPLETED");
+        || upper.contains("TOTAL TIME COMPLETED")
+        || upper.contains("JOB FINISHED");
 }
 }
 
@@ -72,7 +73,9 @@ SolverResultReadResult CalculiXResultReader::read(const SolverCaseContext &conte
         return result;
     }
 
-    const QString statusText = readTextFile(paths.staFile) + "\n" + readTextFile(paths.datFile);
+    const QString statusText = readTextFile(paths.staFile)
+        + "\n" + readTextFile(paths.datFile)
+        + "\n" + readTextFile(paths.logFile);
     if (containsFailureMarker(statusText)) {
         result.errors.append("CalculiX result contains failure markers. Check .sta/.dat for details.");
     }

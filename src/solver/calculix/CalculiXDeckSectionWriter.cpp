@@ -126,6 +126,10 @@ bool CalculiXDeckSectionWriter::appendFixedConstraints(
 
 void CalculiXDeckSectionWriter::appendResultRequests(CalculiXInputDeck &deck) const
 {
+    deck.appendLine("*NODE FILE");
+    deck.appendLine("U");
+    deck.appendLine("*EL FILE");
+    deck.appendLine("S");
     deck.appendLine("*NODE PRINT, NSET=NALL");
     deck.appendLine("U");
     deck.appendLine("*EL PRINT, ELSET=EALL");

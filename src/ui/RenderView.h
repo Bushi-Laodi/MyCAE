@@ -26,6 +26,14 @@ public:
     void showBoxGeometry(const BoxGeometry &box);
     void showOccShape(const TopoDS_Shape &shape, const QString &title, const QString &subtitle);
     void showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const QString &title, const QString &subtitle);
+    void showResultGrid(
+        vtkSmartPointer<vtkUnstructuredGrid> grid,
+        const QString &title,
+        const QString &subtitle,
+        const QString &scalarName,
+        double scalarMin,
+        double scalarMax
+    );
     void setPickMode(PickMode mode);
     void clearHighlight();
     void highlightFaceIndices(const std::vector<int> &faceIndices);

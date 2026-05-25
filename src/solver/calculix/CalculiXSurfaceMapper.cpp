@@ -17,9 +17,14 @@ CalculiXSurfaceMapper::CalculiXSurfaceMapper(const MeshData &meshData)
 
 std::vector<int> CalculiXSurfaceMapper::nodeSetForPhysicalTag(int physicalTag) const
 {
+    return nodeSetForPhysicalTags({physicalTag});
+}
+
+std::vector<int> CalculiXSurfaceMapper::nodeSetForPhysicalTags(const std::vector<int> &physicalTags) const
+{
     QSet<int> nodeIds;
     for (const SurfaceTriangleElement &triangle : m_meshData.surfaceTriangles) {
-        if (triangle.physicalGroupTag != physicalTag) {
+        if (!containsTag(physicalTags, triangle.physicalGroupTag)) {
             continue;
         }
         nodeIds.insert(triangle.node1);
@@ -38,9 +43,16 @@ std::vector<int> CalculiXSurfaceMapper::nodeSetForPhysicalTag(int physicalTag) c
 
 std::vector<CalculiXElementSurfaceFace> CalculiXSurfaceMapper::surfaceFacesForPhysicalTag(int physicalTag) const
 {
+    return surfaceFacesForPhysicalTags({physicalTag});
+}
+
+std::vector<CalculiXElementSurfaceFace> CalculiXSurfaceMapper::surfaceFacesForPhysicalTags(
+    const std::vector<int> &physicalTags
+) const
+{
     std::vector<CalculiXElementSurfaceFace> surfaceFaces;
     for (const SurfaceTriangleElement &triangle : m_meshData.surfaceTriangles) {
-        if (triangle.physicalGroupTag != physicalTag) {
+        if (!containsTag(physicalTags, triangle.physicalGroupTag)) {
             continue;
         }
 
@@ -50,6 +62,11 @@ std::vector<CalculiXElementSurfaceFace> CalculiXSurfaceMapper::surfaceFacesForPh
         }
     }
     return surfaceFaces;
+}
+
+bool CalculiXSurfaceMapper::containsTag(const std::vector<int> &physicalTags, int physicalTag)
+{
+    return std::find(physicalTags.begin(), physicalTags.end(), physicalTag) != physicalTags.end();
 }
 
 std::array<int, 3> CalculiXSurfaceMapper::sortedFaceKey(int node1, int node2, int node3)

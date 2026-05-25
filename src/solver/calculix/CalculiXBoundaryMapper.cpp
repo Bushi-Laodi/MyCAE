@@ -70,7 +70,18 @@ QString physicalGroupNameForTag(const MeshData &meshData, int tag)
     return {};
 }
 
-std::optional<int> physicalTagForBoundary(
+std::vector<int> tagsForMeshBoundary(const MeshBoundary &meshBoundary)
+{
+    std::vector<int> tags = meshBoundary.physicalGroupTags;
+    if (tags.empty() && meshBoundary.physicalGroupTag >= 0) {
+        tags.push_back(meshBoundary.physicalGroupTag);
+    }
+    std::sort(tags.begin(), tags.end());
+    tags.erase(std::unique(tags.begin(), tags.end()), tags.end());
+    return tags;
+}
+
+std::vector<int> physicalTagsForBoundary(
     const MeshData &meshData,
     const std::vector<MeshBoundary> &meshBoundaries,
     const CalculiXBoundaryData &boundary
@@ -81,7 +92,7 @@ std::optional<int> physicalTagForBoundary(
             ? matchesBoundaryName(boundary.meshBoundaryName, meshBoundary)
             : matchesFaceGroup(boundary, meshBoundary);
         if (matched && meshBoundary.physicalGroupTag >= 0) {
-            return meshBoundary.physicalGroupTag;
+            return tagsForMeshBoundary(meshBoundary);
         }
     }
 
@@ -89,15 +100,15 @@ std::optional<int> physicalTagForBoundary(
         ? boundary.faceGroupName
         : boundary.meshBoundaryName;
     if (targetName.isEmpty()) {
-        return std::nullopt;
+        return {};
     }
 
     for (const MeshPhysicalGroup &physicalGroup : meshData.physicalGroups) {
         if (physicalGroup.dimension == 2 && physicalGroup.name == targetName) {
-            return physicalGroup.tag;
+            return {physicalGroup.tag};
         }
     }
-    return std::nullopt;
+    return {};
 }
 
 std::vector<int> elementIdsForSurfaceFaces(const std::vector<CalculiXElementSurfaceFace> &surfaceFaces)
@@ -127,29 +138,29 @@ std::optional<CalculiXBoundaryExport> mapBoundary(
         return std::nullopt;
     }
 
-    const std::optional<int> physicalTag = physicalTagForBoundary(
+    const std::vector<int> physicalTags = physicalTagsForBoundary(
         caseData.meshData,
         caseData.meshBoundaries,
         boundary
     );
-    if (!physicalTag.has_value()) {
+    if (physicalTags.empty()) {
         errors.append("CalculiX export failed: no mesh physical group is available for boundary '"
             + boundary.name + "'.");
         return std::nullopt;
     }
 
-    std::vector<int> nodes = surfaceMapper.nodeSetForPhysicalTag(*physicalTag);
+    std::vector<int> nodes = surfaceMapper.nodeSetForPhysicalTags(physicalTags);
     if (nodes.empty()) {
         errors.append("CalculiX export failed: mesh boundary '"
-            + physicalGroupNameForTag(caseData.meshData, *physicalTag)
+            + physicalGroupNameForTag(caseData.meshData, physicalTags.front())
             + "' has no surface nodes.");
         return std::nullopt;
     }
 
-    std::vector<CalculiXElementSurfaceFace> faces = surfaceMapper.surfaceFacesForPhysicalTag(*physicalTag);
+    std::vector<CalculiXElementSurfaceFace> faces = surfaceMapper.surfaceFacesForPhysicalTags(physicalTags);
     if (faces.empty()) {
         errors.append("CalculiX export failed: mesh boundary '"
-            + physicalGroupNameForTag(caseData.meshData, *physicalTag)
+            + physicalGroupNameForTag(caseData.meshData, physicalTags.front())
             + "' cannot be mapped to C3D4 element faces.");
         return std::nullopt;
     }

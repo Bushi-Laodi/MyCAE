@@ -18,6 +18,7 @@ class vtkGenericOpenGLRenderWindow;
 class vtkObject;
 class vtkPolyData;
 class vtkRenderer;
+class vtkScalarBarActor;
 class vtkUnstructuredGrid;
 
 class VtkRenderCanvas final : public QWidget
@@ -31,6 +32,12 @@ public:
     void showBoxGeometry(const BoxGeometry &box);
     void showOccShape(const TopoDS_Shape &shape, const QString &geometryName);
     void showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid);
+    void showResultGrid(
+        vtkSmartPointer<vtkUnstructuredGrid> grid,
+        const QString &scalarName,
+        double scalarMin,
+        double scalarMax
+    );
     void setPickMode(PickMode mode);
     void clearHighlight();
     void highlightFaceIndices(const std::vector<int> &faceIndices);
@@ -52,6 +59,7 @@ private:
     vtkSmartPointer<vtkPolyData> m_currentPolyData;
     vtkSmartPointer<vtkActor> m_primaryActor;
     vtkSmartPointer<vtkActor> m_highlightActor;
+    vtkSmartPointer<vtkScalarBarActor> m_scalarBarActor;
     QString m_activeGeometryName;
     PickMode m_pickMode = PickMode::None;
 };

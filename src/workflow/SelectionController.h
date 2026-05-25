@@ -25,6 +25,7 @@ private:
     SelectionControllerResult showGeometry(const QString &geometryName) const;
     SelectionControllerResult showMesh(const QString &meshName) const;
     SelectionControllerResult showFaceGroup(const QString &faceGroupId) const;
+    SelectionControllerResult showResult(const QString &resultId) const;
     SelectionControllerResult showSolverCategory(SelectionKind kind) const;
 
     ProjectModel &m_projectModel;

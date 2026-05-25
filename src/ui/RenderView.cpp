@@ -93,6 +93,24 @@ void RenderView::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const Q
     m_canvas->showMeshGrid(grid);
 }
 
+void RenderView::showResultGrid(
+    vtkSmartPointer<vtkUnstructuredGrid> grid,
+    const QString &title,
+    const QString &subtitle,
+    const QString &scalarName,
+    double scalarMin,
+    double scalarMax
+)
+{
+    m_titleLabel->setText(title);
+    m_subtitleLabel->setText(subtitle);
+    m_detailLabel->setText(QString("CalculiX scalar field: %1 [%2, %3]")
+        .arg(scalarName)
+        .arg(scalarMin, 0, 'g', 6)
+        .arg(scalarMax, 0, 'g', 6));
+    m_canvas->showResultGrid(grid, scalarName, scalarMin, scalarMax);
+}
+
 void RenderView::setPickMode(PickMode mode)
 {
     m_canvas->setPickMode(mode);

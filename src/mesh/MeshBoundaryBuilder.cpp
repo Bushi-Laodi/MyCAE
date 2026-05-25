@@ -29,6 +29,7 @@ QVector<MeshBoundary> MeshBoundaryBuilder::build(const MeshData &meshData, const
         boundary.sourceFaceGroupId = physicalGroup.name;
         boundary.physicalGroupName = physicalGroup.name;
         boundary.physicalGroupTag = physicalGroup.tag;
+        boundary.physicalGroupTags = {physicalGroup.tag};
         boundary.faceCount = triangleCountByPhysicalTag.value(physicalGroup.tag, 0);
         meshBoundaries.append(boundary);
     }

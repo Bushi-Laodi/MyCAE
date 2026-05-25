@@ -11,6 +11,7 @@
 
 #include <QDateTime>
 #include <QDir>
+#include <QFileInfo>
 #include <QUuid>
 
 namespace
@@ -88,6 +89,7 @@ QString resultId(const QString &pluginId)
 ResultObject makeResultObject(
     const QString &pluginId,
     const SolverPluginDescriptor &descriptor,
+    const SimulationCase &simulationCase,
     const QString &caseDirectory,
     const SolverRunResult &runResult,
     const SolverResultReadResult &readResult
@@ -97,8 +99,28 @@ ResultObject makeResultObject(
     resultObject.id = resultId(pluginId);
     resultObject.name = descriptor.name + " Result";
     resultObject.solverName = descriptor.name;
+    resultObject.meshName = simulationCase.meshName;
     resultObject.casePath = caseDirectory;
     resultObject.logFile = runResult.logFile;
+    resultObject.resultFiles = readResult.resultFiles;
+    for (const QString &filePath : readResult.resultFiles) {
+        const QString suffix = QFileInfo(filePath).suffix().toLower();
+        if (suffix == "dat") {
+            resultObject.datFile = filePath;
+        } else if (suffix == "frd") {
+            resultObject.frdFile = filePath;
+        } else if (suffix == "sta") {
+            resultObject.staFile = filePath;
+        }
+    }
+    if (descriptor.id == "calculix") {
+        resultObject.primaryFieldName = "Displacement Magnitude";
+        resultObject.availableFields = QStringList{
+            "Displacement",
+            "Displacement Magnitude",
+            "Stress"
+        };
+    }
     resultObject.createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);
     resultObject.success = true;
     resultObject.summary = readResult.summary;
@@ -191,7 +213,7 @@ SolverCaseWorkflowResult SolverCaseWorkflowController::runPlugin(const QString &
     }
 
     m_projectModel.resultRepository().results().push_back(
-        makeResultObject(pluginId, *descriptor, caseDirectory, runResult, readResult)
+        makeResultObject(pluginId, *descriptor, simulationCase, caseDirectory, runResult, readResult)
     );
 
     result.logMessages.append("Solver result: " + readResult.summary);

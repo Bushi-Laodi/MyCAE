@@ -18,13 +18,16 @@
 #include <vtkDataSetMapper.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkIntArray.h>
+#include <vtkLookupTable.h>
 #include <vtkNew.h>
 #include <vtkObject.h>
+#include <vtkPointData.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkProperty.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindowInteractor.h>
+#include <vtkScalarBarActor.h>
 #include <vtkUnstructuredGrid.h>
 
 VtkRenderCanvas::VtkRenderCanvas(QWidget *parent)
@@ -158,6 +161,53 @@ void VtkRenderCanvas::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid)
     m_renderWindow->Render();
 }
 
+void VtkRenderCanvas::showResultGrid(
+    vtkSmartPointer<vtkUnstructuredGrid> grid,
+    const QString &scalarName,
+    double scalarMin,
+    double scalarMax
+)
+{
+    vtkNew<vtkLookupTable> lookupTable;
+    lookupTable->SetHueRange(0.667, 0.0);
+    lookupTable->SetSaturationRange(0.82, 0.92);
+    lookupTable->SetValueRange(0.90, 1.0);
+    lookupTable->SetNumberOfTableValues(256);
+    lookupTable->SetRange(scalarMin, scalarMax);
+    lookupTable->Build();
+
+    vtkNew<vtkDataSetMapper> mapper;
+    mapper->SetInputData(grid);
+    mapper->SetLookupTable(lookupTable);
+    mapper->SetScalarRange(scalarMin, scalarMax);
+    mapper->ScalarVisibilityOn();
+    mapper->SetScalarModeToUsePointFieldData();
+    mapper->SelectColorArray(scalarName.toUtf8().constData());
+
+    vtkNew<vtkActor> actor;
+    actor->SetMapper(mapper);
+    actor->GetProperty()->SetEdgeColor(0.08, 0.10, 0.12);
+    actor->GetProperty()->EdgeVisibilityOn();
+    actor->GetProperty()->SetLineWidth(0.45);
+    actor->GetProperty()->SetOpacity(0.96);
+
+    vtkNew<vtkScalarBarActor> scalarBar;
+    scalarBar->SetLookupTable(lookupTable);
+    scalarBar->SetTitle(scalarName.toUtf8().constData());
+    scalarBar->SetNumberOfLabels(5);
+    scalarBar->SetMaximumWidthInPixels(90);
+    scalarBar->SetMaximumHeightInPixels(420);
+
+    resetSceneState();
+    m_primaryActor = actor;
+    m_scalarBarActor = scalarBar;
+    m_renderer->RemoveAllViewProps();
+    m_renderer->AddActor(m_primaryActor);
+    m_renderer->AddActor2D(m_scalarBarActor);
+    resetCamera();
+    m_renderWindow->Render();
+}
+
 void VtkRenderCanvas::setPickMode(PickMode mode)
 {
     m_pickMode = mode;
@@ -216,6 +266,7 @@ void VtkRenderCanvas::resetSceneState()
     m_currentPolyData = nullptr;
     m_primaryActor = nullptr;
     m_highlightActor = nullptr;
+    m_scalarBarActor = nullptr;
     m_activeGeometryName.clear();
 }
 

@@ -3,6 +3,7 @@
 #include "geometry/GeometryDisplayController.h"
 #include "geometry/GeometryPropertyController.h"
 #include "render/RenderHighlightController.h"
+#include "result/ResultDisplayController.h"
 #include "workflow/MeshWorkflowController.h"
 #include "project/ProjectModel.h"
 #include "result/ResultObject.h"
@@ -77,21 +78,8 @@ SelectionControllerResult SelectionController::apply(const Selection &selection)
         result.accepted = m_projectModel.selection().kind == SelectionKind::Load;
         return result;
     }
-    case SelectionKind::Result: {
-        SelectionControllerResult result;
-        const ResultObject *resultObject = m_projectModel.findResultById(selection.id);
-        if (!resultObject) {
-            result.logMessages.append("Result selection failed: not found: " + selection.id);
-            return result;
-        }
-        m_projectModel.setSelection(Selection::item(SelectionKind::Result, resultObject->id, resultObject->name));
-        if (m_propertyPanel) {
-            m_propertyPanel->showResult(*resultObject);
-        }
-        result.logMessages.append("Result selected: " + resultObject->id);
-        result.accepted = true;
-        return result;
-    }
+    case SelectionKind::Result:
+        return showResult(selection.id);
     case SelectionKind::None:
         m_projectModel.clearSelection();
         if (m_propertyPanel) {
@@ -104,6 +92,29 @@ SelectionControllerResult SelectionController::apply(const Selection &selection)
     }
 
     return {};
+}
+
+SelectionControllerResult SelectionController::showResult(const QString &resultId) const
+{
+    SelectionControllerResult result;
+    const ResultObject *resultObject = m_projectModel.findResultById(resultId);
+    if (!resultObject) {
+        result.logMessages.append("Result selection failed: not found: " + resultId);
+        return result;
+    }
+
+    m_projectModel.setSelection(Selection::item(SelectionKind::Result, resultObject->id, resultObject->name));
+    if (m_propertyPanel) {
+        m_propertyPanel->showResult(*resultObject);
+    }
+
+    const ResultDisplayController displayController;
+    const ResultDisplayResult displayResult =
+        displayController.displayResult(m_projectModel, *resultObject, m_renderView);
+    result.logMessages.append(displayResult.logMessages);
+    result.logMessages.append("Result selected: " + resultObject->id);
+    result.accepted = true;
+    return result;
 }
 
 SelectionControllerResult SelectionController::showGeometry(const QString &geometryName) const

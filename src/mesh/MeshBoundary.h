@@ -2,6 +2,8 @@
 
 #include <QString>
 
+#include <vector>
+
 struct MeshBoundary
 {
     QString id;
@@ -11,5 +13,6 @@ struct MeshBoundary
     QString sourceFaceGroupId;
     QString physicalGroupName;
     int physicalGroupTag = -1;
+    std::vector<int> physicalGroupTags;
     int faceCount = 0;
 };
