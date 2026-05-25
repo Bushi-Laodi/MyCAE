@@ -2,6 +2,7 @@
 
 #include "solver/calculix/CalculiXDatResultReader.h"
 #include "solver/calculix/CalculiXEnvironment.h"
+#include "validation/DemoProjectValidator.h"
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -125,6 +126,7 @@ public:
             return m_report;
         }
 
+        DemoProjectValidator(m_samplesRoot).validate(m_report);
         validateCalculiXExecutable();
         if (m_report.failedCount() > 0) {
             return m_report;
@@ -137,13 +139,14 @@ public:
     }
 
 private:
+    void addBooleanStep(bool passed, const QString &name, const QString &detail = {})
+    {
+        m_report.addStep(passed ? SampleValidationStatus::Pass : SampleValidationStatus::Fail, name, detail);
+    }
+
     void validateRoots()
     {
-        m_report.addStep(
-            QFileInfo::exists(m_samplesRoot) ? SampleValidationStatus::Pass : SampleValidationStatus::Fail,
-            "sample root found",
-            m_samplesRoot
-        );
+        addBooleanStep(QFileInfo::exists(m_samplesRoot), "sample root found", m_samplesRoot);
         if (!QFileInfo::exists(m_samplesRoot)) {
             return;
         }

@@ -27,6 +27,7 @@ class ProjectTreePanel;
 class PropertyPanel;
 class RenderView;
 class ResultPostprocessPanel;
+class ResultWorkflowController;
 struct WorkflowCommandContext;
 
 class MainWindow final : public QMainWindow
@@ -64,8 +65,6 @@ private:
     void openSelectedResultDirectory();
     void renameSelectedResult();
     void deleteSelectedResultHistory();
-    void redisplaySelectedResult();
-    void saveResultIndex();
     void showProjectResources();
     void openRecentProject(const QString &projectFilePath);
     void updateRecentProjectActions();
@@ -78,6 +77,7 @@ private:
     void handleFacePicked(const PickSelection &selection);
     void updateActionStates();
     WorkflowCommandContext workflowCommandContext();
+    ResultWorkflowController resultWorkflowController();
     void writeLog(const QString &message);
     void writeLogMessages(const QStringList &messages);
 

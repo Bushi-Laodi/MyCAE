@@ -1,0 +1,191 @@
+{
+    "boundaryConditions": [
+        {
+            "enabled": true,
+            "id": "fixedend",
+            "materialId": "steel",
+            "name": "FixedEnd",
+            "target": {
+                "faceGroupId": "Box_1.PickedFaces1",
+                "faceGroupName": "PickedFaces1",
+                "geometryName": "Box_1",
+                "kind": "geometryFaceGroup",
+                "meshBoundaryName": ""
+            },
+            "type": "wall"
+        },
+        {
+            "enabled": true,
+            "id": "loadendbc",
+            "materialId": "steel",
+            "name": "LoadEndBc",
+            "target": {
+                "faceGroupId": "Box_1.LoadEnd",
+                "faceGroupName": "LoadEnd",
+                "geometryName": "Box_1",
+                "kind": "geometryFaceGroup",
+                "meshBoundaryName": ""
+            },
+            "type": "wall"
+        }
+    ],
+    "geometrySetup": {
+        "booleanOperation": {
+            "id": "",
+            "inputGeometryIds": [
+            ],
+            "resultGeometryName": "",
+            "type": "union"
+        },
+        "cylinders": [
+        ],
+        "faceGroups": [
+            {
+                "faceIndices": [
+                ],
+                "faceReferences": [
+                ],
+                "geometryName": "Box_1",
+                "id": "Box_1.Default",
+                "localMeshEnabled": false,
+                "localMeshSize": 0,
+                "name": "Default",
+                "physicalGroupEnabled": true,
+                "role": "Default"
+            },
+            {
+                "faceIndices": [
+                    4
+                ],
+                "faceReferences": [
+                    {
+                        "area": 1000,
+                        "center": {
+                            "x": 66.66666666666667,
+                            "y": 20,
+                            "z": 6.666666666666667
+                        },
+                        "faceIndex": 4,
+                        "normal": {
+                            "x": 0,
+                            "y": 1,
+                            "z": 0
+                        },
+                        "pickedPoint": {
+                            "x": 68.25596131951258,
+                            "y": 20,
+                            "z": 11.638821975564897
+                        }
+                    }
+                ],
+                "geometryName": "Box_1",
+                "id": "Box_1.PickedFaces1",
+                "localMeshEnabled": false,
+                "localMeshSize": 0,
+                "name": "PickedFaces1",
+                "physicalGroupEnabled": false,
+                "role": "Boundary"
+            },
+            {
+                "faceIndices": [
+                    3
+                ],
+                "faceReferences": [
+                    {
+                        "area": 1000,
+                        "center": {
+                            "x": 33.333333333333336,
+                            "y": 0,
+                            "z": 13.333333333333334
+                        },
+                        "faceIndex": 3,
+                        "normal": {
+                            "x": 0,
+                            "y": -1,
+                            "z": 0
+                        },
+                        "pickedPoint": {
+                            "x": 48.653348762722096,
+                            "y": 0,
+                            "z": 10.366482823941057
+                        }
+                    }
+                ],
+                "geometryName": "Box_1",
+                "id": "Box_1.LoadEnd",
+                "localMeshEnabled": false,
+                "localMeshSize": 0,
+                "name": "LoadEnd",
+                "physicalGroupEnabled": true,
+                "role": "Boundary"
+            }
+        ]
+    },
+    "id": "box_pressure_demo",
+    "loads": [
+        {
+            "boundaryConditionId": "loadendbc",
+            "enabled": true,
+            "fieldName": "pressure",
+            "id": "endpressure",
+            "name": "EndPressure",
+            "type": "pressure",
+            "value": {
+                "kind": "scalar",
+                "unit": "Pa",
+                "x": 100000,
+                "y": 0,
+                "z": 0
+            }
+        }
+    ],
+    "materials": [
+        {
+            "density": 7800,
+            "densityUnit": "kg/m^3",
+            "domain": "solid",
+            "dynamicViscosity": 0,
+            "dynamicViscosityUnit": "Pa*s",
+            "extraProperties": [
+                {
+                    "name": "youngModulus",
+                    "unit": "Pa",
+                    "value": 210000000000
+                },
+                {
+                    "name": "poissonRatio",
+                    "unit": "",
+                    "value": 0.3
+                }
+            ],
+            "hasDensity": true,
+            "hasDynamicViscosity": false,
+            "hasKinematicViscosity": false,
+            "id": "steel",
+            "kinematicViscosity": 0,
+            "kinematicViscosityUnit": "m^2/s",
+            "name": "Steel",
+            "viscosityModel": "Newtonian"
+        }
+    ],
+    "meshName": "Box_1_Mesh",
+    "meshSetup": {
+        "autoImportAfterGeneration": true,
+        "autoSize": true,
+        "localFaceGroupName": "",
+        "maximumSize": 1,
+        "minimumSize": 0,
+        "showBoundaryAfterImport": true
+    },
+    "name": "Box Pressure Demo Simulation Case",
+    "postProcessingTool": "ParaView",
+    "runControl": {
+        "cleanPreviousResult": false,
+        "endTime": 400,
+        "timeStep": 1,
+        "writeInterval": 100
+    },
+    "solverType": "SIMPLE",
+    "sourceGeometryName": "Box_1",
+    "turbulenceModel": "k-Omega SST"
+}

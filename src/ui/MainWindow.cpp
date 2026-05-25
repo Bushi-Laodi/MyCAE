@@ -16,36 +16,24 @@
 #include "commands/SolverCommands.h"
 #include "commands/UtilityCommands.h"
 #include "commands/WorkflowCommandContext.h"
-#include "result/ResultCsvExporter.h"
-#include "result/ResultDisplayController.h"
-#include "result/ResultManager.h"
-#include "result/ResultReportExporter.h"
 #include "solver/calculix/CalculiXResultGridBuilder.h"
 #include "solver/plugin/SolverPluginDescriptorFormatter.h"
 #include "workflow/ProjectWorkflowController.h"
+#include "workflow/ResultWorkflowController.h"
 #include "workflow/SelectionController.h"
 
 #include <QAction>
 #include <QActionGroup>
 #include <QCloseEvent>
-#include <QDesktopServices>
 #include <QDockWidget>
 #include <QDir>
-#include <QFileDialog>
 #include <QFileInfo>
-#include <QInputDialog>
-#include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
-#include <QMessageBox>
-#include <QRegularExpression>
 #include <QShowEvent>
 #include <QStatusBar>
 #include <QToolBar>
 #include <QTimer>
-#include <QUrl>
-
-#include <algorithm>
 
 namespace
 {
@@ -81,23 +69,6 @@ QString solverRunCommandId(const QString &pluginId)
     return "solver.run." + pluginId;
 }
 
-QString sanitizedFileStem(QString value)
-{
-    value = value.trimmed();
-    value.replace(QRegularExpression("[\\\\/:*?\"<>|\\s]+"), "_");
-    return value.isEmpty() ? QString("result") : value;
-}
-
-QString ensureFileSuffix(const QString &filePath, const QString &suffix)
-{
-    return QFileInfo(filePath).suffix().isEmpty() ? filePath + suffix : filePath;
-}
-
-QString reportScreenshotPath(const QString &reportPath)
-{
-    const QFileInfo reportInfo(reportPath);
-    return reportInfo.dir().filePath(reportInfo.completeBaseName() + "_screenshot.png");
-}
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -684,118 +655,43 @@ void MainWindow::applySelection(const Selection &selection)
 
 void MainWindow::setSelectedResultField(const QString &fieldName)
 {
-    ResultObject *resultObject = m_projectModel.resultForSelection();
-    if (!resultObject) {
-        writeLog("Result field change skipped: no result is selected.");
-        return;
-    }
-
-    resultObject->displayFieldName = fieldName;
-    saveResultIndex();
-    redisplaySelectedResult();
+    writeLogMessages(resultWorkflowController().setSelectedField(fieldName));
+    updateActionStates();
 }
 
 void MainWindow::setSelectedResultDeformationScale(double scale)
 {
-    ResultObject *resultObject = m_projectModel.resultForSelection();
-    if (!resultObject) {
-        writeLog("Result deformation scale change skipped: no result is selected.");
-        return;
-    }
-
-    resultObject->deformationScale = scale;
-    saveResultIndex();
-    redisplaySelectedResult();
+    writeLogMessages(resultWorkflowController().setSelectedDeformationScale(scale));
+    updateActionStates();
 }
 
 void MainWindow::setSelectedResultMeshEdges(bool enabled)
 {
-    ResultObject *resultObject = m_projectModel.resultForSelection();
-    if (!resultObject) {
-        writeLog("Mesh edge toggle skipped: no result is selected.");
-        return;
-    }
-
-    resultObject->showMeshEdges = enabled;
-    saveResultIndex();
-    redisplaySelectedResult();
+    writeLogMessages(resultWorkflowController().setSelectedMeshEdges(enabled));
+    updateActionStates();
 }
 
 void MainWindow::setSelectedResultUndeformedOverlay(bool enabled)
 {
-    ResultObject *resultObject = m_projectModel.resultForSelection();
-    if (!resultObject) {
-        writeLog("Undeformed overlay toggle skipped: no result is selected.");
-        return;
-    }
-
-    resultObject->showUndeformedOverlay = enabled;
-    saveResultIndex();
-    redisplaySelectedResult();
+    writeLogMessages(resultWorkflowController().setSelectedUndeformedOverlay(enabled));
+    updateActionStates();
 }
 
 void MainWindow::playSelectedResultAnimation(double speed)
 {
-    const ResultObject *resultObject = m_projectModel.resultForSelection();
-    if (!resultObject) {
-        writeLog("Play animation skipped: no result is selected.");
-        return;
-    }
-
-    const double peakScale = resultObject->deformationScale;
-    if (peakScale <= 0.0) {
-        writeLog("Play animation started with zero deformation scale; increase Deformation to see motion.");
-    }
-    m_resultAnimationController.start(peakScale, speed);
-    writeLog(QString("Result animation started: peakScale=%1, speed=%2 Hz.")
-        .arg(peakScale, 0, 'g', 6)
-        .arg(speed, 0, 'g', 6));
+    writeLogMessages(resultWorkflowController().playSelectedAnimation(speed));
+    updateActionStates();
 }
 
 void MainWindow::stopSelectedResultAnimation()
 {
-    if (!m_resultAnimationController.isRunning()) {
-        writeLog("Stop animation skipped: animation is not running.");
-        return;
-    }
-
-    m_resultAnimationController.stop();
-    saveResultIndex();
-    writeLog(QString("Result animation stopped: scale=%1.")
-        .arg(m_resultAnimationController.currentScale(), 0, 'g', 6));
+    writeLogMessages(resultWorkflowController().stopSelectedAnimation());
+    updateActionStates();
 }
 
 void MainWindow::applyAnimatedResultDeformationScale(double scale)
 {
-    ResultObject *resultObject = m_projectModel.resultForSelection();
-    if (!resultObject) {
-        m_resultAnimationController.stop();
-        return;
-    }
-
-    resultObject->deformationScale = scale;
-    const ResultDisplayResult displayResult =
-        ResultDisplayController().displayResult(m_projectModel, *resultObject, m_renderView, false);
-    if (!displayResult.success) {
-        if (!displayResult.logMessages.isEmpty()) {
-            writeLogMessages(displayResult.logMessages);
-        }
-        m_resultAnimationController.stop();
-        return;
-    }
-
-    if (m_resultPostprocessPanel) {
-        m_resultPostprocessPanel->setResult(resultObject);
-    }
-}
-
-void MainWindow::saveResultIndex()
-{
-    QString saveError;
-    if (m_projectModel.hasProject()
-            && !ResultManager().save(m_projectModel.project(), m_projectModel.resultRepository().results(), &saveError)) {
-        writeLog("Save result index failed: " + saveError);
-    }
+    writeLogMessages(resultWorkflowController().applyAnimatedDeformationScale(scale));
 }
 
 void MainWindow::showProjectResources()
@@ -936,224 +832,35 @@ void MainWindow::handleUndoStackFaceGroupsChanged(const QString &selectionId)
     updateActionStates();
 }
 
-void MainWindow::redisplaySelectedResult()
-{
-    const ResultObject *resultObject = m_projectModel.resultForSelection();
-    if (!resultObject) {
-        return;
-    }
-    applySelection(Selection::item(SelectionKind::Result, resultObject->id, resultObject->name));
-}
-
 void MainWindow::exportSelectedResultCsv()
 {
-    const ResultObject *resultObject = m_projectModel.resultForSelection();
-    if (!resultObject) {
-        writeLog("Export CSV skipped: no result is selected.");
-        return;
-    }
-    if (!m_projectModel.hasProject()) {
-        writeLog("Export CSV failed: no project is open.");
-        return;
-    }
-
-    const QString initialPath = QDir(m_projectModel.project().rootPath)
-        .filePath(QString("solver/exports/%1_result.csv").arg(sanitizedFileStem(resultObject->name)));
-    const QString selectedPath = QFileDialog::getSaveFileName(
-        this,
-        "Export Result CSV",
-        initialPath,
-        "CSV File (*.csv)"
-    );
-    if (selectedPath.isEmpty()) {
-        writeLog("Export CSV canceled.");
-        return;
-    }
-
-    const ResultCsvExportResult exportResult =
-        ResultCsvExporter().exportResult(m_projectModel, *resultObject, ensureFileSuffix(selectedPath, ".csv"));
-    writeLogMessages(exportResult.warnings);
-    if (!exportResult.success) {
-        writeLog(exportResult.errorMessage);
-        QMessageBox::warning(this, "Export CSV", exportResult.errorMessage);
-        return;
-    }
-
-    writeLog("Node displacement CSV exported: " + exportResult.nodeDisplacementCsvPath);
-    writeLog("Element Von Mises CSV exported: " + exportResult.elementStressCsvPath);
+    writeLogMessages(resultWorkflowController().exportSelectedCsv());
 }
 
 void MainWindow::exportSelectedResultReport()
 {
-    const ResultObject *resultObject = m_projectModel.resultForSelection();
-    if (!resultObject) {
-        writeLog("Export report skipped: no result is selected.");
-        return;
-    }
-    if (!m_projectModel.hasProject()) {
-        writeLog("Export report failed: no project is open.");
-        return;
-    }
-    if (!m_renderView) {
-        writeLog("Export report failed: render view is not available.");
-        return;
-    }
-
-    const QString initialPath = QDir(m_projectModel.project().rootPath)
-        .filePath(QString("solver/reports/%1_report.md").arg(sanitizedFileStem(resultObject->name)));
-    const QString selectedPath = QFileDialog::getSaveFileName(
-        this,
-        "Export Result Report",
-        initialPath,
-        "Markdown File (*.md)"
-    );
-    if (selectedPath.isEmpty()) {
-        writeLog("Export report canceled.");
-        return;
-    }
-
-    const QString reportPath = ensureFileSuffix(selectedPath, ".md");
-    const QString screenshotPath = reportScreenshotPath(reportPath);
-    if (!QDir().mkpath(QFileInfo(reportPath).absolutePath())) {
-        const QString message = "Export report failed: cannot create " + QFileInfo(reportPath).absolutePath();
-        writeLog(message);
-        QMessageBox::warning(this, "Export Report", message);
-        return;
-    }
-    if (!m_renderView->saveScreenshot(screenshotPath)) {
-        const QString message = "Export report failed: cannot save screenshot " + screenshotPath;
-        writeLog(message);
-        QMessageBox::warning(this, "Export Report", message);
-        return;
-    }
-
-    const ResultReportExportResult exportResult =
-        ResultReportExporter().exportMarkdown(m_projectModel.project(), *resultObject, reportPath, screenshotPath);
-    if (!exportResult.success) {
-        writeLog(exportResult.errorMessage);
-        QMessageBox::warning(this, "Export Report", exportResult.errorMessage);
-        return;
-    }
-
-    writeLog("Result report exported: " + exportResult.reportPath);
-    writeLog("Result report screenshot exported: " + screenshotPath);
+    writeLogMessages(resultWorkflowController().exportSelectedReport());
 }
 
 void MainWindow::exportRenderScreenshot()
 {
-    if (!m_renderView) {
-        writeLog("Export screenshot failed: render view is not available.");
-        return;
-    }
-
-    QString initialPath;
-    const QString recentExportDirectory = m_appSettings.recentExportDirectory();
-    if (!recentExportDirectory.isEmpty()) {
-        initialPath = QDir(recentExportDirectory).filePath("render_screenshot.png");
-    } else if (m_projectModel.hasProject()) {
-        initialPath = QDir(m_projectModel.project().rootPath).filePath("solver/render_screenshot.png");
-    }
-    const QString filePath = QFileDialog::getSaveFileName(
-        this,
-        "Export Render Screenshot",
-        initialPath,
-        "PNG Image (*.png);;JPEG Image (*.jpg *.jpeg);;Bitmap Image (*.bmp)"
-    );
-    if (filePath.isEmpty()) {
-        writeLog("Export screenshot canceled.");
-        return;
-    }
-
-    if (!m_renderView->saveScreenshot(filePath)) {
-        writeLog("Export screenshot failed: " + filePath);
-        return;
-    }
-    m_appSettings.setRecentExportDirectory(QFileInfo(filePath).absolutePath());
-    writeLog("Render screenshot exported: " + filePath);
+    writeLogMessages(resultWorkflowController().exportRenderScreenshot());
 }
 
 void MainWindow::openSelectedResultDirectory()
 {
-    const ResultObject *resultObject = m_projectModel.resultForSelection();
-    if (!resultObject) {
-        writeLog("Open result directory skipped: no result is selected.");
-        return;
-    }
-    if (resultObject->casePath.isEmpty()) {
-        writeLog("Open result directory failed: result has no case path.");
-        return;
-    }
-    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(resultObject->casePath))) {
-        writeLog("Open result directory failed: " + resultObject->casePath);
-    }
+    writeLogMessages(resultWorkflowController().openSelectedResultDirectory());
 }
 
 void MainWindow::renameSelectedResult()
 {
-    ResultObject *resultObject = m_projectModel.resultForSelection();
-    if (!resultObject) {
-        writeLog("Rename result skipped: no result is selected.");
-        return;
-    }
-
-    bool accepted = false;
-    const QString newName = QInputDialog::getText(
-        this,
-        "Rename Result",
-        "Result name",
-        QLineEdit::Normal,
-        resultObject->name,
-        &accepted
-    ).trimmed();
-    if (!accepted || newName.isEmpty()) {
-        writeLog("Rename result canceled.");
-        return;
-    }
-
-    resultObject->name = newName;
-    saveResultIndex();
-    if (m_projectTreePanel) {
-        m_projectTreePanel->setResultItems(m_projectModel.resultRepository().results());
-    }
-    redisplaySelectedResult();
-    writeLog("Result renamed: " + newName);
+    writeLogMessages(resultWorkflowController().renameSelectedResult());
+    updateActionStates();
 }
 
 void MainWindow::deleteSelectedResultHistory()
 {
-    const ResultObject *selectedResult = m_projectModel.resultForSelection();
-    if (!selectedResult) {
-        writeLog("Delete result skipped: no result is selected.");
-        return;
-    }
-
-    const QString resultId = selectedResult->id;
-    const QMessageBox::StandardButton answer = QMessageBox::question(
-        this,
-        "Delete Result History",
-        "Remove this result from the project result list? Solver files on disk will not be deleted."
-    );
-    if (answer != QMessageBox::Yes) {
-        writeLog("Delete result canceled.");
-        return;
-    }
-
-    std::vector<ResultObject> &results = m_projectModel.resultRepository().results();
-    results.erase(std::remove_if(results.begin(), results.end(), [&resultId](const ResultObject &result) {
-        return result.id == resultId;
-    }), results.end());
-    m_projectModel.clearSelectionIfKind(SelectionKind::Result);
-    saveResultIndex();
-    if (m_projectTreePanel) {
-        m_projectTreePanel->setResultItems(results);
-    }
-    if (m_propertyPanel) {
-        m_propertyPanel->showResultCategory(results);
-    }
-    if (m_resultPostprocessPanel) {
-        m_resultPostprocessPanel->setResult(nullptr);
-    }
-    writeLog("Result history deleted: " + resultId);
+    writeLogMessages(resultWorkflowController().deleteSelectedResultHistory());
     updateActionStates();
 }
 
@@ -1301,6 +1008,20 @@ WorkflowCommandContext MainWindow::workflowCommandContext()
         &m_pickController,
         &m_undoStackController
     };
+}
+
+ResultWorkflowController MainWindow::resultWorkflowController()
+{
+    return ResultWorkflowController(
+        m_projectModel,
+        m_projectTreePanel,
+        m_propertyPanel,
+        m_resultPostprocessPanel,
+        m_renderView,
+        m_appSettings,
+        m_resultAnimationController,
+        this
+    );
 }
 
 void MainWindow::writeLog(const QString &message)

@@ -1,0 +1,11 @@
+{
+    "createdAt": "2026-05-25T17:08:58",
+    "mshFile": "mesh/box_1.msh",
+    "name": "Box_1_Mesh",
+    "nodeCount": 111,
+    "sourceGeometry": "Box_1",
+    "sourceGeometryType": "box",
+    "sourceStepFile": "geometry/box_1.step",
+    "tetraCount": 264,
+    "type": "tetra4"
+}

@@ -368,12 +368,16 @@ qt_add_executable(MyCAE
     src/workflow/MeshWorkflowController.h
     src/workflow/ProjectWorkflowController.cpp
     src/workflow/ProjectWorkflowController.h
+    src/workflow/ResultWorkflowController.cpp
+    src/workflow/ResultWorkflowController.h
     src/workflow/SelectionController.cpp
     src/workflow/SelectionController.h
     src/workflow/SolverCaseWorkflowController.cpp
     src/workflow/SolverCaseWorkflowController.h
     src/workflow/SolverWorkflowController.cpp
     src/workflow/SolverWorkflowController.h
+    src/validation/DemoProjectValidator.cpp
+    src/validation/DemoProjectValidator.h
     src/validation/SampleProjectValidator.cpp
     src/validation/SampleProjectValidator.h
 )

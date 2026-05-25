@@ -1,0 +1,15 @@
+{
+    "createdAt": "2026-05-25T17:06:40",
+    "dimensions": {
+        "height": 20,
+        "length": 100,
+        "unit": "mm",
+        "width": 20
+    },
+    "name": "Box_1",
+    "occ": {
+        "brepFile": "geometry/box_1.brep",
+        "stepFile": "geometry/box_1.step"
+    },
+    "type": "box"
+}

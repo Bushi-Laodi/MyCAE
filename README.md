@@ -24,6 +24,20 @@ cmake --build build-qt6 --config Debug
 
 The installed Qt package is `msvc2019_64`, so use a 64-bit MSVC compiler from Visual Studio 2019 16.7 or newer. Visual Studio 2017 is too old for Qt 6.6.3.
 
+## Acceptance Check
+
+The repository includes a formal demo project at:
+
+`samples/projects/box_pressure_demo/project.json`
+
+Run the automated acceptance check from a built application directory:
+
+```powershell
+.\MyCAE.exe --validate-samples
+```
+
+The check opens the demo project, verifies its geometry, mesh, simulation case, result files, and result data, then runs the CalculiX sample decks when `ccx` is configured.
+
 ## Current Development Order
 
 1. Qt 6 application skeleton

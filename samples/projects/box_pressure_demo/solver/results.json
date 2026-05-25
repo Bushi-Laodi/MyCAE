@@ -1,0 +1,46 @@
+{
+    "results": [
+        {
+            "availableFields": [
+                "Ux",
+                "Uy",
+                "Uz",
+                "Displacement Magnitude",
+                "Von Mises Stress"
+            ],
+            "casePath": "solver/calculix/test1_Simulation_Case_20260525_174648_319",
+            "checkMessages": [
+            ],
+            "createdAt": "2026-05-25T17:46:48",
+            "datFile": "solver/calculix/test1_Simulation_Case_20260525_174648_319/test1_Simulation_Case_calculix.dat",
+            "deformationScale": 0,
+            "displayFieldName": "Displacement Magnitude",
+            "frdFile": "solver/calculix/test1_Simulation_Case_20260525_174648_319/test1_Simulation_Case_calculix.frd",
+            "id": "calculix_demo_box_pressure_20260525_174648_319",
+            "logFile": "solver/calculix/test1_Simulation_Case_20260525_174648_319/test1_Simulation_Case_calculix.log",
+            "matchedElementCount": 264,
+            "matchedNodeCount": 111,
+            "meshElementCount": 264,
+            "meshName": "Box_1_Mesh",
+            "meshNodeCount": 111,
+            "name": "CalculiX Result - Box Pressure Demo",
+            "primaryFieldName": "Displacement Magnitude",
+            "resultFiles": [
+                "solver/calculix/test1_Simulation_Case_20260525_174648_319/test1_Simulation_Case_calculix.dat",
+                "solver/calculix/test1_Simulation_Case_20260525_174648_319/test1_Simulation_Case_calculix.frd",
+                "solver/calculix/test1_Simulation_Case_20260525_174648_319/test1_Simulation_Case_calculix.log",
+                "solver/calculix/test1_Simulation_Case_20260525_174648_319/test1_Simulation_Case_calculix.sta"
+            ],
+            "resultFilesComplete": true,
+            "scalarMax": 1.08369064627412e-05,
+            "scalarMin": 0,
+            "showMeshEdges": true,
+            "showUndeformedOverlay": false,
+            "solverName": "CalculiX",
+            "staFile": "solver/calculix/test1_Simulation_Case_20260525_174648_319/test1_Simulation_Case_calculix.sta",
+            "success": true,
+            "summary": "Demo CalculiX result: completed=yes; nodes=111; tetrahedra=264; fields=5"
+        }
+    ],
+    "version": "0.1.0"
+}

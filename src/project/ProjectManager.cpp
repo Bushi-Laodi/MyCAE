@@ -9,6 +9,30 @@
 #include <QJsonObject>
 #include <QStringList>
 
+namespace
+{
+QString resolvedProjectRootPath(const QFileInfo &projectFileInfo, const QString &storedRootPath)
+{
+    const QDir projectFileDir = projectFileInfo.dir();
+    if (storedRootPath.trimmed().isEmpty()) {
+        return projectFileDir.absolutePath();
+    }
+
+    const QFileInfo storedRootInfo(storedRootPath);
+    const QString candidateRootPath = storedRootInfo.isAbsolute()
+        ? storedRootInfo.absoluteFilePath()
+        : projectFileDir.absoluteFilePath(storedRootPath);
+    const QFileInfo candidateProjectFile(QDir(candidateRootPath).filePath("project.json"));
+
+    if (candidateProjectFile.exists()
+        && candidateProjectFile.canonicalFilePath() == projectFileInfo.canonicalFilePath()) {
+        return QDir::cleanPath(candidateRootPath);
+    }
+
+    return projectFileDir.absolutePath();
+}
+}
+
 bool ProjectManager::createProject(const QString &projectPath, Project *project, QString *errorMessage) const
 {
     if (!project) {
@@ -77,7 +101,7 @@ bool ProjectManager::openProject(const QString &projectFilePath, Project *projec
 
     Project openedProject;
     openedProject.name = object.value("name").toString(fileInfo.dir().dirName());
-    openedProject.rootPath = object.value("rootPath").toString(fileInfo.dir().absolutePath());
+    openedProject.rootPath = resolvedProjectRootPath(fileInfo, object.value("rootPath").toString());
     openedProject.projectFilePath = fileInfo.absoluteFilePath();
 
     if (openedProject.name.isEmpty() || openedProject.rootPath.isEmpty()) {

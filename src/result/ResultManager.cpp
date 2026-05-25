@@ -14,6 +14,28 @@ QString absoluteResultsPath(const Project &project)
     return QDir(project.rootPath).filePath(ResultManager::relativeResultsFilePath());
 }
 
+QString resolvedProjectPath(const Project &project, const QString &path)
+{
+    if (path.trimmed().isEmpty()) {
+        return QString();
+    }
+
+    const QFileInfo fileInfo(path);
+    return fileInfo.isAbsolute()
+        ? QDir::cleanPath(fileInfo.absoluteFilePath())
+        : QDir::cleanPath(QDir(project.rootPath).filePath(path));
+}
+
+QStringList resolvedProjectPaths(const Project &project, const QStringList &paths)
+{
+    QStringList resolved;
+    resolved.reserve(paths.size());
+    for (const QString &path : paths) {
+        resolved.append(resolvedProjectPath(project, path));
+    }
+    return resolved;
+}
+
 QJsonArray toJsonArray(const QStringList &values)
 {
     QJsonArray array;
@@ -97,6 +119,20 @@ ResultObject fromJsonObject(const QJsonObject &object)
     result.summary = object.value("summary").toString();
     return result;
 }
+
+void normalizeResultPaths(const Project &project, ResultObject *result)
+{
+    if (!result) {
+        return;
+    }
+
+    result->casePath = resolvedProjectPath(project, result->casePath);
+    result->logFile = resolvedProjectPath(project, result->logFile);
+    result->datFile = resolvedProjectPath(project, result->datFile);
+    result->frdFile = resolvedProjectPath(project, result->frdFile);
+    result->staFile = resolvedProjectPath(project, result->staFile);
+    result->resultFiles = resolvedProjectPaths(project, result->resultFiles);
+}
 }
 
 QString ResultManager::relativeResultsFilePath()
@@ -133,7 +169,9 @@ bool ResultManager::load(const Project &project, std::vector<ResultObject> &resu
     results.reserve(array.size());
     for (const QJsonValue &value : array) {
         if (value.isObject()) {
-            results.push_back(fromJsonObject(value.toObject()));
+            ResultObject result = fromJsonObject(value.toObject());
+            normalizeResultPaths(project, &result);
+            results.push_back(result);
         }
     }
     return true;
