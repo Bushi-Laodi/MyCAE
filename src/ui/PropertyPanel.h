@@ -4,8 +4,10 @@
 #include "solver/Load.h"
 #include "solver/Material.h"
 #include "solver/SimulationCase.h"
+#include "picking/PickMode.h"
 
 #include <QWidget>
+#include <QString>
 
 #include <vector>
 
@@ -28,6 +30,7 @@ public:
     void showGeometryObject(const GeometryObject &geometry);
     void showMeshObject(const MeshObject &meshObject);
     void showFaceGroup(const FaceGroup &faceGroup);
+    void showPickState(PickMode mode, const QString &geometryName, const std::vector<int> &faceIndices);
 
     void showMaterialCategory(const std::vector<Material> &materials);
     void showBoundaryConditionCategory(const std::vector<BoundaryCondition> &boundaryConditions);

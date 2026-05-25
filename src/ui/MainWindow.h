@@ -1,16 +1,16 @@
 #pragma once
 
-#include "geometry/GeometryCreationController.h"
 #include "geometry/GeometryManager.h"
-#include "geometry/GeometryObject.h"
-#include "mesh/MeshObject.h"
-#include "mesh/MeshWorkflowController.h"
+#include "picking/PickController.h"
 #include "project/ProjectModel.h"
 #include "project/ProjectManager.h"
+#include "project/SelectionState.h"
 #include "solver/plugin/SolverPluginManager.h"
-#include "ui/SolverDataController.h"
+#include "ui/ActionRegistry.h"
 
 #include <QMainWindow>
+#include <QVector>
+#include <QStringList>
 
 class QAction;
 class QString;
@@ -19,6 +19,7 @@ class LogPanel;
 class ProjectTreePanel;
 class PropertyPanel;
 class RenderView;
+struct WorkflowCommandContext;
 
 class MainWindow final : public QMainWindow
 {
@@ -40,61 +41,34 @@ private:
     void showEvent(QShowEvent *event) override;
     bool m_vtkInitialized = false;
 
-    void newProject();
-    void openProject();
-    void createGeometry(GeometryCreateType type);
-    void createBooleanGeometry();
-    void checkGmsh();
-    void generateMesh();
-    void readMeshInfo();
-    void showMesh();
-    void runSolverPlugin(const QString &pluginId);
-    void setCurrentProject(const Project &project);
-    void loadProjectGeometries();
-    void loadProjectMeshes();
-    void loadProjectSimulationCase();
-    bool saveProjectSimulationCase();
-    void refreshProjectTree();
-    void refreshGeometryTree();
-    void refreshMeshTree();
-    void refreshFaceGroupTree();
-    void refreshSolverDataTree();
-    bool selectGeometryByName(const QString &geometryName);
-    void showGeometryProperties(const QString &geometryName);
-    void showMeshObject(const QString &meshName);
-    void showFaceGroup(const QString &faceGroupId);
-    void showMaterial(const QString &materialId);
-    void showBoundaryCondition(const QString &boundaryConditionId);
-    void showLoad(const QString &loadId);
-    void displayGeometry(const GeometryObject &geometry);
-    void displayMeshObject(const MeshObject &meshObject);
-    void handleMeshWorkflowResult(const MeshWorkflowResult &result);
-    void handleSolverDataResult(const SolverDataControllerResult &result);
+    void applySelection(const Selection &selection);
+    void handleFacePicked(const PickSelection &selection);
+    void updateActionStates();
+    WorkflowCommandContext workflowCommandContext();
     void writeLog(const QString &message);
-
-    // Solver data UI handlers
-    void onMaterialCategorySelected();
-    void onBoundaryConditionCategorySelected();
-    void onLoadCategorySelected();
-    void onSolverCategorySelected();
-    void createMaterial();
-    void createBoundaryCondition();
-    void createLoad();
-    void editSelectedSolverData();
-    void deleteSelectedSolverData();
+    void writeLogMessages(const QStringList &messages);
 
     QAction *m_newProjectAction = nullptr;
     QAction *m_openProjectAction = nullptr;
     QAction *m_createBoxAction = nullptr;
     QAction *m_createCylinderAction = nullptr;
-    QAction *m_booleanOperationAction = nullptr;
     QAction *m_checkGmshAction = nullptr;
     QAction *m_generateMeshAction = nullptr;
     QAction *m_readMeshInfoAction = nullptr;
     QAction *m_showMeshAction = nullptr;
+    QAction *m_pickFaceAction = nullptr;
+    QAction *m_clearPickAction = nullptr;
+    QAction *m_createFaceGroupFromPickAction = nullptr;
+    QAction *m_addPickedFacesToFaceGroupAction = nullptr;
+    QAction *m_removePickedFacesFromFaceGroupAction = nullptr;
+    QAction *m_clearFaceGroupFacesAction = nullptr;
+    QAction *m_renameFaceGroupAction = nullptr;
+    QAction *m_deleteFaceGroupAction = nullptr;
+    QAction *m_setFaceGroupLocalMeshSizeAction = nullptr;
+    QAction *m_toggleFaceGroupPhysicalGroupAction = nullptr;
     QAction *m_exitAction = nullptr;
+    QVector<QAction *> m_runSolverActions;
 
-    // Solver data actions
     QAction *m_createMaterialAction = nullptr;
     QAction *m_createBoundaryConditionAction = nullptr;
     QAction *m_createLoadAction = nullptr;
@@ -110,4 +84,6 @@ private:
     GeometryManager m_geometryManager;
     ProjectModel m_projectModel;
     SolverPluginManager m_solverPluginManager;
+    ActionRegistry m_actionRegistry;
+    PickController m_pickController;
 };

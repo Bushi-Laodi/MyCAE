@@ -21,25 +21,27 @@ QString makeId(QString value)
 
 QString selectedOrFirstGeometryName(const ProjectModel &projectModel)
 {
-    if (const GeometryObject *geometry = projectModel.selectedGeometry()) {
+    if (const GeometryObject *geometry = projectModel.geometryForSelection()) {
         return geometry->name;
     }
-    if (const MeshObject *meshObject = projectModel.selectedMesh()) {
+    if (const MeshObject *meshObject = projectModel.meshForSelection()) {
         return meshObject->sourceGeometryName;
     }
-    if (!projectModel.geometryObjects().isEmpty()) {
-        return projectModel.geometryObjects().front().name;
+    const GeometryRepository &geometryRepository = projectModel.geometryRepository();
+    if (!geometryRepository.geometryObjects().isEmpty()) {
+        return geometryRepository.geometryObjects().front().name;
     }
     return {};
 }
 
 QString selectedOrFirstMeshName(const ProjectModel &projectModel)
 {
-    if (const MeshObject *meshObject = projectModel.selectedMesh()) {
+    if (const MeshObject *meshObject = projectModel.meshForSelection()) {
         return meshObject->name;
     }
-    if (!projectModel.meshObjects().isEmpty()) {
-        return projectModel.meshObjects().front().name;
+    const MeshRepository &meshRepository = projectModel.meshRepository();
+    if (!meshRepository.meshObjects().isEmpty()) {
+        return meshRepository.meshObjects().front().name;
     }
     return {};
 }
@@ -56,9 +58,10 @@ SimulationCase SimulationCaseBuilder::fromProjectModel(const ProjectModel &proje
     simulationCase.sourceGeometryName = selectedOrFirstGeometryName(projectModel);
     simulationCase.meshName = selectedOrFirstMeshName(projectModel);
     simulationCase.postProcessingTool = "ParaView";
-    simulationCase.materials = projectModel.materials();
-    simulationCase.boundaryConditions = projectModel.boundaryConditions();
-    simulationCase.loads = projectModel.loads();
-    simulationCase.geometrySetup.faceGroups = projectModel.faceGroups();
+    const SolverRepository &solverRepository = projectModel.solverRepository();
+    simulationCase.materials = solverRepository.materials();
+    simulationCase.boundaryConditions = solverRepository.boundaryConditions();
+    simulationCase.loads = solverRepository.loads();
+    simulationCase.geometrySetup.faceGroups = solverRepository.faceGroups();
     return simulationCase;
 }

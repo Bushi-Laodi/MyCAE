@@ -1,5 +1,7 @@
 #pragma once
 
+#include "project/SelectionState.h"
+
 #include <QString>
 #include <QStringList>
 #include <QWidget>
@@ -29,21 +31,13 @@ public:
     void setLoadItems(const std::vector<Load> &loads);
 
 signals:
-    void geometrySelected(const QString &geometryName);
-    void meshSelected(const QString &meshName);
-    void faceGroupSelected(const QString &faceGroupId);
-    void materialSelected(const QString &materialId);
-    void boundaryConditionSelected(const QString &boundaryConditionId);
-    void loadSelected(const QString &loadId);
-    void materialCategorySelected();
-    void boundaryConditionCategorySelected();
-    void loadCategorySelected();
-    void solverCategorySelected();
+    void selectionChanged(const Selection &selection);
 
 private:
     void buildInitialTree();
     void buildProjectTree(const QString &projectName, const QString &projectPath);
     void handleCurrentItemChanged(QTreeWidgetItem *current);
+    void setItemSelection(QTreeWidgetItem *item, const Selection &selection);
 
     QTreeWidget *m_tree = nullptr;
     QTreeWidgetItem *m_geometryRoot = nullptr;

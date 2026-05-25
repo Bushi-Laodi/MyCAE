@@ -2,12 +2,35 @@
 
 #include <QString>
 
+#include <vector>
+
+struct FacePoint
+{
+    double x = 0.0;
+    double y = 0.0;
+    double z = 0.0;
+};
+
+struct FaceReference
+{
+    int faceIndex = -1;
+    FacePoint pickedPoint;
+    FacePoint center;
+    FacePoint normal;
+    double area = 0.0;
+};
+
 struct FaceGroup
 {
     QString id;
     QString name;
     QString geometryName;
     QString role = "Default";
+    std::vector<int> faceIndices;
+    std::vector<FaceReference> faceReferences;
+    bool physicalGroupEnabled = true;
+    bool localMeshEnabled = false;
+    double localMeshSize = 0.0;
 };
 
 namespace FaceGroups

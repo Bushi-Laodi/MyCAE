@@ -52,6 +52,9 @@ void BoundaryConditionDialog::setupUi()
     if (m_geometryNameCombo->isEditable()) {
         m_geometryNameCombo->setPlaceholderText("e.g. Pipe");
     }
+    if (!m_options.defaultGeometryName.trimmed().isEmpty()) {
+        setComboCurrentText(m_geometryNameCombo, m_options.defaultGeometryName);
+    }
     form->addRow("Geometry:", m_geometryNameCombo);
 
     m_faceGroupNameCombo = new QComboBox(this);
@@ -70,6 +73,9 @@ void BoundaryConditionDialog::setupUi()
         updateFaceGroupItems(geometryName);
     });
     updateFaceGroupItems(m_geometryNameCombo->currentText());
+    if (!m_options.defaultFaceGroupId.trimmed().isEmpty()) {
+        setComboCurrentText(m_faceGroupNameCombo, m_options.defaultFaceGroupId);
+    }
 
     mainLayout->addLayout(form);
 

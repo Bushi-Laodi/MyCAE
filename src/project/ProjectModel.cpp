@@ -1,337 +1,276 @@
-#include "ProjectModel.h"
+#include "project/ProjectModel.h"
 
 void ProjectModel::clear()
 {
-    m_project = {};
-    m_geometryObjects.clear();
-    m_boxes.clear();
-    m_cylinders.clear();
-    m_meshObjects.clear();
-    m_materials.clear();
-    m_boundaryConditions.clear();
-    m_loads.clear();
-    m_faceGroups.clear();
-    m_selectedGeometryName.clear();
-    m_selectedMeshName.clear();
-    clearSelectedSolverData();
+    m_context.clear();
+}
+
+ProjectContext &ProjectModel::context()
+{
+    return m_context;
+}
+
+const ProjectContext &ProjectModel::context() const
+{
+    return m_context;
+}
+
+GeometryRepository &ProjectModel::geometryRepository()
+{
+    return m_context.geometry();
+}
+
+const GeometryRepository &ProjectModel::geometryRepository() const
+{
+    return m_context.geometry();
+}
+
+MeshRepository &ProjectModel::meshRepository()
+{
+    return m_context.mesh();
+}
+
+const MeshRepository &ProjectModel::meshRepository() const
+{
+    return m_context.mesh();
+}
+
+SolverRepository &ProjectModel::solverRepository()
+{
+    return m_context.solver();
+}
+
+const SolverRepository &ProjectModel::solverRepository() const
+{
+    return m_context.solver();
 }
 
 void ProjectModel::setProject(const Project &project)
 {
-    m_project = project;
-    m_selectedGeometryName.clear();
-    m_selectedMeshName.clear();
-    clearSelectedSolverData();
+    m_context.setProject(project);
 }
 
 const Project &ProjectModel::project() const
 {
-    return m_project;
+    return m_context.project();
 }
 
 bool ProjectModel::hasProject() const
 {
-    return !m_project.rootPath.isEmpty();
+    return m_context.hasProject();
 }
 
 QVector<GeometryObject> &ProjectModel::geometryObjects()
 {
-    return m_geometryObjects;
+    return m_context.geometry().geometryObjects();
 }
 
 const QVector<GeometryObject> &ProjectModel::geometryObjects() const
 {
-    return m_geometryObjects;
+    return m_context.geometry().geometryObjects();
 }
 
 QVector<BoxGeometry> &ProjectModel::boxes()
 {
-    return m_boxes;
+    return m_context.geometry().boxes();
 }
 
 const QVector<BoxGeometry> &ProjectModel::boxes() const
 {
-    return m_boxes;
+    return m_context.geometry().boxes();
 }
 
 QVector<CylinderGeometry> &ProjectModel::cylinders()
 {
-    return m_cylinders;
+    return m_context.geometry().cylinders();
 }
 
 const QVector<CylinderGeometry> &ProjectModel::cylinders() const
 {
-    return m_cylinders;
+    return m_context.geometry().cylinders();
 }
 
 QVector<MeshObject> &ProjectModel::meshObjects()
 {
-    return m_meshObjects;
+    return m_context.mesh().meshObjects();
 }
 
 const QVector<MeshObject> &ProjectModel::meshObjects() const
 {
-    return m_meshObjects;
+    return m_context.mesh().meshObjects();
 }
 
 std::vector<Material> &ProjectModel::materials()
 {
-    return m_materials;
+    return m_context.solver().materials();
 }
 
 const std::vector<Material> &ProjectModel::materials() const
 {
-    return m_materials;
+    return m_context.solver().materials();
 }
 
 std::vector<BoundaryCondition> &ProjectModel::boundaryConditions()
 {
-    return m_boundaryConditions;
+    return m_context.solver().boundaryConditions();
 }
 
 const std::vector<BoundaryCondition> &ProjectModel::boundaryConditions() const
 {
-    return m_boundaryConditions;
+    return m_context.solver().boundaryConditions();
 }
 
 std::vector<Load> &ProjectModel::loads()
 {
-    return m_loads;
+    return m_context.solver().loads();
 }
 
 const std::vector<Load> &ProjectModel::loads() const
 {
-    return m_loads;
+    return m_context.solver().loads();
 }
 
 std::vector<FaceGroup> &ProjectModel::faceGroups()
 {
-    return m_faceGroups;
+    return m_context.solver().faceGroups();
 }
 
 const std::vector<FaceGroup> &ProjectModel::faceGroups() const
 {
-    return m_faceGroups;
+    return m_context.solver().faceGroups();
 }
 
 void ProjectModel::ensureDefaultFaceGroups()
 {
-    for (const GeometryObject &geometry : m_geometryObjects) {
-        const FaceGroup defaultFaceGroup = FaceGroups::makeDefault(geometry.name);
-        bool exists = false;
-        for (const FaceGroup &faceGroup : m_faceGroups) {
-            if (faceGroup.id == defaultFaceGroup.id) {
-                exists = true;
-                break;
-            }
-        }
-        if (exists) {
-            continue;
-        }
-
-        m_faceGroups.push_back(defaultFaceGroup);
-    }
+    m_context.solver().ensureDefaultFaceGroups(m_context.geometry());
 }
 
-void ProjectModel::setSelectedGeometryName(const QString &name)
+const Selection &ProjectModel::selection() const
 {
-    m_selectedGeometryName = name;
-    m_selectedMeshName.clear();
-    clearSelectedSolverData();
+    return m_context.selectionState().current();
 }
 
-const QString &ProjectModel::selectedGeometryName() const
+SelectionCapabilities ProjectModel::selectionCapabilities() const
 {
-    return m_selectedGeometryName;
+    return m_context.selectionState().capabilities();
 }
 
-void ProjectModel::clearSelectedGeometry()
+void ProjectModel::setSelection(const Selection &selection)
 {
-    m_selectedGeometryName.clear();
+    m_context.selectionState().select(selection);
 }
 
-const GeometryObject *ProjectModel::selectedGeometry() const
+void ProjectModel::clearSelection()
 {
-    return findGeometryByName(m_selectedGeometryName);
+    m_context.selectionState().clear();
 }
 
-void ProjectModel::setSelectedMeshName(const QString &name)
+void ProjectModel::clearSelectionIfKind(SelectionKind kind)
 {
-    m_selectedMeshName = name;
-    m_selectedGeometryName.clear();
-    clearSelectedSolverData();
+    m_context.selectionState().clearIfKind(kind);
 }
 
-const QString &ProjectModel::selectedMeshName() const
+void ProjectModel::clearSolverSelection()
 {
-    return m_selectedMeshName;
+    m_context.selectionState().clearSolverSelection();
 }
 
-void ProjectModel::clearSelectedMesh()
+const GeometryObject *ProjectModel::geometryForSelection() const
 {
-    m_selectedMeshName.clear();
+    return selection().kind == SelectionKind::Geometry ? findGeometryByName(selection().id) : nullptr;
 }
 
-const MeshObject *ProjectModel::selectedMesh() const
+const MeshObject *ProjectModel::meshForSelection() const
 {
-    return findMeshByName(m_selectedMeshName);
+    return selection().kind == SelectionKind::Mesh ? findMeshByName(selection().id) : nullptr;
 }
 
-void ProjectModel::setSelectedMaterialId(const QString &id)
+Material *ProjectModel::materialForSelection()
 {
-    m_selectedMaterialId = id;
-    m_selectedBoundaryConditionId.clear();
-    m_selectedLoadId.clear();
-    m_selectedGeometryName.clear();
-    m_selectedMeshName.clear();
+    return selection().kind == SelectionKind::Material ? findMaterialById(selection().id) : nullptr;
 }
 
-const QString &ProjectModel::selectedMaterialId() const
+const Material *ProjectModel::materialForSelection() const
 {
-    return m_selectedMaterialId;
+    return selection().kind == SelectionKind::Material ? findMaterialById(selection().id) : nullptr;
 }
 
-void ProjectModel::setSelectedBoundaryConditionId(const QString &id)
+BoundaryCondition *ProjectModel::boundaryConditionForSelection()
 {
-    m_selectedBoundaryConditionId = id;
-    m_selectedMaterialId.clear();
-    m_selectedLoadId.clear();
-    m_selectedGeometryName.clear();
-    m_selectedMeshName.clear();
+    return selection().kind == SelectionKind::BoundaryCondition ? findBoundaryConditionById(selection().id) : nullptr;
 }
 
-const QString &ProjectModel::selectedBoundaryConditionId() const
+const BoundaryCondition *ProjectModel::boundaryConditionForSelection() const
 {
-    return m_selectedBoundaryConditionId;
+    return selection().kind == SelectionKind::BoundaryCondition ? findBoundaryConditionById(selection().id) : nullptr;
 }
 
-void ProjectModel::setSelectedLoadId(const QString &id)
+Load *ProjectModel::loadForSelection()
 {
-    m_selectedLoadId = id;
-    m_selectedMaterialId.clear();
-    m_selectedBoundaryConditionId.clear();
-    m_selectedGeometryName.clear();
-    m_selectedMeshName.clear();
+    return selection().kind == SelectionKind::Load ? findLoadById(selection().id) : nullptr;
 }
 
-const QString &ProjectModel::selectedLoadId() const
+const Load *ProjectModel::loadForSelection() const
 {
-    return m_selectedLoadId;
-}
-
-void ProjectModel::clearSelectedSolverData()
-{
-    m_selectedMaterialId.clear();
-    m_selectedBoundaryConditionId.clear();
-    m_selectedLoadId.clear();
+    return selection().kind == SelectionKind::Load ? findLoadById(selection().id) : nullptr;
 }
 
 const GeometryObject *ProjectModel::findGeometryByName(const QString &name) const
 {
-    for (const GeometryObject &geometry : m_geometryObjects) {
-        if (geometry.name == name) {
-            return &geometry;
-        }
-    }
-    return nullptr;
+    return m_context.geometry().findGeometryByName(name);
 }
 
 const BoxGeometry *ProjectModel::findBoxByName(const QString &name) const
 {
-    for (const BoxGeometry &box : m_boxes) {
-        if (box.name == name) {
-            return &box;
-        }
-    }
-    return nullptr;
+    return m_context.geometry().findBoxByName(name);
 }
 
 const CylinderGeometry *ProjectModel::findCylinderByName(const QString &name) const
 {
-    for (const CylinderGeometry &cylinder : m_cylinders) {
-        if (cylinder.name == name) {
-            return &cylinder;
-        }
-    }
-    return nullptr;
+    return m_context.geometry().findCylinderByName(name);
 }
 
 const MeshObject *ProjectModel::findMeshByName(const QString &name) const
 {
-    for (const MeshObject &meshObject : m_meshObjects) {
-        if (meshObject.name == name) {
-            return &meshObject;
-        }
-    }
-    return nullptr;
+    return m_context.mesh().findMeshByName(name);
+}
+
+FaceGroup *ProjectModel::findFaceGroupById(const QString &id)
+{
+    return m_context.solver().findFaceGroupById(id);
 }
 
 const FaceGroup *ProjectModel::findFaceGroupById(const QString &id) const
 {
-    for (const FaceGroup &faceGroup : m_faceGroups) {
-        if (faceGroup.id == id) {
-            return &faceGroup;
-        }
-    }
-    return nullptr;
+    return m_context.solver().findFaceGroupById(id);
 }
 
 Material *ProjectModel::findMaterialById(const QString &id)
 {
-    for (Material &material : m_materials) {
-        if (material.id == id) {
-            return &material;
-        }
-    }
-    return nullptr;
+    return m_context.solver().findMaterialById(id);
 }
 
 const Material *ProjectModel::findMaterialById(const QString &id) const
 {
-    for (const Material &material : m_materials) {
-        if (material.id == id) {
-            return &material;
-        }
-    }
-    return nullptr;
+    return m_context.solver().findMaterialById(id);
 }
 
 BoundaryCondition *ProjectModel::findBoundaryConditionById(const QString &id)
 {
-    for (BoundaryCondition &boundaryCondition : m_boundaryConditions) {
-        if (boundaryCondition.id == id) {
-            return &boundaryCondition;
-        }
-    }
-    return nullptr;
+    return m_context.solver().findBoundaryConditionById(id);
 }
 
 const BoundaryCondition *ProjectModel::findBoundaryConditionById(const QString &id) const
 {
-    for (const BoundaryCondition &boundaryCondition : m_boundaryConditions) {
-        if (boundaryCondition.id == id) {
-            return &boundaryCondition;
-        }
-    }
-    return nullptr;
+    return m_context.solver().findBoundaryConditionById(id);
 }
 
 Load *ProjectModel::findLoadById(const QString &id)
 {
-    for (Load &load : m_loads) {
-        if (load.id == id) {
-            return &load;
-        }
-    }
-    return nullptr;
+    return m_context.solver().findLoadById(id);
 }
 
 const Load *ProjectModel::findLoadById(const QString &id) const
 {
-    for (const Load &load : m_loads) {
-        if (load.id == id) {
-            return &load;
-        }
-    }
-    return nullptr;
+    return m_context.solver().findLoadById(id);
 }

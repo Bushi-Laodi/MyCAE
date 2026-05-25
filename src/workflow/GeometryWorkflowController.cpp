@@ -1,0 +1,61 @@
+#include "workflow/GeometryWorkflowController.h"
+
+#include "geometry/GeometryManager.h"
+#include "project/ProjectModel.h"
+#include "workflow/ProjectWorkflowController.h"
+#include "ui/PropertyPanel.h"
+#include "ui/RenderView.h"
+#include "workflow/SelectionController.h"
+
+#include <QMessageBox>
+
+GeometryWorkflowController::GeometryWorkflowController(
+    GeometryManager &geometryManager,
+    ProjectModel &projectModel,
+    ProjectWorkflowController &projectWorkflow,
+    PropertyPanel *propertyPanel,
+    RenderView *renderView,
+    QWidget *parent
+)
+    : m_geometryManager(geometryManager)
+    , m_projectModel(projectModel)
+    , m_projectWorkflow(projectWorkflow)
+    , m_propertyPanel(propertyPanel)
+    , m_renderView(renderView)
+    , m_parent(parent)
+{
+}
+
+GeometryWorkflowResult GeometryWorkflowController::createGeometry(GeometryCreateType type) const
+{
+    GeometryWorkflowResult workflowResult;
+    const GeometryCreationController creationController(m_geometryManager);
+    const GeometryCreationResult creationResult =
+        creationController.createGeometry(m_parent, m_projectModel.project(), type);
+
+    workflowResult.logMessages.append(creationResult.logMessages);
+    if (creationResult.canceled) {
+        workflowResult.canceled = true;
+        return workflowResult;
+    }
+    if (!creationResult.success) {
+        QMessageBox::warning(m_parent, "Create geometry failed", creationResult.errorMessage);
+        return workflowResult;
+    }
+
+    const QString createdGeometryName = creationResult.geometryObject.name;
+    workflowResult.logMessages.append(m_projectWorkflow.loadGeometries().logMessages);
+    m_projectWorkflow.refreshProjectTree();
+
+    const SelectionController selectionController(m_projectModel, m_propertyPanel, m_renderView);
+    const SelectionControllerResult selectionResult =
+        selectionController.apply(Selection::item(SelectionKind::Geometry, createdGeometryName, createdGeometryName));
+    workflowResult.logMessages.append(selectionResult.logMessages);
+    if (!selectionResult.accepted) {
+        workflowResult.logMessages.append("Created geometry was saved but could not be selected: " + createdGeometryName);
+    }
+
+    workflowResult.logMessages.append(m_projectWorkflow.saveSimulationCase().logMessages);
+    workflowResult.success = true;
+    return workflowResult;
+}

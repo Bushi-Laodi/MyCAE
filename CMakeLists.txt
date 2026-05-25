@@ -112,6 +112,12 @@ qt_add_executable(MyCAE
     src/geometry/BoxGeometry.h
     src/geometry/CylinderGeometry.h
     src/geometry/FaceGroup.h
+    src/geometry/FaceGroupReferenceService.cpp
+    src/geometry/FaceGroupReferenceService.h
+    src/geometry/FaceGroupService.cpp
+    src/geometry/FaceGroupService.h
+    src/geometry/FaceReferenceUtils.cpp
+    src/geometry/FaceReferenceUtils.h
     src/geometry/GeometryBooleanController.cpp
     src/geometry/GeometryBooleanController.h
     src/geometry/GeometryBooleanOperation.h
@@ -124,6 +130,28 @@ qt_add_executable(MyCAE
     src/geometry/GeometryObject.h
     src/geometry/GeometryPropertyController.cpp
     src/geometry/GeometryPropertyController.h
+    src/commands/AppCommand.h
+    src/commands/CommandUtilities.cpp
+    src/commands/CommandUtilities.h
+    src/commands/GeometryCommands.cpp
+    src/commands/GeometryCommands.h
+    src/commands/FaceGroupCommandUtilities.cpp
+    src/commands/FaceGroupCommandUtilities.h
+    src/commands/FaceGroupEditCommands.cpp
+    src/commands/FaceGroupEditCommands.h
+    src/commands/MeshCommands.cpp
+    src/commands/MeshCommands.h
+    src/commands/PickModeCommands.cpp
+    src/commands/PickModeCommands.h
+    src/commands/ProjectCommands.cpp
+    src/commands/ProjectCommands.h
+    src/commands/SolverCommands.cpp
+    src/commands/SolverCommands.h
+    src/commands/UtilityCommands.cpp
+    src/commands/UtilityCommands.h
+    src/commands/WorkflowCommandContext.h
+    src/mesh/GmshCaseWriter.cpp
+    src/mesh/GmshCaseWriter.h
     src/mesh/GmshRunner.cpp
     src/mesh/GmshRunner.h
     src/mesh/MeshData.h
@@ -132,8 +160,6 @@ qt_add_executable(MyCAE
     src/mesh/MeshObject.h
     src/mesh/MeshToVtkConverter.cpp
     src/mesh/MeshToVtkConverter.h
-    src/mesh/MeshWorkflowController.cpp
-    src/mesh/MeshWorkflowController.h
     src/mesh/MshReader.cpp
     src/mesh/MshReader.h
     src/occ/OCCBoxBuilder.cpp
@@ -148,13 +174,35 @@ qt_add_executable(MyCAE
     src/occ/OCCShapeConverter.h
     src/occ/OCCShapeIO.cpp
     src/occ/OCCShapeIO.h
+    src/project/GeometryRepository.cpp
+    src/project/GeometryRepository.h
+    src/project/MeshRepository.cpp
+    src/project/MeshRepository.h
     src/project/Project.h
+    src/project/ProjectContext.cpp
+    src/project/ProjectContext.h
     src/project/ProjectModel.cpp
     src/project/ProjectModel.h
     src/project/ProjectModelLoader.cpp
     src/project/ProjectModelLoader.h
     src/project/ProjectManager.cpp
     src/project/ProjectManager.h
+    src/project/SelectionState.cpp
+    src/project/SelectionState.h
+    src/project/SolverRepository.cpp
+    src/project/SolverRepository.h
+    src/picking/PickController.cpp
+    src/picking/PickController.h
+    src/picking/PickMode.h
+    src/picking/PickSelection.h
+    src/render/RenderHighlightController.cpp
+    src/render/RenderHighlightController.h
+    src/render/VtkFaceGeometry.cpp
+    src/render/VtkFaceGeometry.h
+    src/render/VtkHighlightActorFactory.cpp
+    src/render/VtkHighlightActorFactory.h
+    src/render/VtkPickAdapter.cpp
+    src/render/VtkPickAdapter.h
     src/solver/BoundaryCondition.h
     src/solver/Load.h
     src/solver/Material.h
@@ -167,6 +215,8 @@ qt_add_executable(MyCAE
     src/solver/SimulationCaseJsonWriter.h
     src/solver/SimulationCaseManager.cpp
     src/solver/SimulationCaseManager.h
+    src/solver/SolverDataService.cpp
+    src/solver/SolverDataService.h
     src/solver/plugin/ExternalProcessSolverPlugin.cpp
     src/solver/plugin/ExternalProcessSolverPlugin.h
     src/solver/plugin/ExternalSolverPluginConfig.cpp
@@ -180,6 +230,8 @@ qt_add_executable(MyCAE
     src/ui/BooleanOperationDialog.h
     src/ui/BoundaryConditionDialog.cpp
     src/ui/BoundaryConditionDialog.h
+    src/ui/ActionRegistry.cpp
+    src/ui/ActionRegistry.h
     src/ui/CylinderDialog.cpp
     src/ui/CylinderDialog.h
     src/ui/LoadDialog.cpp
@@ -194,12 +246,32 @@ qt_add_executable(MyCAE
     src/ui/ProjectTreePanel.h
     src/ui/PropertyPanel.cpp
     src/ui/PropertyPanel.h
+    src/ui/property/FaceGroupPropertyView.cpp
+    src/ui/property/FaceGroupPropertyView.h
+    src/ui/property/GeometryPropertyView.cpp
+    src/ui/property/GeometryPropertyView.h
+    src/ui/property/PickPropertyView.cpp
+    src/ui/property/PickPropertyView.h
+    src/ui/property/SolverPropertyView.cpp
+    src/ui/property/SolverPropertyView.h
     src/ui/RenderView.cpp
     src/ui/RenderView.h
     src/ui/SolverDataController.cpp
     src/ui/SolverDataController.h
     src/ui/VtkRenderCanvas.cpp
     src/ui/VtkRenderCanvas.h
+    src/workflow/GeometryWorkflowController.cpp
+    src/workflow/GeometryWorkflowController.h
+    src/workflow/FaceGroupWorkflowController.cpp
+    src/workflow/FaceGroupWorkflowController.h
+    src/workflow/MeshWorkflowController.cpp
+    src/workflow/MeshWorkflowController.h
+    src/workflow/ProjectWorkflowController.cpp
+    src/workflow/ProjectWorkflowController.h
+    src/workflow/SelectionController.cpp
+    src/workflow/SelectionController.h
+    src/workflow/SolverWorkflowController.cpp
+    src/workflow/SolverWorkflowController.h
 )
 
 target_include_directories(MyCAE PRIVATE src ${OpenCASCADE_INCLUDE_DIR})

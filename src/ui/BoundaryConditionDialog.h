@@ -16,6 +16,8 @@ struct BoundaryConditionDialogOptions
     QStringList geometryNames;
     QMap<QString, QStringList> faceGroupsByGeometry;
     QStringList materialIds;
+    QString defaultGeometryName;
+    QString defaultFaceGroupId;
 };
 
 class BoundaryConditionDialog final : public QDialog

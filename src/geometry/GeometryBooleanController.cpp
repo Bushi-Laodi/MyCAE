@@ -21,22 +21,26 @@ GeometryBooleanResult GeometryBooleanController::createBooleanGeometry(
         result.logMessages.append("Boolean operation failed: no project is open.");
         return result;
     }
-    if (projectModel.geometryObjects().size() < 2) {
+    const GeometryRepository &geometryRepository = projectModel.geometryRepository();
+    if (geometryRepository.geometryObjects().size() < 2) {
         result.errorMessage = "Boolean operation requires at least two geometry objects.";
         result.logMessages.append("Boolean operation failed: less than two geometry objects are available.");
         return result;
     }
 
+    const QString initialGeometryName = projectModel.selection().kind == SelectionKind::Geometry
+        ? projectModel.selection().id
+        : QString();
     const std::optional<BooleanOperationDialogResult> dialogResult =
-        BooleanOperationDialog::getOperation(parent, projectModel.geometryObjects(), projectModel.selectedGeometryName());
+        BooleanOperationDialog::getOperation(parent, geometryRepository.geometryObjects(), initialGeometryName);
     if (!dialogResult) {
         result.canceled = true;
         result.logMessages.append("Boolean operation canceled.");
         return result;
     }
 
-    const GeometryObject *leftGeometry = projectModel.findGeometryByName(dialogResult->leftGeometryName);
-    const GeometryObject *rightGeometry = projectModel.findGeometryByName(dialogResult->rightGeometryName);
+    const GeometryObject *leftGeometry = geometryRepository.findGeometryByName(dialogResult->leftGeometryName);
+    const GeometryObject *rightGeometry = geometryRepository.findGeometryByName(dialogResult->rightGeometryName);
     if (!leftGeometry || !rightGeometry) {
         result.errorMessage = "Selected boolean input geometry was not found.";
         result.logMessages.append("Boolean operation failed: input geometry was not found.");

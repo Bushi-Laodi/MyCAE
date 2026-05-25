@@ -15,9 +15,11 @@
 #include <gp_Trsf.hxx>
 
 #include <vtkCellArray.h>
+#include <vtkIntArray.h>
 #include <vtkNew.h>
 #include <vtkPoints.h>
 #include <vtkPolyData.h>
+#include <vtkCellData.h>
 #include <vtkSmartPointer.h>
 
 #include <stdexcept>
@@ -40,7 +42,10 @@ vtkSmartPointer<vtkPolyData> OCCShapeConverter::toPolyData(const TopoDS_Shape &s
 
     vtkNew<vtkPoints> points;
     vtkNew<vtkCellArray> triangles;
+    vtkNew<vtkIntArray> faceIndices;
+    faceIndices->SetName("MyCAE_FaceIndex");
 
+    int faceIndex = 1;
     for (TopExp_Explorer faceExplorer(shape, TopAbs_FACE); faceExplorer.More(); faceExplorer.Next()) {
         const TopoDS_Face face = TopoDS::Face(faceExplorer.Current());
 
@@ -74,12 +79,16 @@ vtkSmartPointer<vtkPolyData> OCCShapeConverter::toPolyData(const TopoDS_Shape &s
                 pointOffset + static_cast<vtkIdType>(n3 - 1)
             };
             triangles->InsertNextCell(3, ids);
+            faceIndices->InsertNextValue(faceIndex);
         }
+        ++faceIndex;
     }
 
     auto polyData = vtkSmartPointer<vtkPolyData>::New();
     polyData->SetPoints(points);
     polyData->SetPolys(triangles);
+    polyData->GetCellData()->AddArray(faceIndices);
+    polyData->GetCellData()->SetActiveScalars("MyCAE_FaceIndex");
     polyData->BuildCells();
     polyData->BuildLinks();
 

@@ -28,15 +28,16 @@ bool ProjectModelLoader::loadGeometries(ProjectModel &projectModel, QString *err
         return false;
     }
 
-    projectModel.boxes() = loadedBoxes;
-    projectModel.cylinders() = loadedCylinders;
-    projectModel.geometryObjects().clear();
+    GeometryRepository &geometryRepository = projectModel.geometryRepository();
+    geometryRepository.boxes() = loadedBoxes;
+    geometryRepository.cylinders() = loadedCylinders;
+    geometryRepository.geometryObjects().clear();
     for (const GeometryObject &geometry : loadedGeometries) {
-        projectModel.geometryObjects().append(geometry);
+        geometryRepository.geometryObjects().append(geometry);
     }
     projectModel.ensureDefaultFaceGroups();
 
-    projectModel.clearSelectedGeometry();
+    projectModel.clearSelectionIfKind(SelectionKind::Geometry);
     return true;
 }
 
@@ -48,12 +49,13 @@ bool ProjectModelLoader::loadMeshes(ProjectModel &projectModel, QString *errorMe
         return false;
     }
 
-    projectModel.meshObjects().clear();
+    MeshRepository &meshRepository = projectModel.meshRepository();
+    meshRepository.meshObjects().clear();
     for (const MeshObject &meshObject : loadedMeshes) {
-        projectModel.meshObjects().append(meshObject);
+        meshRepository.meshObjects().append(meshObject);
     }
 
-    projectModel.clearSelectedMesh();
+    projectModel.clearSelectionIfKind(SelectionKind::Mesh);
     return true;
 }
 
@@ -61,9 +63,7 @@ bool ProjectModelLoader::loadSimulationCase(ProjectModel &projectModel, QString 
 {
     SimulationCaseManager simulationCaseManager;
     if (!simulationCaseManager.exists(projectModel.project())) {
-        projectModel.materials().clear();
-        projectModel.boundaryConditions().clear();
-        projectModel.loads().clear();
+        projectModel.solverRepository().clearSolverData();
         projectModel.ensureDefaultFaceGroups();
         return true;
     }
@@ -73,10 +73,11 @@ bool ProjectModelLoader::loadSimulationCase(ProjectModel &projectModel, QString 
         return false;
     }
 
-    projectModel.materials() = simulationCase.materials;
-    projectModel.boundaryConditions() = simulationCase.boundaryConditions;
-    projectModel.loads() = simulationCase.loads;
-    projectModel.faceGroups() = simulationCase.geometrySetup.faceGroups;
+    SolverRepository &solverRepository = projectModel.solverRepository();
+    solverRepository.materials() = simulationCase.materials;
+    solverRepository.boundaryConditions() = simulationCase.boundaryConditions;
+    solverRepository.loads() = simulationCase.loads;
+    solverRepository.faceGroups() = simulationCase.geometrySetup.faceGroups;
     projectModel.ensureDefaultFaceGroups();
     return true;
 }

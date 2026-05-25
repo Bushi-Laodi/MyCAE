@@ -1,29 +1,61 @@
 #include "MainWindow.h"
 
-#include "geometry/GeometryCreationController.h"
-#include "geometry/GeometryDisplayController.h"
-#include "geometry/GeometryPropertyController.h"
 #include "LogPanel.h"
-#include "mesh/MeshWorkflowController.h"
 #include "ProjectTreePanel.h"
 #include "PropertyPanel.h"
-#include "project/ProjectModelLoader.h"
 #include "RenderView.h"
-#include "solver/SimulationCaseBuilder.h"
-#include "solver/SimulationCaseManager.h"
-#include "SolverDataController.h"
+#include "commands/FaceGroupEditCommands.h"
+#include "commands/GeometryCommands.h"
+#include "commands/MeshCommands.h"
+#include "commands/PickModeCommands.h"
+#include "commands/ProjectCommands.h"
+#include "commands/SolverCommands.h"
+#include "commands/UtilityCommands.h"
+#include "commands/WorkflowCommandContext.h"
+#include "workflow/SelectionController.h"
 
 #include <QAction>
-#include <QDir>
 #include <QDockWidget>
-#include <QFileDialog>
 #include <QMenu>
 #include <QMenuBar>
-#include <QMessageBox>
 #include <QShowEvent>
 #include <QStatusBar>
-#include <QStringList>
 #include <QToolBar>
+
+namespace
+{
+constexpr auto CommandNewProject = "project.new";
+constexpr auto CommandOpenProject = "project.open";
+constexpr auto CommandExit = "app.exit";
+constexpr auto CommandCreateBox = "geometry.create.box";
+constexpr auto CommandCreateCylinder = "geometry.create.cylinder";
+constexpr auto CommandImportStep = "geometry.import.step";
+constexpr auto CommandCheckGmsh = "mesh.checkGmsh";
+constexpr auto CommandGenerateMesh = "mesh.generate";
+constexpr auto CommandReadMeshInfo = "mesh.readInfo";
+constexpr auto CommandShowMesh = "mesh.show";
+constexpr auto CommandPickFace = "picking.face";
+constexpr auto CommandClearPick = "picking.clear";
+constexpr auto CommandCreateFaceGroupFromPick = "picking.faceGroup.createFromPick";
+constexpr auto CommandAddPickedFacesToFaceGroup = "picking.faceGroup.addPicked";
+constexpr auto CommandRemovePickedFacesFromFaceGroup = "picking.faceGroup.removePicked";
+constexpr auto CommandClearFaceGroupFaces = "picking.faceGroup.clearFaces";
+constexpr auto CommandRenameFaceGroup = "picking.faceGroup.rename";
+constexpr auto CommandDeleteFaceGroup = "picking.faceGroup.delete";
+constexpr auto CommandSetFaceGroupLocalMeshSize = "picking.faceGroup.localMeshSize";
+constexpr auto CommandToggleFaceGroupPhysicalGroup = "picking.faceGroup.togglePhysicalGroup";
+constexpr auto CommandCreateMaterial = "solverData.create.material";
+constexpr auto CommandCreateBoundaryCondition = "solverData.create.boundaryCondition";
+constexpr auto CommandCreateLoad = "solverData.create.load";
+constexpr auto CommandEditSolverData = "solverData.editSelected";
+constexpr auto CommandDeleteSolverData = "solverData.deleteSelected";
+constexpr auto CommandSimulationGenerateMesh = "simulation.generateMesh";
+
+QString solverRunCommandId(const QString &pluginId)
+{
+    return "solver.run." + pluginId;
+}
+}
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -31,13 +63,18 @@ MainWindow::MainWindow(QWidget *parent)
     resize(1200, 760);
     setWindowTitle("MyCAE - Qt 6");
 
+    m_renderView = new RenderView(this);
+    connect(m_renderView, &RenderView::facePicked, this, &MainWindow::handleFacePicked);
+    setCentralWidget(m_renderView);
+    createDockWidgets();
+
     createActions();
     createMenus();
     createToolBar();
-
-    m_renderView = new RenderView(this);
-    setCentralWidget(m_renderView);
-    createDockWidgets();
+    m_actionRegistry.setAfterExecuteCallback([this]() {
+        updateActionStates();
+    });
+    updateActionStates();
 
     // NOTE: Do NOT call m_renderView->showEmpty() here!
     // The VTK OpenGL context is not fully ready during widget construction.
@@ -70,69 +107,217 @@ void MainWindow::initializeVtkRender()
 
 void MainWindow::createActions()
 {
+    const WorkflowCommandContext context = workflowCommandContext();
+
     m_newProjectAction = new QAction("New Project", this);
     m_newProjectAction->setStatusTip("Create a new CAE project");
-    connect(m_newProjectAction, &QAction::triggered, this, &MainWindow::newProject);
+    m_actionRegistry.registerActionCommand(
+        CommandNewProject,
+        m_newProjectAction,
+        this,
+        makeProjectCommand(context, ProjectCommandType::Create)
+    );
 
     m_openProjectAction = new QAction("Open Project", this);
     m_openProjectAction->setStatusTip("Open an existing CAE project");
-    connect(m_openProjectAction, &QAction::triggered, this, &MainWindow::openProject);
+    m_actionRegistry.registerActionCommand(
+        CommandOpenProject,
+        m_openProjectAction,
+        this,
+        makeProjectCommand(context, ProjectCommandType::Open)
+    );
 
     m_createBoxAction = new QAction("Create Box", this);
     m_createBoxAction->setStatusTip("Create a box geometry from length, width, and height");
-    connect(m_createBoxAction, &QAction::triggered, this, [this]() {
-        createGeometry(GeometryCreateType::Box);
-    });
+    m_actionRegistry.registerActionCommand(
+        CommandCreateBox,
+        m_createBoxAction,
+        this,
+        makeGeometryCreateCommand(context, GeometryCreateType::Box)
+    );
 
     m_createCylinderAction = new QAction("Create Cylinder", this);
     m_createCylinderAction->setStatusTip("Create a cylinder geometry from radius and height");
-    connect(m_createCylinderAction, &QAction::triggered, this, [this]() {
-        createGeometry(GeometryCreateType::Cylinder);
-    });
+    m_actionRegistry.registerActionCommand(
+        CommandCreateCylinder,
+        m_createCylinderAction,
+        this,
+        makeGeometryCreateCommand(context, GeometryCreateType::Cylinder)
+    );
 
     m_checkGmshAction = new QAction("Check Gmsh", this);
     m_checkGmshAction->setStatusTip("Run gmsh.exe --version");
-    connect(m_checkGmshAction, &QAction::triggered, this, &MainWindow::checkGmsh);
+    m_actionRegistry.registerActionCommand(
+        CommandCheckGmsh,
+        m_checkGmshAction,
+        this,
+        makeMeshCommand(context, MeshCommandType::CheckGmsh)
+    );
 
     m_generateMeshAction = new QAction("Generate Mesh", this);
     m_generateMeshAction->setStatusTip("Generate a 3D mesh from the selected STEP geometry");
-    connect(m_generateMeshAction, &QAction::triggered, this, &MainWindow::generateMesh);
+    m_actionRegistry.registerActionCommand(
+        CommandGenerateMesh,
+        m_generateMeshAction,
+        this,
+        makeMeshCommand(context, MeshCommandType::Generate)
+    );
 
     m_readMeshInfoAction = new QAction("Read Mesh Info", this);
     m_readMeshInfoAction->setStatusTip("Read node and tetrahedron counts from the selected MSH file");
-    connect(m_readMeshInfoAction, &QAction::triggered, this, &MainWindow::readMeshInfo);
+    m_actionRegistry.registerActionCommand(
+        CommandReadMeshInfo,
+        m_readMeshInfoAction,
+        this,
+        makeMeshCommand(context, MeshCommandType::ReadInfo)
+    );
 
     m_showMeshAction = new QAction("Show Mesh", this);
     m_showMeshAction->setStatusTip("Read and display the selected tetrahedral MSH file");
-    connect(m_showMeshAction, &QAction::triggered, this, &MainWindow::showMesh);
+    m_actionRegistry.registerActionCommand(
+        CommandShowMesh,
+        m_showMeshAction,
+        this,
+        makeMeshCommand(context, MeshCommandType::Show)
+    );
+
+    m_pickFaceAction = new QAction("Pick Face", this);
+    m_pickFaceAction->setCheckable(true);
+    m_pickFaceAction->setStatusTip("Pick geometry faces in the render view");
+    m_actionRegistry.registerActionCommand(
+        CommandPickFace,
+        m_pickFaceAction,
+        this,
+        makePickModeCommand(context)
+    );
+
+    m_clearPickAction = new QAction("Clear Pick", this);
+    m_clearPickAction->setStatusTip("Clear the current pick highlight");
+    m_actionRegistry.registerActionCommand(
+        CommandClearPick,
+        m_clearPickAction,
+        this,
+        makeClearPickCommand(context)
+    );
+
+    m_createFaceGroupFromPickAction = new QAction("Create Face Group from Pick", this);
+    m_createFaceGroupFromPickAction->setStatusTip("Create or update a face group from the picked face");
+    m_actionRegistry.registerActionCommand(
+        CommandCreateFaceGroupFromPick,
+        m_createFaceGroupFromPickAction,
+        this,
+        makeFaceGroupEditCommand(context, FaceGroupEditCommandType::CreateFromPick)
+    );
+
+    m_addPickedFacesToFaceGroupAction = new QAction("Add Picked Faces to Face Group", this);
+    m_actionRegistry.registerActionCommand(
+        CommandAddPickedFacesToFaceGroup,
+        m_addPickedFacesToFaceGroupAction,
+        this,
+        makeFaceGroupEditCommand(context, FaceGroupEditCommandType::AddPickedFaces)
+    );
+
+    m_removePickedFacesFromFaceGroupAction = new QAction("Remove Picked Faces from Face Group", this);
+    m_actionRegistry.registerActionCommand(
+        CommandRemovePickedFacesFromFaceGroup,
+        m_removePickedFacesFromFaceGroupAction,
+        this,
+        makeFaceGroupEditCommand(context, FaceGroupEditCommandType::RemovePickedFaces)
+    );
+
+    m_clearFaceGroupFacesAction = new QAction("Clear Selected Face Group Faces", this);
+    m_actionRegistry.registerActionCommand(
+        CommandClearFaceGroupFaces,
+        m_clearFaceGroupFacesAction,
+        this,
+        makeFaceGroupEditCommand(context, FaceGroupEditCommandType::ClearFaces)
+    );
+
+    m_renameFaceGroupAction = new QAction("Rename Selected Face Group", this);
+    m_actionRegistry.registerActionCommand(
+        CommandRenameFaceGroup,
+        m_renameFaceGroupAction,
+        this,
+        makeFaceGroupEditCommand(context, FaceGroupEditCommandType::Rename)
+    );
+
+    m_deleteFaceGroupAction = new QAction("Delete Selected Face Group", this);
+    m_actionRegistry.registerActionCommand(
+        CommandDeleteFaceGroup,
+        m_deleteFaceGroupAction,
+        this,
+        makeFaceGroupEditCommand(context, FaceGroupEditCommandType::Delete)
+    );
+
+    m_setFaceGroupLocalMeshSizeAction = new QAction("Set Face Group Local Mesh Size", this);
+    m_actionRegistry.registerActionCommand(
+        CommandSetFaceGroupLocalMeshSize,
+        m_setFaceGroupLocalMeshSizeAction,
+        this,
+        makeFaceGroupEditCommand(context, FaceGroupEditCommandType::SetLocalMeshSize)
+    );
+
+    m_toggleFaceGroupPhysicalGroupAction = new QAction("Toggle Face Group Physical Group", this);
+    m_actionRegistry.registerActionCommand(
+        CommandToggleFaceGroupPhysicalGroup,
+        m_toggleFaceGroupPhysicalGroupAction,
+        this,
+        makeFaceGroupEditCommand(context, FaceGroupEditCommandType::TogglePhysicalGroup)
+    );
 
     m_exitAction = new QAction("Exit", this);
-    connect(m_exitAction, &QAction::triggered, this, &QWidget::close);
+    m_actionRegistry.registerActionCommand(CommandExit, m_exitAction, this, makeCloseWindowCommand(this));
 
-    // Solver data actions
     m_createMaterialAction = new QAction("Create Material", this);
     m_createMaterialAction->setStatusTip("Create a new material");
-    connect(m_createMaterialAction, &QAction::triggered, this, &MainWindow::createMaterial);
+    m_actionRegistry.registerActionCommand(
+        CommandCreateMaterial,
+        m_createMaterialAction,
+        this,
+        makeSolverDataCommand(context, SolverDataCommandType::CreateMaterial)
+    );
 
     m_createBoundaryConditionAction = new QAction("Create Boundary Condition", this);
     m_createBoundaryConditionAction->setStatusTip("Create a new boundary condition");
-    connect(m_createBoundaryConditionAction, &QAction::triggered, this, &MainWindow::createBoundaryCondition);
+    m_actionRegistry.registerActionCommand(
+        CommandCreateBoundaryCondition,
+        m_createBoundaryConditionAction,
+        this,
+        makeSolverDataCommand(context, SolverDataCommandType::CreateBoundaryCondition)
+    );
 
     m_createLoadAction = new QAction("Create Load", this);
     m_createLoadAction->setStatusTip("Create a new load");
-    connect(m_createLoadAction, &QAction::triggered, this, &MainWindow::createLoad);
+    m_actionRegistry.registerActionCommand(
+        CommandCreateLoad,
+        m_createLoadAction,
+        this,
+        makeSolverDataCommand(context, SolverDataCommandType::CreateLoad)
+    );
 
     m_editSolverDataAction = new QAction("Edit Selected Solver Data", this);
     m_editSolverDataAction->setStatusTip("Edit the selected material, boundary condition, or load");
-    connect(m_editSolverDataAction, &QAction::triggered, this, &MainWindow::editSelectedSolverData);
+    m_actionRegistry.registerActionCommand(
+        CommandEditSolverData,
+        m_editSolverDataAction,
+        this,
+        makeSolverDataCommand(context, SolverDataCommandType::EditSelected)
+    );
 
     m_deleteSolverDataAction = new QAction("Delete Selected Solver Data", this);
     m_deleteSolverDataAction->setStatusTip("Delete the selected material, boundary condition, or load");
-    connect(m_deleteSolverDataAction, &QAction::triggered, this, &MainWindow::deleteSelectedSolverData);
+    m_actionRegistry.registerActionCommand(
+        CommandDeleteSolverData,
+        m_deleteSolverDataAction,
+        this,
+        makeSolverDataCommand(context, SolverDataCommandType::DeleteSelected)
+    );
 }
 
 void MainWindow::createMenus()
 {
+    const WorkflowCommandContext context = workflowCommandContext();
+
     auto *fileMenu = menuBar()->addMenu("File");
     fileMenu->addAction(m_newProjectAction);
     fileMenu->addAction(m_openProjectAction);
@@ -142,9 +327,28 @@ void MainWindow::createMenus()
     auto *geometryMenu = menuBar()->addMenu("Geometry");
     geometryMenu->addAction(m_createBoxAction);
     geometryMenu->addAction(m_createCylinderAction);
-    geometryMenu->addAction("Import STEP", this, [this]() {
-        writeLog("STEP import is reserved for a later stage.");
-    });
+    QAction *importStepAction = geometryMenu->addAction("Import STEP");
+    m_actionRegistry.registerActionCommand(
+        CommandImportStep,
+        importStepAction,
+        this,
+        makeLogMessageCommand(m_logPanel, "STEP import is reserved for a later stage.")
+    );
+
+    auto *pickingMenu = menuBar()->addMenu("Picking");
+    pickingMenu->addAction(m_pickFaceAction);
+    pickingMenu->addAction(m_clearPickAction);
+    pickingMenu->addSeparator();
+    pickingMenu->addAction(m_createFaceGroupFromPickAction);
+    pickingMenu->addAction(m_addPickedFacesToFaceGroupAction);
+    pickingMenu->addAction(m_removePickedFacesFromFaceGroupAction);
+    pickingMenu->addAction(m_clearFaceGroupFacesAction);
+    pickingMenu->addSeparator();
+    pickingMenu->addAction(m_renameFaceGroupAction);
+    pickingMenu->addAction(m_deleteFaceGroupAction);
+    pickingMenu->addSeparator();
+    pickingMenu->addAction(m_setFaceGroupLocalMeshSizeAction);
+    pickingMenu->addAction(m_toggleFaceGroupPhysicalGroupAction);
 
     auto *solverMenu = menuBar()->addMenu("Solver Setup");
     solverMenu->addAction(m_createMaterialAction);
@@ -161,9 +365,13 @@ void MainWindow::createMenus()
     meshMenu->addAction(m_showMeshAction);
 
     auto *simulationMenu = menuBar()->addMenu("Simulation");
-    simulationMenu->addAction("Generate Mesh", this, [this]() {
-        writeLog("Use Mesh -> Generate Mesh for the current external Gmsh flow.");
-    });
+    QAction *simulationGenerateMeshAction = simulationMenu->addAction("Generate Mesh");
+    m_actionRegistry.registerActionCommand(
+        CommandSimulationGenerateMesh,
+        simulationGenerateMeshAction,
+        this,
+        makeLogMessageCommand(m_logPanel, "Use Mesh -> Generate Mesh for the current external Gmsh flow.")
+    );
 
     simulationMenu->addSeparator();
     if (m_solverPluginManager.plugins().empty()) {
@@ -173,10 +381,14 @@ void MainWindow::createMenus()
         for (const std::unique_ptr<SolverPlugin> &plugin : m_solverPluginManager.plugins()) {
             const QString pluginId = plugin->id();
             QAction *runSolverAction = simulationMenu->addAction("Run " + plugin->name());
+            m_runSolverActions.append(runSolverAction);
             runSolverAction->setStatusTip("Run solver plugin: " + pluginId);
-            connect(runSolverAction, &QAction::triggered, this, [this, pluginId]() {
-                runSolverPlugin(pluginId);
-            });
+            m_actionRegistry.registerActionCommand(
+                solverRunCommandId(pluginId),
+                runSolverAction,
+                this,
+                makeRunSolverCommand(context, pluginId)
+            );
         }
     }
 }
@@ -190,22 +402,18 @@ void MainWindow::createToolBar()
     toolBar->addSeparator();
     toolBar->addAction(m_createBoxAction);
     toolBar->addAction(m_createCylinderAction);
+    toolBar->addSeparator();
+    toolBar->addAction(m_pickFaceAction);
+    toolBar->addAction(m_createFaceGroupFromPickAction);
+    toolBar->addAction(m_addPickedFacesToFaceGroupAction);
+    toolBar->addAction(m_removePickedFacesFromFaceGroupAction);
 }
 
 void MainWindow::createDockWidgets()
 {
     auto *projectDock = new QDockWidget("Project / Model", this);
     m_projectTreePanel = new ProjectTreePanel(projectDock);
-    connect(m_projectTreePanel, &ProjectTreePanel::geometrySelected, this, &MainWindow::showGeometryProperties);
-    connect(m_projectTreePanel, &ProjectTreePanel::meshSelected, this, &MainWindow::showMeshObject);
-    connect(m_projectTreePanel, &ProjectTreePanel::faceGroupSelected, this, &MainWindow::showFaceGroup);
-    connect(m_projectTreePanel, &ProjectTreePanel::materialSelected, this, &MainWindow::showMaterial);
-    connect(m_projectTreePanel, &ProjectTreePanel::boundaryConditionSelected, this, &MainWindow::showBoundaryCondition);
-    connect(m_projectTreePanel, &ProjectTreePanel::loadSelected, this, &MainWindow::showLoad);
-    connect(m_projectTreePanel, &ProjectTreePanel::materialCategorySelected, this, &MainWindow::onMaterialCategorySelected);
-    connect(m_projectTreePanel, &ProjectTreePanel::boundaryConditionCategorySelected, this, &MainWindow::onBoundaryConditionCategorySelected);
-    connect(m_projectTreePanel, &ProjectTreePanel::loadCategorySelected, this, &MainWindow::onLoadCategorySelected);
-    connect(m_projectTreePanel, &ProjectTreePanel::solverCategorySelected, this, &MainWindow::onSolverCategorySelected);
+    connect(m_projectTreePanel, &ProjectTreePanel::selectionChanged, this, &MainWindow::applySelection);
     projectDock->setWidget(m_projectTreePanel);
     addDockWidget(Qt::LeftDockWidgetArea, projectDock);
 
@@ -220,397 +428,134 @@ void MainWindow::createDockWidgets()
     addDockWidget(Qt::BottomDockWidgetArea, logDock);
 }
 
-void MainWindow::newProject()
+void MainWindow::applySelection(const Selection &selection)
 {
-    const QString projectPath = QFileDialog::getExistingDirectory(
-        this,
-        "Select Project Directory",
-        QString(),
-        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
-    );
-
-    if (projectPath.isEmpty()) {
-        writeLog("New project canceled.");
-        return;
+    const SelectionController controller(m_projectModel, m_propertyPanel, m_renderView);
+    if (selection.kind == SelectionKind::Geometry) {
+        m_pickController.setTargetGeometry(selection.id);
+    } else if (selection.kind == SelectionKind::FaceGroup) {
+        if (const FaceGroup *faceGroup = m_projectModel.findFaceGroupById(selection.id)) {
+            m_pickController.setTargetGeometry(faceGroup->geometryName);
+        }
     }
-
-    Project project;
-    QString errorMessage;
-    if (!m_projectManager.createProject(projectPath, &project, &errorMessage)) {
-        QMessageBox::warning(this, "New project failed", errorMessage);
-        writeLog("New project failed: " + errorMessage);
-        return;
+    const SelectionControllerResult result = controller.apply(selection);
+    writeLogMessages(result.logMessages);
+    if (selection.kind != SelectionKind::FaceGroup) {
+        m_pickController.clear(m_renderView);
     }
-
-    setCurrentProject(project);
-    refreshProjectTree();
-    saveProjectSimulationCase();
-    writeLog("Project created: " + project.rootPath);
+    updateActionStates();
 }
 
-void MainWindow::openProject()
+void MainWindow::handleFacePicked(const PickSelection &selection)
 {
-    const QString projectFilePath = QFileDialog::getOpenFileName(
-        this,
-        "Open Project",
-        QString(),
-        "MyCAE Project (project.json);;JSON Files (*.json)"
-    );
-
-    if (projectFilePath.isEmpty()) {
-        writeLog("Open project canceled.");
-        return;
+    const PickControllerResult result = m_pickController.acceptSelection(selection, m_renderView);
+    writeLogMessages(result.logMessages);
+    if (m_propertyPanel && result.success) {
+        m_propertyPanel->showPickState(
+            m_pickController.mode(),
+            m_pickController.geometryName(),
+            m_pickController.selectedFaceIndices()
+        );
     }
-
-    Project project;
-    QString errorMessage;
-    if (!m_projectManager.openProject(projectFilePath, &project, &errorMessage)) {
-        QMessageBox::warning(this, "Open project failed", errorMessage);
-        writeLog("Open project failed: " + errorMessage);
-        return;
+    if (result.success) {
+        statusBar()->showMessage(
+            QString("Pick: %1 face(s) on %2")
+                .arg(result.selectedFaceCount)
+                .arg(result.geometryName)
+        );
     }
-
-    setCurrentProject(project);
-    loadProjectGeometries();
-    loadProjectMeshes();
-    loadProjectSimulationCase();
-    refreshProjectTree();
-    writeLog("Project opened: " + project.rootPath);
+    updateActionStates();
 }
 
-void MainWindow::createGeometry(GeometryCreateType type)
+void MainWindow::updateActionStates()
 {
-    GeometryCreationController creationController(m_geometryManager);
-    const GeometryCreationResult result = creationController.createGeometry(this, m_projectModel.project(), type);
+    const bool hasProject = m_projectModel.hasProject();
+    const SelectionCapabilities capabilities = m_projectModel.selectionCapabilities();
+    const bool hasPickedFaces = m_pickController.hasSelection();
+    const bool hasSelectedFaceGroup = m_projectModel.selection().kind == SelectionKind::FaceGroup;
 
-    for (const QString &message : result.logMessages) {
-        writeLog(message);
+    if (m_createBoxAction) {
+        m_createBoxAction->setEnabled(hasProject);
     }
-
-    if (result.canceled) {
-        return;
+    if (m_createCylinderAction) {
+        m_createCylinderAction->setEnabled(hasProject);
     }
-    if (!result.success) {
-        QMessageBox::warning(this, "Create geometry failed", result.errorMessage);
-        return;
+    if (m_generateMeshAction) {
+        m_generateMeshAction->setEnabled(hasProject && capabilities.canGenerateMesh);
     }
-
-    const QString createdGeometryName = result.geometryObject.name;
-    loadProjectGeometries();
-    refreshProjectTree();
-    if (!selectGeometryByName(createdGeometryName)) {
-        writeLog("Created geometry was saved but could not be selected: " + createdGeometryName);
+    if (m_readMeshInfoAction) {
+        m_readMeshInfoAction->setEnabled(hasProject && capabilities.canReadMeshInfo);
     }
-    saveProjectSimulationCase();
+    if (m_showMeshAction) {
+        m_showMeshAction->setEnabled(hasProject && capabilities.canShowMesh);
+    }
+    if (m_pickFaceAction) {
+        m_pickFaceAction->setEnabled(hasProject);
+        m_pickFaceAction->setChecked(m_pickController.mode() == PickMode::Face);
+    }
+    if (m_clearPickAction) {
+        m_clearPickAction->setEnabled(hasProject);
+    }
+    if (m_createFaceGroupFromPickAction) {
+        m_createFaceGroupFromPickAction->setEnabled(hasProject && hasPickedFaces);
+    }
+    if (m_addPickedFacesToFaceGroupAction) {
+        m_addPickedFacesToFaceGroupAction->setEnabled(hasProject && hasPickedFaces && hasSelectedFaceGroup);
+    }
+    if (m_removePickedFacesFromFaceGroupAction) {
+        m_removePickedFacesFromFaceGroupAction->setEnabled(hasProject && hasPickedFaces && hasSelectedFaceGroup);
+    }
+    if (m_clearFaceGroupFacesAction) {
+        m_clearFaceGroupFacesAction->setEnabled(hasProject && hasSelectedFaceGroup);
+    }
+    if (m_renameFaceGroupAction) {
+        m_renameFaceGroupAction->setEnabled(hasProject && hasSelectedFaceGroup);
+    }
+    if (m_deleteFaceGroupAction) {
+        m_deleteFaceGroupAction->setEnabled(hasProject && hasSelectedFaceGroup);
+    }
+    if (m_setFaceGroupLocalMeshSizeAction) {
+        m_setFaceGroupLocalMeshSizeAction->setEnabled(hasProject && hasSelectedFaceGroup);
+    }
+    if (m_toggleFaceGroupPhysicalGroupAction) {
+        m_toggleFaceGroupPhysicalGroupAction->setEnabled(hasProject && hasSelectedFaceGroup);
+    }
+    if (m_createMaterialAction) {
+        m_createMaterialAction->setEnabled(hasProject);
+    }
+    if (m_createBoundaryConditionAction) {
+        m_createBoundaryConditionAction->setEnabled(hasProject);
+    }
+    if (m_createLoadAction) {
+        m_createLoadAction->setEnabled(hasProject);
+    }
+    if (m_editSolverDataAction) {
+        m_editSolverDataAction->setEnabled(hasProject && capabilities.canEditSolverData);
+    }
+    if (m_deleteSolverDataAction) {
+        m_deleteSolverDataAction->setEnabled(hasProject && capabilities.canDeleteSolverData);
+    }
+    for (QAction *runSolverAction : m_runSolverActions) {
+        if (runSolverAction) {
+            runSolverAction->setEnabled(hasProject);
+        }
+    }
 }
 
-void MainWindow::checkGmsh()
+WorkflowCommandContext MainWindow::workflowCommandContext()
 {
-    const MeshWorkflowController controller;
-    handleMeshWorkflowResult(controller.checkGmsh());
-}
-
-void MainWindow::generateMesh()
-{
-    const MeshWorkflowController controller;
-    handleMeshWorkflowResult(controller.generateMesh(m_projectModel));
-}
-
-void MainWindow::readMeshInfo()
-{
-    const MeshWorkflowController controller;
-    handleMeshWorkflowResult(controller.readMeshInfo(m_projectModel));
-}
-
-void MainWindow::showMesh()
-{
-    const MeshWorkflowController controller;
-    handleMeshWorkflowResult(controller.showSelectedGeometryMesh(m_projectModel, m_renderView));
-}
-
-void MainWindow::runSolverPlugin(const QString &pluginId)
-{
-    if (!m_projectModel.hasProject()) {
-        writeLog("Run solver failed: create or open a project first.");
-        return;
-    }
-
-    if (!saveProjectSimulationCase()) {
-        return;
-    }
-
-    const SimulationCase simulationCase = SimulationCaseBuilder::fromProjectModel(m_projectModel);
-    const QString caseDirectory = QDir(m_projectModel.project().rootPath).filePath("solver/" + pluginId);
-
-    const SolverPlugin *plugin = m_solverPluginManager.pluginById(pluginId);
-    if (!plugin) {
-        writeLog("Run solver failed: plugin is not registered: " + pluginId);
-        return;
-    }
-
-    QString errorMessage;
-    writeLog("Solver plugin: " + plugin->name());
-    writeLog("Solver case directory: " + caseDirectory);
-    writeLog(QString("Solver case data: %1 materials, %2 boundary conditions, %3 loads.")
-        .arg(simulationCase.materials.size())
-        .arg(simulationCase.boundaryConditions.size())
-        .arg(simulationCase.loads.size()));
-
-    if (!plugin->exportCase(simulationCase, caseDirectory, &errorMessage)) {
-        writeLog("Solver export failed: " + errorMessage);
-        return;
-    }
-    writeLog("Solver input exported.");
-
-    QString solverLog;
-    if (!plugin->runCase(caseDirectory, &solverLog, &errorMessage)) {
-        writeLog("Solver run failed: " + errorMessage);
-        return;
-    }
-    if (!solverLog.isEmpty()) {
-        writeLog(solverLog);
-    }
-
-    QString resultText;
-    if (!plugin->readResult(caseDirectory, &resultText, &errorMessage)) {
-        writeLog("Solver result read failed: " + errorMessage);
-        return;
-    }
-    writeLog("Solver result: " + resultText);
-}
-
-void MainWindow::setCurrentProject(const Project &project)
-{
-    m_projectModel.clear();
-    m_projectModel.setProject(project);
-    setWindowTitle("MyCAE - " + project.name);
-
-    if (m_projectTreePanel) {
-        m_projectTreePanel->showProject(project.name, project.rootPath);
-    }
-    if (m_propertyPanel) {
-        m_propertyPanel->showEmptySelection();
-    }
-    if (m_renderView) {
-        m_renderView->showEmpty();
-    }
-
-    statusBar()->showMessage("Current project: " + project.name);
-}
-
-void MainWindow::loadProjectGeometries()
-{
-    QString errorMessage;
-    ProjectModelLoader loader(m_geometryManager);
-    if (!loader.loadGeometries(m_projectModel, &errorMessage)) {
-        QMessageBox::warning(this, "Load geometry failed", errorMessage);
-        writeLog("Load geometry failed: " + errorMessage);
-        return;
-    }
-
-    if (m_propertyPanel) {
-        m_propertyPanel->showEmptySelection();
-    }
-    if (m_renderView) {
-        m_renderView->showEmpty();
-    }
-    writeLog(QString("Loaded %1 geometry objects.").arg(m_projectModel.geometryObjects().size()));
-}
-
-void MainWindow::loadProjectMeshes()
-{
-    QString errorMessage;
-    ProjectModelLoader loader(m_geometryManager);
-    if (!loader.loadMeshes(m_projectModel, &errorMessage)) {
-        QMessageBox::warning(this, "Load mesh failed", errorMessage);
-        writeLog("Load mesh failed: " + errorMessage);
-        return;
-    }
-
-    writeLog(QString("Loaded %1 mesh objects.").arg(m_projectModel.meshObjects().size()));
-}
-
-void MainWindow::loadProjectSimulationCase()
-{
-    QString errorMessage;
-    ProjectModelLoader loader(m_geometryManager);
-    if (!loader.loadSimulationCase(m_projectModel, &errorMessage)) {
-        QMessageBox::warning(this, "Load simulation case failed", errorMessage);
-        writeLog("Load simulation case failed: " + errorMessage);
-        return;
-    }
-
-    writeLog(QString("Loaded simulation case data: %1 materials, %2 boundary conditions, %3 loads.")
-        .arg(m_projectModel.materials().size())
-        .arg(m_projectModel.boundaryConditions().size())
-        .arg(m_projectModel.loads().size()));
-}
-
-bool MainWindow::saveProjectSimulationCase()
-{
-    QString errorMessage;
-    const SimulationCaseManager simulationCaseManager;
-    if (!simulationCaseManager.save(m_projectModel, &errorMessage)) {
-        writeLog("Save simulation case failed: " + errorMessage);
-        return false;
-    }
-
-    writeLog("Simulation case saved: " + SimulationCaseManager::relativeCaseFilePath());
-    return true;
-}
-
-void MainWindow::refreshProjectTree()
-{
-    refreshGeometryTree();
-    refreshFaceGroupTree();
-    refreshMeshTree();
-    refreshSolverDataTree();
-}
-
-void MainWindow::refreshGeometryTree()
-{
-    if (!m_projectTreePanel) {
-        return;
-    }
-
-    QStringList geometryNames;
-    for (const GeometryObject &geometry : m_projectModel.geometryObjects()) {
-        geometryNames.append(geometry.name);
-    }
-    m_projectTreePanel->setGeometryItems(geometryNames);
-}
-
-void MainWindow::refreshMeshTree()
-{
-    if (!m_projectTreePanel) {
-        return;
-    }
-
-    QStringList meshNames;
-    for (const MeshObject &meshObject : m_projectModel.meshObjects()) {
-        meshNames.append(meshObject.name);
-    }
-    m_projectTreePanel->setMeshItems(meshNames);
-}
-
-void MainWindow::refreshFaceGroupTree()
-{
-    if (!m_projectTreePanel) {
-        return;
-    }
-
-    m_projectTreePanel->setFaceGroupItems(m_projectModel.faceGroups());
-}
-
-void MainWindow::refreshSolverDataTree()
-{
-    if (!m_projectTreePanel) {
-        return;
-    }
-
-    m_projectTreePanel->setMaterialItems(m_projectModel.materials());
-    m_projectTreePanel->setBoundaryConditionItems(m_projectModel.boundaryConditions());
-    m_projectTreePanel->setLoadItems(m_projectModel.loads());
-}
-
-bool MainWindow::selectGeometryByName(const QString &geometryName)
-{
-    showGeometryProperties(geometryName);
-    return m_projectModel.selectedGeometryName() == geometryName;
-}
-
-void MainWindow::showGeometryProperties(const QString &geometryName)
-{
-    const GeometryObject *geometry = m_projectModel.findGeometryByName(geometryName);
-    if (!geometry) {
-        m_projectModel.clearSelectedGeometry();
-        return;
-    }
-
-    m_projectModel.setSelectedGeometryName(geometry->name);
-
-    const GeometryPropertyController propertyController;
-    const GeometryPropertyResult propertyResult = propertyController.showGeometryProperties(
+    return WorkflowCommandContext{
+        m_projectManager,
+        m_geometryManager,
         m_projectModel,
-        *geometry,
-        m_propertyPanel
-    );
-    if (!propertyResult.success) {
-        writeLog(propertyResult.errorMessage);
-    }
-
-    displayGeometry(*geometry);
-}
-
-void MainWindow::showMeshObject(const QString &meshName)
-{
-    const MeshObject *meshObject = m_projectModel.findMeshByName(meshName);
-    if (meshObject) {
-        m_projectModel.setSelectedMeshName(meshName);
-        displayMeshObject(*meshObject);
-        return;
-    }
-    m_projectModel.clearSelectedMesh();
-}
-
-void MainWindow::showFaceGroup(const QString &faceGroupId)
-{
-    const FaceGroup *faceGroup = m_projectModel.findFaceGroupById(faceGroupId);
-    if (!faceGroup) {
-        writeLog("Face group selection failed: not found: " + faceGroupId);
-        return;
-    }
-
-    if (m_propertyPanel) {
-        m_propertyPanel->showFaceGroup(*faceGroup);
-    }
-    writeLog("Face group selected: " + faceGroup->id);
-}
-
-void MainWindow::showMaterial(const QString &materialId)
-{
-    for (const QString &message : SolverDataController::showMaterial(m_projectModel, m_propertyPanel, materialId)) {
-        writeLog(message);
-    }
-}
-
-void MainWindow::showBoundaryCondition(const QString &boundaryConditionId)
-{
-    for (const QString &message :
-         SolverDataController::showBoundaryCondition(m_projectModel, m_propertyPanel, boundaryConditionId)) {
-        writeLog(message);
-    }
-}
-
-void MainWindow::showLoad(const QString &loadId)
-{
-    for (const QString &message : SolverDataController::showLoad(m_projectModel, m_propertyPanel, loadId)) {
-        writeLog(message);
-    }
-}
-
-void MainWindow::displayGeometry(const GeometryObject &geometry)
-{
-    const GeometryDisplayController displayController;
-    const GeometryDisplayResult result = displayController.displayGeometry(
-        m_projectModel,
-        geometry,
-        m_renderView
-    );
-
-    for (const QString &message : result.logMessages) {
-        writeLog(message);
-    }
-}
-
-void MainWindow::displayMeshObject(const MeshObject &meshObject)
-{
-    if (m_propertyPanel) {
-        m_propertyPanel->showMeshObject(meshObject);
-    }
-
-    const MeshWorkflowController controller;
-    handleMeshWorkflowResult(controller.displayMeshObject(m_projectModel, meshObject, m_renderView));
+        m_solverPluginManager,
+        m_projectTreePanel,
+        m_propertyPanel,
+        m_renderView,
+        m_logPanel,
+        this,
+        &m_pickController
+    };
 }
 
 void MainWindow::writeLog(const QString &message)
@@ -620,115 +565,9 @@ void MainWindow::writeLog(const QString &message)
     }
 }
 
-void MainWindow::handleMeshWorkflowResult(const MeshWorkflowResult &result)
+void MainWindow::writeLogMessages(const QStringList &messages)
 {
-    for (const QString &message : result.logMessages) {
+    for (const QString &message : messages) {
         writeLog(message);
     }
-
-    if (result.meshTreeChanged) {
-        refreshMeshTree();
-    }
-    if (result.simulationCaseChanged) {
-        saveProjectSimulationCase();
-    }
-}
-
-void MainWindow::handleSolverDataResult(const SolverDataControllerResult &result)
-{
-    for (const QString &message : result.logMessages) {
-        writeLog(message);
-    }
-
-    if (!result.changed) {
-        return;
-    }
-
-    saveProjectSimulationCase();
-    refreshSolverDataTree();
-
-    switch (result.selectionKind) {
-    case SolverDataSelectionKind::MaterialCategory:
-        onMaterialCategorySelected();
-        break;
-    case SolverDataSelectionKind::BoundaryConditionCategory:
-        onBoundaryConditionCategorySelected();
-        break;
-    case SolverDataSelectionKind::LoadCategory:
-        onLoadCategorySelected();
-        break;
-    case SolverDataSelectionKind::Material:
-        showMaterial(result.selectionId);
-        break;
-    case SolverDataSelectionKind::BoundaryCondition:
-        showBoundaryCondition(result.selectionId);
-        break;
-    case SolverDataSelectionKind::Load:
-        showLoad(result.selectionId);
-        break;
-    case SolverDataSelectionKind::None:
-        break;
-    }
-}
-
-// ============================================================
-// Solver data UI handlers
-// ============================================================
-
-void MainWindow::onMaterialCategorySelected()
-{
-    for (const QString &message : SolverDataController::showMaterialCategory(m_projectModel, m_propertyPanel)) {
-        writeLog(message);
-    }
-}
-
-void MainWindow::onBoundaryConditionCategorySelected()
-{
-    for (const QString &message :
-         SolverDataController::showBoundaryConditionCategory(m_projectModel, m_propertyPanel)) {
-        writeLog(message);
-    }
-}
-
-void MainWindow::onLoadCategorySelected()
-{
-    for (const QString &message : SolverDataController::showLoadCategory(m_projectModel, m_propertyPanel)) {
-        writeLog(message);
-    }
-}
-
-void MainWindow::onSolverCategorySelected()
-{
-    m_projectModel.clearSelectedGeometry();
-    m_projectModel.clearSelectedMesh();
-    m_projectModel.clearSelectedSolverData();
-    if (m_propertyPanel) {
-        m_propertyPanel->showSolverCategory(SimulationCaseBuilder::fromProjectModel(m_projectModel));
-    }
-    writeLog("Solver settings displayed.");
-}
-
-void MainWindow::createMaterial()
-{
-    handleSolverDataResult(SolverDataController::createMaterial(this, m_projectModel));
-}
-
-void MainWindow::createBoundaryCondition()
-{
-    handleSolverDataResult(SolverDataController::createBoundaryCondition(this, m_projectModel));
-}
-
-void MainWindow::createLoad()
-{
-    handleSolverDataResult(SolverDataController::createLoad(this, m_projectModel));
-}
-
-void MainWindow::editSelectedSolverData()
-{
-    handleSolverDataResult(SolverDataController::editSelected(this, m_projectModel));
-}
-
-void MainWindow::deleteSelectedSolverData()
-{
-    handleSolverDataResult(SolverDataController::deleteSelected(this, m_projectModel));
 }

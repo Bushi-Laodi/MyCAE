@@ -1,14 +1,6 @@
 #pragma once
 
-#include "geometry/BoxGeometry.h"
-#include "geometry/CylinderGeometry.h"
-#include "geometry/FaceGroup.h"
-#include "geometry/GeometryObject.h"
-#include "mesh/MeshObject.h"
-#include "project/Project.h"
-#include "solver/BoundaryCondition.h"
-#include "solver/Load.h"
-#include "solver/Material.h"
+#include "project/ProjectContext.h"
 
 #include <QString>
 #include <QVector>
@@ -19,6 +11,15 @@ class ProjectModel
 {
 public:
     void clear();
+
+    ProjectContext &context();
+    const ProjectContext &context() const;
+    GeometryRepository &geometryRepository();
+    const GeometryRepository &geometryRepository() const;
+    MeshRepository &meshRepository();
+    const MeshRepository &meshRepository() const;
+    SolverRepository &solverRepository();
+    const SolverRepository &solverRepository() const;
 
     void setProject(const Project &project);
     const Project &project() const;
@@ -42,28 +43,26 @@ public:
     const std::vector<FaceGroup> &faceGroups() const;
     void ensureDefaultFaceGroups();
 
-    void setSelectedGeometryName(const QString &name);
-    const QString &selectedGeometryName() const;
-    void clearSelectedGeometry();
-    const GeometryObject *selectedGeometry() const;
-
-    void setSelectedMeshName(const QString &name);
-    const QString &selectedMeshName() const;
-    void clearSelectedMesh();
-    const MeshObject *selectedMesh() const;
-
-    void setSelectedMaterialId(const QString &id);
-    const QString &selectedMaterialId() const;
-    void setSelectedBoundaryConditionId(const QString &id);
-    const QString &selectedBoundaryConditionId() const;
-    void setSelectedLoadId(const QString &id);
-    const QString &selectedLoadId() const;
-    void clearSelectedSolverData();
+    const Selection &selection() const;
+    SelectionCapabilities selectionCapabilities() const;
+    void setSelection(const Selection &selection);
+    void clearSelection();
+    void clearSelectionIfKind(SelectionKind kind);
+    void clearSolverSelection();
+    const GeometryObject *geometryForSelection() const;
+    const MeshObject *meshForSelection() const;
+    Material *materialForSelection();
+    const Material *materialForSelection() const;
+    BoundaryCondition *boundaryConditionForSelection();
+    const BoundaryCondition *boundaryConditionForSelection() const;
+    Load *loadForSelection();
+    const Load *loadForSelection() const;
 
     const GeometryObject *findGeometryByName(const QString &name) const;
     const BoxGeometry *findBoxByName(const QString &name) const;
     const CylinderGeometry *findCylinderByName(const QString &name) const;
     const MeshObject *findMeshByName(const QString &name) const;
+    FaceGroup *findFaceGroupById(const QString &id);
     const FaceGroup *findFaceGroupById(const QString &id) const;
     Material *findMaterialById(const QString &id);
     const Material *findMaterialById(const QString &id) const;
@@ -73,18 +72,5 @@ public:
     const Load *findLoadById(const QString &id) const;
 
 private:
-    Project m_project;
-    QVector<GeometryObject> m_geometryObjects;
-    QVector<BoxGeometry> m_boxes;
-    QVector<CylinderGeometry> m_cylinders;
-    QVector<MeshObject> m_meshObjects;
-    std::vector<Material> m_materials;
-    std::vector<BoundaryCondition> m_boundaryConditions;
-    std::vector<Load> m_loads;
-    std::vector<FaceGroup> m_faceGroups;
-    QString m_selectedGeometryName;
-    QString m_selectedMeshName;
-    QString m_selectedMaterialId;
-    QString m_selectedBoundaryConditionId;
-    QString m_selectedLoadId;
+    ProjectContext m_context;
 };

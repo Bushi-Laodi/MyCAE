@@ -38,6 +38,7 @@ RenderView::RenderView(QWidget *parent)
     m_detailLabel->setStyleSheet("font-size: 13px; color: #9ba7b4;");
 
     m_canvas = new VtkRenderCanvas(this);
+    connect(m_canvas, &VtkRenderCanvas::facePicked, this, &RenderView::facePicked);
 
     layout->addWidget(m_titleLabel);
     layout->addWidget(m_subtitleLabel);
@@ -81,7 +82,7 @@ void RenderView::showOccShape(const TopoDS_Shape &shape, const QString &title, c
     m_titleLabel->setText(title);
     m_subtitleLabel->setText(subtitle);
     m_detailLabel->setText("Open CASCADE TopoDS_Shape converted to VTK PolyData.");
-    m_canvas->showOccShape(shape);
+    m_canvas->showOccShape(shape, title);
 }
 
 void RenderView::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const QString &title, const QString &subtitle)
@@ -90,4 +91,19 @@ void RenderView::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const Q
     m_subtitleLabel->setText(subtitle);
     m_detailLabel->setText("Gmsh tetrahedral mesh converted to VTK UnstructuredGrid.");
     m_canvas->showMeshGrid(grid);
+}
+
+void RenderView::setPickMode(PickMode mode)
+{
+    m_canvas->setPickMode(mode);
+}
+
+void RenderView::clearHighlight()
+{
+    m_canvas->clearHighlight();
+}
+
+void RenderView::highlightFaceIndices(const std::vector<int> &faceIndices)
+{
+    m_canvas->highlightFaceIndices(faceIndices);
 }

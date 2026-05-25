@@ -1,21 +1,30 @@
 #include "VtkRenderCanvas.h"
 
 #include "occ/OCCShapeConverter.h"
+#include "render/VtkHighlightActorFactory.h"
+#include "render/VtkPickAdapter.h"
 
 #include <algorithm>
+#include <vector>
 #include <QSizePolicy>
 #include <QVBoxLayout>
 #include <QVTKOpenGLNativeWidget.h>
 #include <vtkActor.h>
 #include <vtkCamera.h>
+#include <vtkCallbackCommand.h>
+#include <vtkCellData.h>
+#include <vtkCommand.h>
 #include <vtkCubeSource.h>
 #include <vtkDataSetMapper.h>
 #include <vtkGenericOpenGLRenderWindow.h>
+#include <vtkIntArray.h>
 #include <vtkNew.h>
+#include <vtkObject.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkProperty.h>
 #include <vtkRenderer.h>
+#include <vtkRenderWindowInteractor.h>
 #include <vtkUnstructuredGrid.h>
 
 VtkRenderCanvas::VtkRenderCanvas(QWidget *parent)
@@ -33,6 +42,15 @@ VtkRenderCanvas::VtkRenderCanvas(QWidget *parent)
 
     m_renderWindow->AddRenderer(m_renderer);
     m_vtkWidget->setRenderWindow(m_renderWindow);
+    m_leftButtonReleaseCallback = vtkSmartPointer<vtkCallbackCommand>::New();
+    m_leftButtonReleaseCallback->SetClientData(this);
+    m_leftButtonReleaseCallback->SetCallback(&VtkRenderCanvas::handleVtkLeftButtonRelease);
+    if (m_renderWindow->GetInteractor()) {
+        m_renderWindow->GetInteractor()->AddObserver(
+            vtkCommand::LeftButtonReleaseEvent,
+            m_leftButtonReleaseCallback
+        );
+    }
 
     m_renderer->SetBackground(0.125, 0.141, 0.165);
 
@@ -48,6 +66,7 @@ VtkRenderCanvas::VtkRenderCanvas(QWidget *parent)
 
 void VtkRenderCanvas::showEmpty()
 {
+    resetSceneState();
     m_renderer->RemoveAllViewProps();
     m_renderWindow->Render();
 }
@@ -63,9 +82,19 @@ void VtkRenderCanvas::showBoxGeometry(const BoxGeometry &box)
     cubeSource->SetYLength(width);
     cubeSource->SetZLength(height);
     cubeSource->SetCenter(0.0, 0.0, 0.0);
+    cubeSource->Update();
+
+    vtkSmartPointer<vtkPolyData> polyData = cubeSource->GetOutput();
+    vtkNew<vtkIntArray> faceIndices;
+    faceIndices->SetName("MyCAE_FaceIndex");
+    for (vtkIdType cellId = 0; cellId < polyData->GetNumberOfCells(); ++cellId) {
+        faceIndices->InsertNextValue(static_cast<int>(cellId + 1));
+    }
+    polyData->GetCellData()->AddArray(faceIndices);
+    polyData->GetCellData()->SetActiveScalars("MyCAE_FaceIndex");
 
     vtkNew<vtkPolyDataMapper> mapper;
-    mapper->SetInputConnection(cubeSource->GetOutputPort());
+    mapper->SetInputData(polyData);
 
     vtkNew<vtkActor> actor;
     actor->SetMapper(mapper);
@@ -74,13 +103,17 @@ void VtkRenderCanvas::showBoxGeometry(const BoxGeometry &box)
     actor->GetProperty()->EdgeVisibilityOn();
     actor->GetProperty()->SetLineWidth(1.5);
 
+    resetSceneState();
+    m_currentPolyData = polyData;
+    m_activeGeometryName = box.name;
+    m_primaryActor = actor;
     m_renderer->RemoveAllViewProps();
-    m_renderer->AddActor(actor);
+    m_renderer->AddActor(m_primaryActor);
     resetCamera();
     m_renderWindow->Render();
 }
 
-void VtkRenderCanvas::showOccShape(const TopoDS_Shape &shape)
+void VtkRenderCanvas::showOccShape(const TopoDS_Shape &shape, const QString &geometryName)
 {
     OCCShapeConverter converter;
     vtkSmartPointer<vtkPolyData> polyData = converter.toPolyData(shape);
@@ -95,8 +128,12 @@ void VtkRenderCanvas::showOccShape(const TopoDS_Shape &shape)
     actor->GetProperty()->EdgeVisibilityOn();
     actor->GetProperty()->SetLineWidth(1.2);
 
+    resetSceneState();
+    m_currentPolyData = polyData;
+    m_activeGeometryName = geometryName;
+    m_primaryActor = actor;
     m_renderer->RemoveAllViewProps();
-    m_renderer->AddActor(actor);
+    m_renderer->AddActor(m_primaryActor);
     resetCamera();
     m_renderWindow->Render();
 }
@@ -114,10 +151,55 @@ void VtkRenderCanvas::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid)
     actor->GetProperty()->SetLineWidth(0.8);
     actor->GetProperty()->SetOpacity(0.78);
 
+    resetSceneState();
     m_renderer->RemoveAllViewProps();
     m_renderer->AddActor(actor);
     resetCamera();
     m_renderWindow->Render();
+}
+
+void VtkRenderCanvas::setPickMode(PickMode mode)
+{
+    m_pickMode = mode;
+}
+
+void VtkRenderCanvas::clearHighlight()
+{
+    if (m_highlightActor) {
+        m_renderer->RemoveActor(m_highlightActor);
+        m_highlightActor = nullptr;
+        m_renderWindow->Render();
+    }
+}
+
+void VtkRenderCanvas::highlightFaceIndices(const std::vector<int> &faceIndices)
+{
+    clearHighlight();
+    m_highlightActor = VtkHighlightActorFactory::createFaceHighlightActor(m_currentPolyData, faceIndices);
+    if (m_highlightActor) {
+        m_renderer->AddActor(m_highlightActor);
+    }
+    m_renderWindow->Render();
+}
+
+void VtkRenderCanvas::handleVtkLeftButtonRelease(
+    vtkObject *caller,
+    unsigned long eventId,
+    void *clientData,
+    void *callData
+)
+{
+    Q_UNUSED(eventId);
+    Q_UNUSED(callData);
+
+    auto *canvas = static_cast<VtkRenderCanvas *>(clientData);
+    auto *interactor = vtkRenderWindowInteractor::SafeDownCast(caller);
+    if (!canvas || !interactor) {
+        return;
+    }
+
+    const int *position = interactor->GetEventPosition();
+    canvas->handlePickAtRenderWindowPosition(position[0], position[1]);
 }
 
 void VtkRenderCanvas::resetCamera()
@@ -127,4 +209,24 @@ void VtkRenderCanvas::resetCamera()
     m_renderer->GetActiveCamera()->Elevation(25.0);
     m_renderer->ResetCameraClippingRange();
     m_renderWindow->Render();
+}
+
+void VtkRenderCanvas::resetSceneState()
+{
+    m_currentPolyData = nullptr;
+    m_primaryActor = nullptr;
+    m_highlightActor = nullptr;
+    m_activeGeometryName.clear();
+}
+
+void VtkRenderCanvas::handlePickAtRenderWindowPosition(int x, int y)
+{
+    if (m_pickMode != PickMode::Face || !m_currentPolyData || !m_primaryActor || m_activeGeometryName.isEmpty()) {
+        return;
+    }
+
+    PickSelection selection;
+    if (VtkPickAdapter::pickFace(m_renderer, m_primaryActor, m_currentPolyData, m_activeGeometryName, x, y, selection)) {
+        emit facePicked(selection);
+    }
 }

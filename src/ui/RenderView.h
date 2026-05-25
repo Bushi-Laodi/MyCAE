@@ -1,8 +1,13 @@
 #pragma once
 
+#include "picking/PickMode.h"
+#include "picking/PickSelection.h"
+
 #include <QFrame>
 #include <QString>
 #include <vtkSmartPointer.h>
+
+#include <vector>
 
 class QLabel;
 class TopoDS_Shape;
@@ -12,6 +17,8 @@ struct BoxGeometry;
 
 class RenderView final : public QFrame
 {
+    Q_OBJECT
+
 public:
     explicit RenderView(QWidget *parent = nullptr);
 
@@ -19,6 +26,12 @@ public:
     void showBoxGeometry(const BoxGeometry &box);
     void showOccShape(const TopoDS_Shape &shape, const QString &title, const QString &subtitle);
     void showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const QString &title, const QString &subtitle);
+    void setPickMode(PickMode mode);
+    void clearHighlight();
+    void highlightFaceIndices(const std::vector<int> &faceIndices);
+
+signals:
+    void facePicked(const PickSelection &selection);
 
 private:
     QLabel *m_titleLabel = nullptr;

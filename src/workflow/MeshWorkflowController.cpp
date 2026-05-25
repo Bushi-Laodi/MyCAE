@@ -1,6 +1,7 @@
-#include "mesh/MeshWorkflowController.h"
+#include "workflow/MeshWorkflowController.h"
 
 #include "geometry/GeometryObject.h"
+#include "mesh/GmshCaseWriter.h"
 #include "mesh/GmshRunner.h"
 #include "mesh/MeshData.h"
 #include "mesh/MeshManager.h"
@@ -60,7 +61,7 @@ const GeometryObject *selectedGeometryOrLog(const ProjectModel &projectModel, Me
         return nullptr;
     }
 
-    const GeometryObject *selectedGeometry = projectModel.selectedGeometry();
+    const GeometryObject *selectedGeometry = projectModel.geometryForSelection();
     if (!selectedGeometry) {
         result.logMessages.append("Please select a geometry object in the project tree first.");
         return nullptr;
@@ -141,6 +142,10 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     const QString meshRelativePath = QDir("mesh").filePath(safeGeometryName + ".msh");
     const QString meshAbsPath = QDir(projectModel.project().rootPath).filePath(meshRelativePath);
 
+    const GmshCaseWriter gmshCaseWriter;
+    const GmshCaseWriterResult gmshCaseResult = gmshCaseWriter.prepareFaceGroupExport(projectModel, geometry);
+    workflowResult.logMessages.append(gmshCaseResult.logMessages);
+
     const GmshRunner gmshRunner;
     const GmshRunResult gmshResult = gmshRunner.generate3DMesh(stepAbsPath, meshAbsPath);
 
@@ -190,7 +195,7 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     }
 
     bool replaced = false;
-    QVector<MeshObject> &meshObjects = projectModel.meshObjects();
+    QVector<MeshObject> &meshObjects = projectModel.meshRepository().meshObjects();
     for (MeshObject &existingMesh : meshObjects) {
         if (existingMesh.sourceGeometryName == meshObject.sourceGeometryName) {
             existingMesh = meshObject;
@@ -201,7 +206,7 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     if (!replaced) {
         meshObjects.append(meshObject);
     }
-    projectModel.setSelectedMeshName(meshObject.name);
+    projectModel.setSelection(Selection::item(SelectionKind::Mesh, meshObject.name, meshObject.name));
 
     workflowResult.meshTreeChanged = true;
     workflowResult.simulationCaseChanged = true;

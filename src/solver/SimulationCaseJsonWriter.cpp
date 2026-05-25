@@ -20,6 +20,26 @@ QJsonObject pointToJson(const Point3D &point)
     return object;
 }
 
+QJsonObject facePointToJson(const FacePoint &point)
+{
+    QJsonObject object;
+    object.insert("x", point.x);
+    object.insert("y", point.y);
+    object.insert("z", point.z);
+    return object;
+}
+
+QJsonObject faceReferenceToJson(const FaceReference &reference)
+{
+    QJsonObject object;
+    object.insert("faceIndex", reference.faceIndex);
+    object.insert("pickedPoint", facePointToJson(reference.pickedPoint));
+    object.insert("center", facePointToJson(reference.center));
+    object.insert("normal", facePointToJson(reference.normal));
+    object.insert("area", reference.area);
+    return object;
+}
+
 QJsonObject cylinderToJson(const CylinderDefinition &cylinder)
 {
     QJsonObject object;
@@ -34,11 +54,25 @@ QJsonObject cylinderToJson(const CylinderDefinition &cylinder)
 
 QJsonObject faceGroupToJson(const FaceGroup &faceGroup)
 {
+    QJsonArray faceIndices;
+    for (const int faceIndex : faceGroup.faceIndices) {
+        faceIndices.append(faceIndex);
+    }
+    QJsonArray faceReferences;
+    for (const FaceReference &reference : faceGroup.faceReferences) {
+        faceReferences.append(faceReferenceToJson(reference));
+    }
+
     QJsonObject object;
     object.insert("id", faceGroup.id);
     object.insert("name", faceGroup.name);
     object.insert("geometryName", faceGroup.geometryName);
     object.insert("role", faceGroup.role);
+    object.insert("faceIndices", faceIndices);
+    object.insert("faceReferences", faceReferences);
+    object.insert("physicalGroupEnabled", faceGroup.physicalGroupEnabled);
+    object.insert("localMeshEnabled", faceGroup.localMeshEnabled);
+    object.insert("localMeshSize", faceGroup.localMeshSize);
     return object;
 }
 

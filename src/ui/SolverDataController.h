@@ -1,5 +1,7 @@
 #pragma once
 
+#include "solver/SolverDataService.h"
+
 #include <QString>
 #include <QStringList>
 
@@ -7,24 +9,7 @@ class ProjectModel;
 class PropertyPanel;
 class QWidget;
 
-enum class SolverDataSelectionKind
-{
-    None,
-    MaterialCategory,
-    BoundaryConditionCategory,
-    LoadCategory,
-    Material,
-    BoundaryCondition,
-    Load
-};
-
-struct SolverDataControllerResult
-{
-    bool changed = false;
-    SolverDataSelectionKind selectionKind = SolverDataSelectionKind::None;
-    QString selectionId;
-    QStringList logMessages;
-};
+using SolverDataControllerResult = SolverDataServiceResult;
 
 class SolverDataController
 {

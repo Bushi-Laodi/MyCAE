@@ -5,6 +5,10 @@
 #include "geometry/FaceGroup.h"
 #include "geometry/GeometryObject.h"
 #include "mesh/MeshObject.h"
+#include "ui/property/FaceGroupPropertyView.h"
+#include "ui/property/GeometryPropertyView.h"
+#include "ui/property/PickPropertyView.h"
+#include "ui/property/SolverPropertyView.h"
 
 #include <QFormLayout>
 #include <QLabel>
@@ -142,12 +146,7 @@ void PropertyPanel::showGeometryObject(const GeometryObject &geometry)
     m_sourceStepFileValue->setText(geometry.stepFile);
 
     resetDynamicArea();
-    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
-    auto *form = new QFormLayout;
-    form->addRow("JSON File:", new QLabel(geometry.jsonFile, m_dynamicArea));
-    form->addRow("BREP File:", new QLabel(geometry.brepFile, m_dynamicArea));
-    form->addRow("STEP File:", new QLabel(geometry.stepFile, m_dynamicArea));
-    dynamicLayout->addLayout(form);
+    GeometryPropertyView::populate(m_dynamicArea, geometry);
 }
 
 void PropertyPanel::showMeshObject(const MeshObject &meshObject)
@@ -179,13 +178,19 @@ void PropertyPanel::showFaceGroup(const FaceGroup &faceGroup)
     m_sourceGeometryValue->setText(faceGroup.geometryName);
 
     resetDynamicArea();
-    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
-    auto *form = new QFormLayout;
-    form->addRow("ID:", new QLabel(faceGroup.id, m_dynamicArea));
-    form->addRow("Name:", new QLabel(faceGroup.name, m_dynamicArea));
-    form->addRow("Geometry:", new QLabel(faceGroup.geometryName, m_dynamicArea));
-    form->addRow("Role:", new QLabel(faceGroup.role, m_dynamicArea));
-    dynamicLayout->addLayout(form);
+    FaceGroupPropertyView::populate(m_dynamicArea, faceGroup);
+}
+
+void PropertyPanel::showPickState(PickMode mode, const QString &geometryName, const std::vector<int> &faceIndices)
+{
+    clearAll();
+    m_selectionValue->setText("Pick");
+    m_typeValue->setText("Picking");
+    m_nameValue->setText(pickModeName(mode));
+    m_sourceGeometryValue->setText(geometryName);
+
+    resetDynamicArea();
+    PickPropertyView::populate(m_dynamicArea, mode, geometryName, faceIndices);
 }
 
 void PropertyPanel::showMaterialCategory(const std::vector<Material> &materials)
@@ -194,38 +199,7 @@ void PropertyPanel::showMaterialCategory(const std::vector<Material> &materials)
     m_selectionValue->setText("Materials");
 
     resetDynamicArea();
-    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
-
-    if (materials.empty()) {
-        dynamicLayout->addWidget(new QLabel("No materials defined.", m_dynamicArea));
-    } else {
-        for (size_t i = 0; i < materials.size(); ++i) {
-            const Material &mat = materials[i];
-            auto *groupLabel = new QLabel(
-                QString("<b>%1. %2</b>").arg(i + 1).arg(mat.name), m_dynamicArea);
-            dynamicLayout->addWidget(groupLabel);
-
-            auto *form = new QFormLayout;
-            form->addRow("ID:", new QLabel(mat.id, m_dynamicArea));
-            form->addRow("Domain:", new QLabel(toString(mat.domain), m_dynamicArea));
-            form->addRow("Viscosity Model:", new QLabel(toString(mat.viscosityModel), m_dynamicArea));
-
-            if (mat.hasDensity) {
-                form->addRow("Density:", new QLabel(
-                    QString::number(mat.density) + " " + mat.densityUnit, m_dynamicArea));
-            }
-            if (mat.hasDynamicViscosity) {
-                form->addRow("Dynamic Viscosity:", new QLabel(
-                    QString::number(mat.dynamicViscosity) + " " + mat.dynamicViscosityUnit, m_dynamicArea));
-            }
-            if (mat.hasKinematicViscosity) {
-                form->addRow("Kinematic Viscosity:", new QLabel(
-                    QString::number(mat.kinematicViscosity) + " " + mat.kinematicViscosityUnit, m_dynamicArea));
-            }
-
-            dynamicLayout->addLayout(form);
-        }
-    }
+    SolverPropertyView::populateMaterialCategory(m_dynamicArea, materials);
 }
 
 void PropertyPanel::showBoundaryConditionCategory(const std::vector<BoundaryCondition> &boundaryConditions)
@@ -234,28 +208,7 @@ void PropertyPanel::showBoundaryConditionCategory(const std::vector<BoundaryCond
     m_selectionValue->setText("Boundary Conditions");
 
     resetDynamicArea();
-    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
-
-    if (boundaryConditions.empty()) {
-        dynamicLayout->addWidget(new QLabel("No boundary conditions defined.", m_dynamicArea));
-    } else {
-        for (size_t i = 0; i < boundaryConditions.size(); ++i) {
-            const BoundaryCondition &bc = boundaryConditions[i];
-            auto *groupLabel = new QLabel(
-                QString("<b>%1. %2</b>").arg(i + 1).arg(bc.name), m_dynamicArea);
-            dynamicLayout->addWidget(groupLabel);
-
-            auto *form = new QFormLayout;
-            form->addRow("ID:", new QLabel(bc.id, m_dynamicArea));
-            form->addRow("Type:", new QLabel(toString(bc.type), m_dynamicArea));
-            form->addRow("Geometry:", new QLabel(bc.target.geometryName, m_dynamicArea));
-            form->addRow("Face Group:", new QLabel(bc.target.faceGroupName, m_dynamicArea));
-            form->addRow("Material ID:", new QLabel(bc.materialId, m_dynamicArea));
-            form->addRow("Enabled:", new QLabel(bc.enabled ? "Yes" : "No", m_dynamicArea));
-
-            dynamicLayout->addLayout(form);
-        }
-    }
+    SolverPropertyView::populateBoundaryConditionCategory(m_dynamicArea, boundaryConditions);
 }
 
 void PropertyPanel::showLoadCategory(const std::vector<Load> &loads)
@@ -264,33 +217,7 @@ void PropertyPanel::showLoadCategory(const std::vector<Load> &loads)
     m_selectionValue->setText("Loads");
 
     resetDynamicArea();
-    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
-
-    if (loads.empty()) {
-        dynamicLayout->addWidget(new QLabel("No loads defined.", m_dynamicArea));
-    } else {
-        for (size_t i = 0; i < loads.size(); ++i) {
-            const Load &ld = loads[i];
-            auto *groupLabel = new QLabel(
-                QString("<b>%1. %2</b>").arg(i + 1).arg(ld.name), m_dynamicArea);
-            dynamicLayout->addWidget(groupLabel);
-
-            auto *form = new QFormLayout;
-            form->addRow("ID:", new QLabel(ld.id, m_dynamicArea));
-            form->addRow("Type:", new QLabel(toString(ld.type), m_dynamicArea));
-            form->addRow("Boundary Condition ID:", new QLabel(ld.boundaryConditionId, m_dynamicArea));
-            form->addRow("Field Name:", new QLabel(ld.fieldName, m_dynamicArea));
-
-            QString valueText = QString::number(ld.value.x);
-            if (!ld.value.unit.isEmpty()) {
-                valueText += " " + ld.value.unit;
-            }
-            form->addRow("Value:", new QLabel(valueText, m_dynamicArea));
-            form->addRow("Enabled:", new QLabel(ld.enabled ? "Yes" : "No", m_dynamicArea));
-
-            dynamicLayout->addLayout(form);
-        }
-    }
+    SolverPropertyView::populateLoadCategory(m_dynamicArea, loads);
 }
 
 void PropertyPanel::showMaterial(const Material &material)
@@ -301,23 +228,7 @@ void PropertyPanel::showMaterial(const Material &material)
     m_nameValue->setText(material.name);
 
     resetDynamicArea();
-    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
-    auto *form = new QFormLayout;
-    form->addRow("ID:", new QLabel(material.id, m_dynamicArea));
-    form->addRow("Domain:", new QLabel(toString(material.domain), m_dynamicArea));
-    form->addRow("Viscosity Model:", new QLabel(toString(material.viscosityModel), m_dynamicArea));
-    form->addRow("Density Enabled:", new QLabel(material.hasDensity ? "Yes" : "No", m_dynamicArea));
-    form->addRow("Density:", new QLabel(
-        QString::number(material.density) + " " + material.densityUnit, m_dynamicArea));
-    form->addRow("Dynamic Viscosity Enabled:", new QLabel(
-        material.hasDynamicViscosity ? "Yes" : "No", m_dynamicArea));
-    form->addRow("Dynamic Viscosity:", new QLabel(
-        QString::number(material.dynamicViscosity) + " " + material.dynamicViscosityUnit, m_dynamicArea));
-    form->addRow("Kinematic Viscosity Enabled:", new QLabel(
-        material.hasKinematicViscosity ? "Yes" : "No", m_dynamicArea));
-    form->addRow("Kinematic Viscosity:", new QLabel(
-        QString::number(material.kinematicViscosity) + " " + material.kinematicViscosityUnit, m_dynamicArea));
-    dynamicLayout->addLayout(form);
+    SolverPropertyView::populateMaterial(m_dynamicArea, material);
 }
 
 void PropertyPanel::showBoundaryCondition(const BoundaryCondition &boundaryCondition)
@@ -329,18 +240,7 @@ void PropertyPanel::showBoundaryCondition(const BoundaryCondition &boundaryCondi
     m_sourceGeometryValue->setText(boundaryCondition.target.geometryName);
 
     resetDynamicArea();
-    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
-    auto *form = new QFormLayout;
-    form->addRow("ID:", new QLabel(boundaryCondition.id, m_dynamicArea));
-    form->addRow("Type:", new QLabel(toString(boundaryCondition.type), m_dynamicArea));
-    form->addRow("Target Kind:", new QLabel(toString(boundaryCondition.target.kind), m_dynamicArea));
-    form->addRow("Geometry:", new QLabel(boundaryCondition.target.geometryName, m_dynamicArea));
-    form->addRow("Face Group ID:", new QLabel(boundaryCondition.target.faceGroupId, m_dynamicArea));
-    form->addRow("Face Group:", new QLabel(boundaryCondition.target.faceGroupName, m_dynamicArea));
-    form->addRow("Mesh Boundary:", new QLabel(boundaryCondition.target.meshBoundaryName, m_dynamicArea));
-    form->addRow("Material ID:", new QLabel(boundaryCondition.materialId, m_dynamicArea));
-    form->addRow("Enabled:", new QLabel(boundaryCondition.enabled ? "Yes" : "No", m_dynamicArea));
-    dynamicLayout->addLayout(form);
+    SolverPropertyView::populateBoundaryCondition(m_dynamicArea, boundaryCondition);
 }
 
 void PropertyPanel::showLoad(const Load &load)
@@ -350,30 +250,8 @@ void PropertyPanel::showLoad(const Load &load)
     m_typeValue->setText("Load");
     m_nameValue->setText(load.name);
 
-    QString valueText;
-    if (load.value.kind == LoadValueKind::Vector3) {
-        valueText = QString("(%1, %2, %3)")
-            .arg(load.value.x)
-            .arg(load.value.y)
-            .arg(load.value.z);
-    } else {
-        valueText = QString::number(load.value.x);
-    }
-    if (!load.value.unit.isEmpty()) {
-        valueText += " " + load.value.unit;
-    }
-
     resetDynamicArea();
-    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
-    auto *form = new QFormLayout;
-    form->addRow("ID:", new QLabel(load.id, m_dynamicArea));
-    form->addRow("Type:", new QLabel(toString(load.type), m_dynamicArea));
-    form->addRow("Boundary Condition ID:", new QLabel(load.boundaryConditionId, m_dynamicArea));
-    form->addRow("Field Name:", new QLabel(load.fieldName, m_dynamicArea));
-    form->addRow("Value Kind:", new QLabel(toString(load.value.kind), m_dynamicArea));
-    form->addRow("Value:", new QLabel(valueText, m_dynamicArea));
-    form->addRow("Enabled:", new QLabel(load.enabled ? "Yes" : "No", m_dynamicArea));
-    dynamicLayout->addLayout(form);
+    SolverPropertyView::populateLoad(m_dynamicArea, load);
 }
 
 void PropertyPanel::showSolverCategory(const SimulationCase &simulationCase)
@@ -382,23 +260,5 @@ void PropertyPanel::showSolverCategory(const SimulationCase &simulationCase)
     m_selectionValue->setText(simulationCase.name);
 
     resetDynamicArea();
-    auto *dynamicLayout = new QVBoxLayout(m_dynamicArea);
-
-    auto *form = new QFormLayout;
-    form->addRow("Case ID:", new QLabel(simulationCase.id, m_dynamicArea));
-    form->addRow("Source Geometry:", new QLabel(simulationCase.sourceGeometryName, m_dynamicArea));
-    form->addRow("Mesh:", new QLabel(simulationCase.meshName, m_dynamicArea));
-    form->addRow("Solver Type:", new QLabel(toString(simulationCase.solverType), m_dynamicArea));
-    form->addRow("Turbulence Model:", new QLabel(toString(simulationCase.turbulenceModel), m_dynamicArea));
-    form->addRow("End Time:", new QLabel(QString::number(simulationCase.runControl.endTime), m_dynamicArea));
-    form->addRow("Time Step:", new QLabel(QString::number(simulationCase.runControl.timeStep), m_dynamicArea));
-    form->addRow("Write Interval:", new QLabel(QString::number(simulationCase.runControl.writeInterval), m_dynamicArea));
-    form->addRow("Post Processing:", new QLabel(simulationCase.postProcessingTool, m_dynamicArea));
-    form->addRow("Materials:", new QLabel(QString::number(simulationCase.materials.size()), m_dynamicArea));
-    form->addRow("Boundary Conditions:", new QLabel(QString::number(simulationCase.boundaryConditions.size()), m_dynamicArea));
-    form->addRow("Loads:", new QLabel(QString::number(simulationCase.loads.size()), m_dynamicArea));
-    dynamicLayout->addLayout(form);
-
-    dynamicLayout->addWidget(new QLabel(
-        "<i>Simulation export uses the current project model.</i>", m_dynamicArea));
+    SolverPropertyView::populateSolverCategory(m_dynamicArea, simulationCase);
 }

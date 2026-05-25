@@ -124,6 +124,26 @@ Point3D pointFromJson(const QJsonObject &object)
     return point;
 }
 
+FacePoint facePointFromJson(const QJsonObject &object)
+{
+    FacePoint point;
+    point.x = numberValue(object, "x");
+    point.y = numberValue(object, "y");
+    point.z = numberValue(object, "z");
+    return point;
+}
+
+FaceReference faceReferenceFromJson(const QJsonObject &object)
+{
+    FaceReference reference;
+    reference.faceIndex = object.value("faceIndex").toInt(-1);
+    reference.pickedPoint = facePointFromJson(object.value("pickedPoint").toObject());
+    reference.center = facePointFromJson(object.value("center").toObject());
+    reference.normal = facePointFromJson(object.value("normal").toObject());
+    reference.area = numberValue(object, "area");
+    return reference;
+}
+
 CylinderDefinition cylinderFromJson(const QJsonObject &object)
 {
     CylinderDefinition cylinder;
@@ -143,6 +163,17 @@ FaceGroup faceGroupFromJson(const QJsonObject &object)
     faceGroup.name = stringValue(object, "name");
     faceGroup.geometryName = stringValue(object, "geometryName");
     faceGroup.role = stringValue(object, "role");
+    faceGroup.physicalGroupEnabled = boolValue(object, "physicalGroupEnabled", true);
+    faceGroup.localMeshEnabled = boolValue(object, "localMeshEnabled");
+    faceGroup.localMeshSize = numberValue(object, "localMeshSize");
+    for (const QJsonValue &faceIndexValue : object.value("faceIndices").toArray()) {
+        if (faceIndexValue.isDouble()) {
+            faceGroup.faceIndices.push_back(faceIndexValue.toInt());
+        }
+    }
+    for (const QJsonValue &referenceValue : object.value("faceReferences").toArray()) {
+        faceGroup.faceReferences.push_back(faceReferenceFromJson(referenceValue.toObject()));
+    }
     if (faceGroup.id.isEmpty() && !faceGroup.geometryName.isEmpty() && !faceGroup.name.isEmpty()) {
         faceGroup.id = FaceGroups::makeId(faceGroup.geometryName, faceGroup.name);
     }
