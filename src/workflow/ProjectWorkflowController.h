@@ -43,6 +43,7 @@ public:
     void refreshMeshTree() const;
     void refreshFaceGroupTree() const;
     void refreshSolverDataTree() const;
+    void refreshResultTree() const;
 
 private:
     ProjectManager &m_projectManager;

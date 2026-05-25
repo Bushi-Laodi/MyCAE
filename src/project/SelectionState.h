@@ -12,9 +12,11 @@ enum class SelectionKind
     BoundaryConditionCategory,
     LoadCategory,
     SolverCategory,
+    ResultCategory,
     Material,
     BoundaryCondition,
-    Load
+    Load,
+    Result
 };
 
 struct SelectionCapabilities

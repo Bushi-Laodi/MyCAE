@@ -1,6 +1,7 @@
 #include "ProjectTreePanel.h"
 
 #include "geometry/FaceGroup.h"
+#include "result/ResultObject.h"
 #include "solver/BoundaryCondition.h"
 #include "solver/Load.h"
 #include "solver/Material.h"
@@ -152,6 +153,23 @@ void ProjectTreePanel::setLoadItems(const std::vector<Load> &loads)
     m_tree->expandAll();
 }
 
+void ProjectTreePanel::setResultItems(const std::vector<ResultObject> &results)
+{
+    if (!m_resultRoot) {
+        return;
+    }
+
+    clearChildren(m_resultRoot);
+    for (const ResultObject &resultObject : results) {
+        auto *item = new QTreeWidgetItem(QStringList{resultObject.name});
+        setItemSelection(item, Selection::item(SelectionKind::Result, resultObject.id, resultObject.name));
+        item->setToolTip(0, resultObject.summary);
+        m_resultRoot->addChild(item);
+    }
+
+    m_tree->expandAll();
+}
+
 void ProjectTreePanel::buildInitialTree()
 {
     buildProjectTree("Unnamed Project", "");
@@ -190,6 +208,10 @@ void ProjectTreePanel::buildProjectTree(const QString &projectName, const QStrin
     m_solverRoot = new QTreeWidgetItem(QStringList{"Solver"});
     setItemSelection(m_solverRoot, Selection::category(SelectionKind::SolverCategory));
     projectRoot->addChild(m_solverRoot);
+
+    m_resultRoot = new QTreeWidgetItem(QStringList{"Results"});
+    setItemSelection(m_resultRoot, Selection::category(SelectionKind::ResultCategory));
+    projectRoot->addChild(m_resultRoot);
 
     m_tree->addTopLevelItem(projectRoot);
     m_tree->expandAll();

@@ -1,6 +1,9 @@
 #include "workflow/SolverWorkflowController.h"
 
 #include "project/ProjectModel.h"
+#include "result/ResultObject.h"
+#include "solver/SimulationCaseBuilder.h"
+#include "solver/plugin/SolverPlugin.h"
 #include "solver/plugin/SolverPluginManager.h"
 #include "workflow/SolverCaseWorkflowController.h"
 #include "workflow/ProjectWorkflowController.h"
@@ -8,6 +11,9 @@
 #include "ui/RenderView.h"
 #include "workflow/SelectionController.h"
 #include "ui/SolverDataController.h"
+
+#include <QDir>
+#include <QDateTime>
 
 SolverWorkflowController::SolverWorkflowController(
     ProjectModel &projectModel,
@@ -61,8 +67,70 @@ SolverWorkflowResult SolverWorkflowController::runSolverPlugin(const QString &pl
     const SolverCaseWorkflowResult caseResult = solverCaseWorkflow.runPlugin(pluginId);
 
     SolverWorkflowResult result;
-    result.success = caseResult.success;
-    result.logMessages = caseResult.logMessages;
+    if (!m_projectModel.hasProject()) {
+        result.logMessages.append("Run solver failed: create or open a project first.");
+        return result;
+    }
+
+    const ProjectWorkflowResult saveResult = m_projectWorkflow.saveSimulationCase();
+    result.logMessages.append(saveResult.logMessages);
+    if (!saveResult.success) {
+        return result;
+    }
+
+    const SimulationCase simulationCase = SimulationCaseBuilder::fromProjectModel(m_projectModel);
+    const QString caseDirectory = QDir(m_projectModel.project().rootPath).filePath("solver/" + pluginId);
+
+    const SolverPlugin *plugin = m_solverPluginManager.pluginById(pluginId);
+    if (!plugin) {
+        result.logMessages.append("Run solver failed: plugin is not registered: " + pluginId);
+        return result;
+    }
+
+    QString errorMessage;
+    result.logMessages.append("Solver plugin: " + plugin->name());
+    result.logMessages.append("Solver case directory: " + caseDirectory);
+    result.logMessages.append(QString("Solver case data: %1 materials, %2 boundary conditions, %3 loads.")
+        .arg(simulationCase.materials.size())
+        .arg(simulationCase.boundaryConditions.size())
+        .arg(simulationCase.loads.size()));
+
+    if (!plugin->exportCase(simulationCase, caseDirectory, &errorMessage)) {
+        result.logMessages.append("Solver export failed: " + errorMessage);
+        return result;
+    }
+    result.logMessages.append("Solver input exported.");
+
+    QString solverLog;
+    if (!plugin->runCase(caseDirectory, &solverLog, &errorMessage)) {
+        result.logMessages.append("Solver run failed: " + errorMessage);
+        return result;
+    }
+    if (!solverLog.isEmpty()) {
+        result.logMessages.append(solverLog);
+    }
+
+    QString resultText;
+    if (!plugin->readResult(caseDirectory, &resultText, &errorMessage)) {
+        result.logMessages.append("Solver result read failed: " + errorMessage);
+        return result;
+    }
+
+    result.logMessages.append("Solver result: " + resultText);
+
+    ResultObject resultObject;
+    resultObject.id = plugin->id() + "_" + QDateTime::currentDateTimeUtc().toString("yyyyMMddHHmmsszzz");
+    resultObject.name = plugin->name() + " Result";
+    resultObject.solverName = plugin->name();
+    resultObject.casePath = caseDirectory;
+    resultObject.createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);
+    resultObject.success = true;
+    resultObject.summary = resultText;
+    m_projectModel.resultRepository().results().push_back(resultObject);
+    m_projectWorkflow.refreshResultTree();
+    result.logMessages.append("Result object created: " + resultObject.id);
+
+    result.success = true;
     return result;
 }
 

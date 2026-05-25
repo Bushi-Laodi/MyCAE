@@ -1,10 +1,32 @@
 #pragma once
 
-#include "solver/plugin/SolverCaseContext.h"
-#include "solver/plugin/SolverRunResult.h"
+#include <QString>
+#include <QStringList>
+
+struct CalculiXRunResult
+{
+    bool success = false;
+    int exitCode = -1;
+    QString jobName;
+    QString command;
+    QString workingDirectory;
+    QString standardOutput;
+    QString standardError;
+    QString logFile;
+    QStringList resultFiles;
+    QStringList errors;
+    QStringList logMessages;
+};
 
 class CalculiXRunner
 {
 public:
-    SolverRunResult run(const SolverCaseContext &context) const;
+    explicit CalculiXRunner(QString executablePath = {});
+
+    CalculiXRunResult run(const QString &caseDirectory, const QString &jobName = "job") const;
+
+    QString executablePath() const;
+
+private:
+    QString m_executablePath;
 };

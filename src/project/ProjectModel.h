@@ -59,6 +59,8 @@ public:
     const BoundaryCondition *boundaryConditionForSelection() const;
     Load *loadForSelection();
     const Load *loadForSelection() const;
+    ResultObject *resultForSelection();
+    const ResultObject *resultForSelection() const;
 
     const GeometryObject *findGeometryByName(const QString &name) const;
     const BoxGeometry *findBoxByName(const QString &name) const;
@@ -72,6 +74,8 @@ public:
     const BoundaryCondition *findBoundaryConditionById(const QString &id) const;
     Load *findLoadById(const QString &id);
     const Load *findLoadById(const QString &id) const;
+    ResultObject *findResultById(const QString &id);
+    const ResultObject *findResultById(const QString &id) const;
 
 private:
     ProjectContext m_context;

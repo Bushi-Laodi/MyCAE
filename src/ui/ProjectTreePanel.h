@@ -14,6 +14,7 @@ struct BoundaryCondition;
 struct FaceGroup;
 struct Load;
 struct Material;
+struct ResultObject;
 
 class ProjectTreePanel final : public QWidget
 {
@@ -29,6 +30,7 @@ public:
     void setMaterialItems(const std::vector<Material> &materials);
     void setBoundaryConditionItems(const std::vector<BoundaryCondition> &boundaryConditions);
     void setLoadItems(const std::vector<Load> &loads);
+    void setResultItems(const std::vector<ResultObject> &results);
 
 signals:
     void selectionChanged(const Selection &selection);
@@ -47,4 +49,5 @@ private:
     QTreeWidgetItem *m_boundaryConditionRoot = nullptr;
     QTreeWidgetItem *m_loadRoot = nullptr;
     QTreeWidgetItem *m_solverRoot = nullptr;
+    QTreeWidgetItem *m_resultRoot = nullptr;
 };
