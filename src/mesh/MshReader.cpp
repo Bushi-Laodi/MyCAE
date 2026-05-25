@@ -161,6 +161,12 @@ bool readTriangleElement(const QStringList &parts, int elementId, int tagCount, 
     if (tagCount > 0) {
         parseInt(parts.at(3), triangle.physicalGroupTag);
     }
+    if (tagCount > 1) {
+        parseInt(parts.at(4), triangle.elementaryEntityTag);
+    }
+    if (triangle.physicalGroupTag <= 0 && triangle.elementaryEntityTag > 0) {
+        triangle.physicalGroupTag = triangle.elementaryEntityTag;
+    }
     if (!parseInt(parts.at(nodeStart), triangle.node1)
             || !parseInt(parts.at(nodeStart + 1), triangle.node2)
             || !parseInt(parts.at(nodeStart + 2), triangle.node3)) {
