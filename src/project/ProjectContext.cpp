@@ -6,6 +6,7 @@ void ProjectContext::clear()
     m_geometryRepository.clear();
     m_meshRepository.clear();
     m_solverRepository.clear();
+    m_resultRepository.clear();
     m_selectionState.clear();
 }
 
@@ -58,6 +59,16 @@ SolverRepository &ProjectContext::solver()
 const SolverRepository &ProjectContext::solver() const
 {
     return m_solverRepository;
+}
+
+ResultRepository &ProjectContext::results()
+{
+    return m_resultRepository;
+}
+
+const ResultRepository &ProjectContext::results() const
+{
+    return m_resultRepository;
 }
 
 SelectionState &ProjectContext::selectionState()

@@ -152,6 +152,7 @@ qt_add_executable(MyCAE
     src/commands/WorkflowCommandContext.h
     src/mesh/GmshCaseWriter.cpp
     src/mesh/GmshCaseWriter.h
+    src/mesh/MeshBoundary.h
     src/mesh/GmshRunner.cpp
     src/mesh/GmshRunner.h
     src/mesh/MeshData.h
@@ -187,6 +188,8 @@ qt_add_executable(MyCAE
     src/project/ProjectModelLoader.h
     src/project/ProjectManager.cpp
     src/project/ProjectManager.h
+    src/project/ResultRepository.cpp
+    src/project/ResultRepository.h
     src/project/SelectionState.cpp
     src/project/SelectionState.h
     src/project/SolverRepository.cpp
@@ -203,6 +206,7 @@ qt_add_executable(MyCAE
     src/render/VtkHighlightActorFactory.h
     src/render/VtkPickAdapter.cpp
     src/render/VtkPickAdapter.h
+    src/result/ResultObject.h
     src/solver/BoundaryCondition.h
     src/solver/Load.h
     src/solver/Material.h
@@ -217,6 +221,11 @@ qt_add_executable(MyCAE
     src/solver/SimulationCaseManager.h
     src/solver/SolverDataService.cpp
     src/solver/SolverDataService.h
+    src/solver/export/OpenFoamCaseWriter.cpp
+    src/solver/export/OpenFoamCaseWriter.h
+    src/solver/export/SolverCaseWriter.cpp
+    src/solver/export/SolverCaseWriter.h
+    src/solver/export/SolverCaseWriterResult.h
     src/solver/plugin/ExternalProcessSolverPlugin.cpp
     src/solver/plugin/ExternalProcessSolverPlugin.h
     src/solver/plugin/ExternalSolverPluginConfig.cpp

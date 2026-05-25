@@ -20,6 +20,8 @@ public:
     const MeshRepository &meshRepository() const;
     SolverRepository &solverRepository();
     const SolverRepository &solverRepository() const;
+    ResultRepository &resultRepository();
+    const ResultRepository &resultRepository() const;
 
     void setProject(const Project &project);
     const Project &project() const;

@@ -45,6 +45,16 @@ const SolverRepository &ProjectModel::solverRepository() const
     return m_context.solver();
 }
 
+ResultRepository &ProjectModel::resultRepository()
+{
+    return m_context.results();
+}
+
+const ResultRepository &ProjectModel::resultRepository() const
+{
+    return m_context.results();
+}
+
 void ProjectModel::setProject(const Project &project)
 {
     m_context.setProject(project);
