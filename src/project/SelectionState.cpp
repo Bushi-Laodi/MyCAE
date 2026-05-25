@@ -30,7 +30,8 @@ bool Selection::isSolverData() const
 {
     return kind == SelectionKind::Material
         || kind == SelectionKind::BoundaryCondition
-        || kind == SelectionKind::Load;
+        || kind == SelectionKind::Load
+        || kind == SelectionKind::Result;
 }
 
 bool Selection::isSolverCategory() const
@@ -38,7 +39,8 @@ bool Selection::isSolverCategory() const
     return kind == SelectionKind::MaterialCategory
         || kind == SelectionKind::BoundaryConditionCategory
         || kind == SelectionKind::LoadCategory
-        || kind == SelectionKind::SolverCategory;
+        || kind == SelectionKind::SolverCategory
+        || kind == SelectionKind::ResultCategory;
 }
 
 SelectionCapabilities Selection::capabilities() const
@@ -58,6 +60,8 @@ SelectionCapabilities Selection::capabilities() const
     case SelectionKind::Load:
         capabilities.canEditSolverData = true;
         capabilities.canDeleteSolverData = true;
+        break;
+    case SelectionKind::Result:
         break;
     default:
         break;

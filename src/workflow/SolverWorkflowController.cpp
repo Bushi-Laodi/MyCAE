@@ -1,6 +1,7 @@
 #include "workflow/SolverWorkflowController.h"
 
 #include "project/ProjectModel.h"
+#include "result/ResultObject.h"
 #include "solver/SimulationCaseBuilder.h"
 #include "solver/plugin/SolverPlugin.h"
 #include "solver/plugin/SolverPluginManager.h"
@@ -11,6 +12,7 @@
 #include "ui/SolverDataController.h"
 
 #include <QDir>
+#include <QDateTime>
 
 SolverWorkflowController::SolverWorkflowController(
     ProjectModel &projectModel,
@@ -107,6 +109,19 @@ SolverWorkflowResult SolverWorkflowController::runSolverPlugin(const QString &pl
     }
 
     result.logMessages.append("Solver result: " + resultText);
+
+    ResultObject resultObject;
+    resultObject.id = plugin->id() + "_" + QDateTime::currentDateTimeUtc().toString("yyyyMMddHHmmsszzz");
+    resultObject.name = plugin->name() + " Result";
+    resultObject.solverName = plugin->name();
+    resultObject.casePath = caseDirectory;
+    resultObject.createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);
+    resultObject.success = true;
+    resultObject.summary = resultText;
+    m_projectModel.resultRepository().results().push_back(resultObject);
+    m_projectWorkflow.refreshResultTree();
+    result.logMessages.append("Result object created: " + resultObject.id);
+
     result.success = true;
     return result;
 }

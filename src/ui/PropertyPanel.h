@@ -18,6 +18,7 @@ struct CylinderGeometry;
 struct FaceGroup;
 struct GeometryObject;
 struct MeshObject;
+struct ResultObject;
 
 class PropertyPanel final : public QWidget
 {
@@ -39,6 +40,8 @@ public:
     void showBoundaryCondition(const BoundaryCondition &boundaryCondition);
     void showLoad(const Load &load);
     void showSolverCategory(const SimulationCase &simulationCase);
+    void showResultCategory(const std::vector<ResultObject> &results);
+    void showResult(const ResultObject &resultObject);
 
 private:
     void clearAll();

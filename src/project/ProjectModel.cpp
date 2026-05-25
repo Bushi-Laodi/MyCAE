@@ -225,6 +225,16 @@ const Load *ProjectModel::loadForSelection() const
     return selection().kind == SelectionKind::Load ? findLoadById(selection().id) : nullptr;
 }
 
+ResultObject *ProjectModel::resultForSelection()
+{
+    return selection().kind == SelectionKind::Result ? findResultById(selection().id) : nullptr;
+}
+
+const ResultObject *ProjectModel::resultForSelection() const
+{
+    return selection().kind == SelectionKind::Result ? findResultById(selection().id) : nullptr;
+}
+
 const GeometryObject *ProjectModel::findGeometryByName(const QString &name) const
 {
     return m_context.geometry().findGeometryByName(name);
@@ -283,4 +293,14 @@ Load *ProjectModel::findLoadById(const QString &id)
 const Load *ProjectModel::findLoadById(const QString &id) const
 {
     return m_context.solver().findLoadById(id);
+}
+
+ResultObject *ProjectModel::findResultById(const QString &id)
+{
+    return m_context.results().findResultById(id);
+}
+
+const ResultObject *ProjectModel::findResultById(const QString &id) const
+{
+    return m_context.results().findResultById(id);
 }

@@ -6,13 +6,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(MYCAE_QT_ROOT "D:/dev/Qt/6.6.3/msvc2019_64" CACHE PATH "Root directory of the local Qt 6 installation")
 set(MYCAE_QT_ROOT "D:\\qt\\6.6.3\\msvc2019_64" CACHE PATH "Root directory of the local Qt 6 installation")
 if (EXISTS "${MYCAE_QT_ROOT}/lib/cmake/Qt6/Qt6Config.cmake")
     list(PREPEND CMAKE_PREFIX_PATH "${MYCAE_QT_ROOT}")
 endif()
 
-set(MYCAE_VTK_ROOT "D:/dev/VTK-9.4.2" CACHE PATH "Root directory of the local VTK installation")
 set(MYCAE_VTK_ROOT "D:/VTK" CACHE PATH "Root directory of the local VTK installation")
 set(MYCAE_VTK_RELEASE_DIR "${MYCAE_VTK_ROOT}/vtk-9.4.2-qt-release/lib/cmake/vtk-9.4")
 set(MYCAE_VTK_DEBUG_DIR "${MYCAE_VTK_ROOT}/vtk-9.4.2-qt-debug/lib/cmake/vtk-9.4")
@@ -35,7 +33,6 @@ if (NOT DEFINED VTK_DIR OR NOT EXISTS "${VTK_DIR}/vtk-config.cmake")
     endif()
 endif()
 
-set(MYCAE_OCC_ROOT "D:/dev/OCC" CACHE PATH "Root directory of the local Open CASCADE installation")
 set(MYCAE_OCC_ROOT "D:/cpp_lib/OCC" CACHE PATH "Root directory of the local Open CASCADE installation")
 set(MYCAE_OCC_CMAKE_CANDIDATES
     "${MYCAE_OCC_ROOT}/opencascade-7.9.3-vc14-64/cmake"
@@ -56,9 +53,12 @@ foreach(MYCAE_OCC_CMAKE_DIR IN LISTS MYCAE_OCC_CMAKE_CANDIDATES)
 endforeach()
 
 set(MYCAE_GMSH_EXECUTABLE
-    "D:/dev/Gmsh/gmsh-4.15.2-Windows64-sdk/bin/gmsh.exe"
     ""D:\\cpp_lib\\Gmsh\\gmsh-4.15.2-Windows64\\gmsh.exe""
     CACHE FILEPATH "Path to the local Gmsh executable"
+)
+set(MYCAE_CALCULIX_EXECUTABLE
+    "ccx"
+    CACHE FILEPATH "Path to the local CalculiX ccx executable"
 )
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
@@ -76,6 +76,7 @@ message(STATUS "Using OpenCASCADE_DIR=${OpenCASCADE_DIR}")
 message(STATUS "Using OpenCASCADE_INCLUDE_DIR=${OpenCASCADE_INCLUDE_DIR}")
 message(STATUS "Using OpenCASCADE_BINARY_DIR=${OpenCASCADE_BINARY_DIR}")
 message(STATUS "Using MYCAE_GMSH_EXECUTABLE=${MYCAE_GMSH_EXECUTABLE}")
+message(STATUS "Using MYCAE_CALCULIX_EXECUTABLE=${MYCAE_CALCULIX_EXECUTABLE}")
 
 get_filename_component(MYCAE_OCC_INSTALL_ROOT "${OpenCASCADE_BINARY_DIR}/../../.." ABSOLUTE)
 set(MYCAE_OCC_THIRDPARTY_ROOT
@@ -225,6 +226,10 @@ qt_add_executable(MyCAE
     src/solver/SimulationCaseManager.h
     src/solver/SolverDataService.cpp
     src/solver/SolverDataService.h
+    src/solver/calculix/CalculiXResultReader.cpp
+    src/solver/calculix/CalculiXResultReader.h
+    src/solver/calculix/CalculiXRunner.cpp
+    src/solver/calculix/CalculiXRunner.h
     src/solver/export/OpenFoamCaseWriter.cpp
     src/solver/export/OpenFoamCaseWriter.h
     src/solver/export/SolverCaseWriter.cpp
@@ -265,6 +270,8 @@ qt_add_executable(MyCAE
     src/ui/property/GeometryPropertyView.h
     src/ui/property/PickPropertyView.cpp
     src/ui/property/PickPropertyView.h
+    src/ui/property/ResultPropertyView.cpp
+    src/ui/property/ResultPropertyView.h
     src/ui/property/SolverPropertyView.cpp
     src/ui/property/SolverPropertyView.h
     src/ui/RenderView.cpp
@@ -288,7 +295,10 @@ qt_add_executable(MyCAE
 )
 
 target_include_directories(MyCAE PRIVATE src ${OpenCASCADE_INCLUDE_DIR})
-target_compile_definitions(MyCAE PRIVATE MYCAE_GMSH_EXECUTABLE_PATH="${MYCAE_GMSH_EXECUTABLE}")
+target_compile_definitions(MyCAE PRIVATE
+    MYCAE_GMSH_EXECUTABLE_PATH="${MYCAE_GMSH_EXECUTABLE}"
+    MYCAE_CALCULIX_EXECUTABLE_PATH="${MYCAE_CALCULIX_EXECUTABLE}"
+)
 target_link_libraries(MyCAE PRIVATE Qt6::Widgets ${VTK_LIBRARIES} ${MYCAE_OCC_LIBRARIES})
 
 vtk_module_autoinit(

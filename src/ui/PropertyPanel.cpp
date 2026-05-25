@@ -5,9 +5,11 @@
 #include "geometry/FaceGroup.h"
 #include "geometry/GeometryObject.h"
 #include "mesh/MeshObject.h"
+#include "result/ResultObject.h"
 #include "ui/property/FaceGroupPropertyView.h"
 #include "ui/property/GeometryPropertyView.h"
 #include "ui/property/PickPropertyView.h"
+#include "ui/property/ResultPropertyView.h"
 #include "ui/property/SolverPropertyView.h"
 
 #include <QFormLayout>
@@ -261,4 +263,42 @@ void PropertyPanel::showSolverCategory(const SimulationCase &simulationCase)
 
     resetDynamicArea();
     SolverPropertyView::populateSolverCategory(m_dynamicArea, simulationCase);
+}
+
+void PropertyPanel::showResultCategory(const std::vector<ResultObject> &results)
+{
+    clearAll();
+    m_selectionValue->setText("Results");
+    m_typeValue->setText("Result Category");
+
+    QWidget *dynamicArea = resetDynamicArea();
+    auto *dynamicLayout = new QVBoxLayout(dynamicArea);
+    if (results.empty()) {
+        dynamicLayout->addWidget(new QLabel("No solver results.", dynamicArea));
+        return;
+    }
+
+    for (size_t i = 0; i < results.size(); ++i) {
+        const ResultObject &resultObject = results[i];
+        dynamicLayout->addWidget(
+            new QLabel(QString("<b>%1. %2</b> - %3")
+                .arg(i + 1)
+                .arg(resultObject.name)
+                .arg(resultObject.success ? "Success" : "Failed"),
+                dynamicArea)
+        );
+    }
+}
+
+void PropertyPanel::showResult(const ResultObject &resultObject)
+{
+    clearAll();
+    m_selectionValue->setText(resultObject.name);
+    m_typeValue->setText("Result");
+    m_nameValue->setText(resultObject.name);
+    m_sourceStepFileValue->setText(resultObject.casePath);
+    m_createdAtValue->setText(resultObject.createdAt);
+
+    resetDynamicArea();
+    ResultPropertyView::populate(m_dynamicArea, resultObject);
 }

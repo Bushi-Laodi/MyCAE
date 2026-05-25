@@ -5,6 +5,7 @@
 #include "render/RenderHighlightController.h"
 #include "workflow/MeshWorkflowController.h"
 #include "project/ProjectModel.h"
+#include "result/ResultObject.h"
 #include "solver/SimulationCaseBuilder.h"
 #include "ui/PropertyPanel.h"
 #include "ui/RenderView.h"
@@ -30,6 +31,7 @@ SelectionControllerResult SelectionController::apply(const Selection &selection)
     case SelectionKind::BoundaryConditionCategory:
     case SelectionKind::LoadCategory:
     case SelectionKind::SolverCategory:
+    case SelectionKind::ResultCategory:
         return showSolverCategory(selection.kind);
     case SelectionKind::Material: {
         SelectionControllerResult result;
@@ -73,6 +75,21 @@ SelectionControllerResult SelectionController::apply(const Selection &selection)
         SelectionControllerResult result;
         result.logMessages = SolverDataController::showLoad(m_projectModel, m_propertyPanel, selection.id);
         result.accepted = m_projectModel.selection().kind == SelectionKind::Load;
+        return result;
+    }
+    case SelectionKind::Result: {
+        SelectionControllerResult result;
+        const ResultObject *resultObject = m_projectModel.findResultById(selection.id);
+        if (!resultObject) {
+            result.logMessages.append("Result selection failed: not found: " + selection.id);
+            return result;
+        }
+        m_projectModel.setSelection(Selection::item(SelectionKind::Result, resultObject->id, resultObject->name));
+        if (m_propertyPanel) {
+            m_propertyPanel->showResult(*resultObject);
+        }
+        result.logMessages.append("Result selected: " + resultObject->id);
+        result.accepted = true;
         return result;
     }
     case SelectionKind::None:
@@ -199,6 +216,12 @@ SelectionControllerResult SelectionController::showSolverCategory(SelectionKind 
             m_propertyPanel->showSolverCategory(SimulationCaseBuilder::fromProjectModel(m_projectModel));
         }
         result.logMessages.append("Solver settings displayed.");
+        break;
+    case SelectionKind::ResultCategory:
+        if (m_propertyPanel) {
+            m_propertyPanel->showResultCategory(m_projectModel.resultRepository().results());
+        }
+        result.logMessages.append("Solver results displayed.");
         break;
     default:
         break;

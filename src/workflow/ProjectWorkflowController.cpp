@@ -212,6 +212,7 @@ void ProjectWorkflowController::refreshProjectTree() const
     refreshFaceGroupTree();
     refreshMeshTree();
     refreshSolverDataTree();
+    refreshResultTree();
 }
 
 void ProjectWorkflowController::refreshGeometryTree() const
@@ -259,4 +260,13 @@ void ProjectWorkflowController::refreshSolverDataTree() const
     m_projectTreePanel->setMaterialItems(solverRepository.materials());
     m_projectTreePanel->setBoundaryConditionItems(solverRepository.boundaryConditions());
     m_projectTreePanel->setLoadItems(solverRepository.loads());
+}
+
+void ProjectWorkflowController::refreshResultTree() const
+{
+    if (!m_projectTreePanel) {
+        return;
+    }
+
+    m_projectTreePanel->setResultItems(m_projectModel.resultRepository().results());
 }
