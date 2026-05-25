@@ -19,6 +19,7 @@ public:
     ResultDisplayResult displayResult(
         const ProjectModel &projectModel,
         ResultObject &resultObject,
-        RenderView *renderView
+        RenderView *renderView,
+        bool resetCamera = true
     ) const;
 };

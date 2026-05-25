@@ -16,7 +16,10 @@
 #include "commands/SolverCommands.h"
 #include "commands/UtilityCommands.h"
 #include "commands/WorkflowCommandContext.h"
+#include "result/ResultCsvExporter.h"
+#include "result/ResultDisplayController.h"
 #include "result/ResultManager.h"
+#include "result/ResultReportExporter.h"
 #include "solver/calculix/CalculiXResultGridBuilder.h"
 #include "solver/plugin/SolverPluginDescriptorFormatter.h"
 #include "workflow/ProjectWorkflowController.h"
@@ -35,6 +38,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QRegularExpression>
 #include <QShowEvent>
 #include <QStatusBar>
 #include <QToolBar>
@@ -76,6 +80,24 @@ QString solverRunCommandId(const QString &pluginId)
 {
     return "solver.run." + pluginId;
 }
+
+QString sanitizedFileStem(QString value)
+{
+    value = value.trimmed();
+    value.replace(QRegularExpression("[\\\\/:*?\"<>|\\s]+"), "_");
+    return value.isEmpty() ? QString("result") : value;
+}
+
+QString ensureFileSuffix(const QString &filePath, const QString &suffix)
+{
+    return QFileInfo(filePath).suffix().isEmpty() ? filePath + suffix : filePath;
+}
+
+QString reportScreenshotPath(const QString &reportPath)
+{
+    const QFileInfo reportInfo(reportPath);
+    return reportInfo.dir().filePath(reportInfo.completeBaseName() + "_screenshot.png");
+}
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -109,6 +131,12 @@ MainWindow::MainWindow(QWidget *parent)
         }
         updateActionStates();
     });
+    connect(
+        &m_resultAnimationController,
+        &ResultAnimationController::frameScaleChanged,
+        this,
+        &MainWindow::applyAnimatedResultDeformationScale
+    );
     updateActionStates();
     updateRecentProjectActions();
     m_appSettings.restoreMainWindow(*this);
@@ -573,6 +601,30 @@ void MainWindow::createDockWidgets()
     );
     connect(
         m_resultPostprocessPanel,
+        &ResultPostprocessPanel::animationPlayRequested,
+        this,
+        &MainWindow::playSelectedResultAnimation
+    );
+    connect(
+        m_resultPostprocessPanel,
+        &ResultPostprocessPanel::animationStopRequested,
+        this,
+        &MainWindow::stopSelectedResultAnimation
+    );
+    connect(
+        m_resultPostprocessPanel,
+        &ResultPostprocessPanel::exportCsvRequested,
+        this,
+        &MainWindow::exportSelectedResultCsv
+    );
+    connect(
+        m_resultPostprocessPanel,
+        &ResultPostprocessPanel::exportReportRequested,
+        this,
+        &MainWindow::exportSelectedResultReport
+    );
+    connect(
+        m_resultPostprocessPanel,
         &ResultPostprocessPanel::exportScreenshotRequested,
         this,
         &MainWindow::exportRenderScreenshot
@@ -603,6 +655,14 @@ void MainWindow::createDockWidgets()
 
 void MainWindow::applySelection(const Selection &selection)
 {
+    const ResultObject *previousResult = m_projectModel.resultForSelection();
+    if (m_resultAnimationController.isRunning()
+            && (selection.kind != SelectionKind::Result
+                || !previousResult
+                || selection.id != previousResult->id)) {
+        stopSelectedResultAnimation();
+    }
+
     const SelectionController controller(m_projectModel, m_propertyPanel, m_renderView);
     if (selection.kind == SelectionKind::Geometry) {
         m_pickController.setTargetGeometry(selection.id);
@@ -672,6 +732,61 @@ void MainWindow::setSelectedResultUndeformedOverlay(bool enabled)
     resultObject->showUndeformedOverlay = enabled;
     saveResultIndex();
     redisplaySelectedResult();
+}
+
+void MainWindow::playSelectedResultAnimation(double speed)
+{
+    const ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        writeLog("Play animation skipped: no result is selected.");
+        return;
+    }
+
+    const double peakScale = resultObject->deformationScale;
+    if (peakScale <= 0.0) {
+        writeLog("Play animation started with zero deformation scale; increase Deformation to see motion.");
+    }
+    m_resultAnimationController.start(peakScale, speed);
+    writeLog(QString("Result animation started: peakScale=%1, speed=%2 Hz.")
+        .arg(peakScale, 0, 'g', 6)
+        .arg(speed, 0, 'g', 6));
+}
+
+void MainWindow::stopSelectedResultAnimation()
+{
+    if (!m_resultAnimationController.isRunning()) {
+        writeLog("Stop animation skipped: animation is not running.");
+        return;
+    }
+
+    m_resultAnimationController.stop();
+    saveResultIndex();
+    writeLog(QString("Result animation stopped: scale=%1.")
+        .arg(m_resultAnimationController.currentScale(), 0, 'g', 6));
+}
+
+void MainWindow::applyAnimatedResultDeformationScale(double scale)
+{
+    ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        m_resultAnimationController.stop();
+        return;
+    }
+
+    resultObject->deformationScale = scale;
+    const ResultDisplayResult displayResult =
+        ResultDisplayController().displayResult(m_projectModel, *resultObject, m_renderView, false);
+    if (!displayResult.success) {
+        if (!displayResult.logMessages.isEmpty()) {
+            writeLogMessages(displayResult.logMessages);
+        }
+        m_resultAnimationController.stop();
+        return;
+    }
+
+    if (m_resultPostprocessPanel) {
+        m_resultPostprocessPanel->setResult(resultObject);
+    }
 }
 
 void MainWindow::saveResultIndex()
@@ -828,6 +943,100 @@ void MainWindow::redisplaySelectedResult()
         return;
     }
     applySelection(Selection::item(SelectionKind::Result, resultObject->id, resultObject->name));
+}
+
+void MainWindow::exportSelectedResultCsv()
+{
+    const ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        writeLog("Export CSV skipped: no result is selected.");
+        return;
+    }
+    if (!m_projectModel.hasProject()) {
+        writeLog("Export CSV failed: no project is open.");
+        return;
+    }
+
+    const QString initialPath = QDir(m_projectModel.project().rootPath)
+        .filePath(QString("solver/exports/%1_result.csv").arg(sanitizedFileStem(resultObject->name)));
+    const QString selectedPath = QFileDialog::getSaveFileName(
+        this,
+        "Export Result CSV",
+        initialPath,
+        "CSV File (*.csv)"
+    );
+    if (selectedPath.isEmpty()) {
+        writeLog("Export CSV canceled.");
+        return;
+    }
+
+    const ResultCsvExportResult exportResult =
+        ResultCsvExporter().exportResult(m_projectModel, *resultObject, ensureFileSuffix(selectedPath, ".csv"));
+    writeLogMessages(exportResult.warnings);
+    if (!exportResult.success) {
+        writeLog(exportResult.errorMessage);
+        QMessageBox::warning(this, "Export CSV", exportResult.errorMessage);
+        return;
+    }
+
+    writeLog("Node displacement CSV exported: " + exportResult.nodeDisplacementCsvPath);
+    writeLog("Element Von Mises CSV exported: " + exportResult.elementStressCsvPath);
+}
+
+void MainWindow::exportSelectedResultReport()
+{
+    const ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        writeLog("Export report skipped: no result is selected.");
+        return;
+    }
+    if (!m_projectModel.hasProject()) {
+        writeLog("Export report failed: no project is open.");
+        return;
+    }
+    if (!m_renderView) {
+        writeLog("Export report failed: render view is not available.");
+        return;
+    }
+
+    const QString initialPath = QDir(m_projectModel.project().rootPath)
+        .filePath(QString("solver/reports/%1_report.md").arg(sanitizedFileStem(resultObject->name)));
+    const QString selectedPath = QFileDialog::getSaveFileName(
+        this,
+        "Export Result Report",
+        initialPath,
+        "Markdown File (*.md)"
+    );
+    if (selectedPath.isEmpty()) {
+        writeLog("Export report canceled.");
+        return;
+    }
+
+    const QString reportPath = ensureFileSuffix(selectedPath, ".md");
+    const QString screenshotPath = reportScreenshotPath(reportPath);
+    if (!QDir().mkpath(QFileInfo(reportPath).absolutePath())) {
+        const QString message = "Export report failed: cannot create " + QFileInfo(reportPath).absolutePath();
+        writeLog(message);
+        QMessageBox::warning(this, "Export Report", message);
+        return;
+    }
+    if (!m_renderView->saveScreenshot(screenshotPath)) {
+        const QString message = "Export report failed: cannot save screenshot " + screenshotPath;
+        writeLog(message);
+        QMessageBox::warning(this, "Export Report", message);
+        return;
+    }
+
+    const ResultReportExportResult exportResult =
+        ResultReportExporter().exportMarkdown(m_projectModel.project(), *resultObject, reportPath, screenshotPath);
+    if (!exportResult.success) {
+        writeLog(exportResult.errorMessage);
+        QMessageBox::warning(this, "Export Report", exportResult.errorMessage);
+        return;
+    }
+
+    writeLog("Result report exported: " + exportResult.reportPath);
+    writeLog("Result report screenshot exported: " + screenshotPath);
 }
 
 void MainWindow::exportRenderScreenshot()

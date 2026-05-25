@@ -7,6 +7,7 @@
 #include "project/ProjectModel.h"
 #include "project/ProjectManager.h"
 #include "project/SelectionState.h"
+#include "result/ResultAnimationController.h"
 #include "solver/plugin/SolverPluginManager.h"
 #include "ui/ActionRegistry.h"
 #include "ui/AppSettings.h"
@@ -54,6 +55,11 @@ private:
     void setSelectedResultDeformationScale(double scale);
     void setSelectedResultMeshEdges(bool enabled);
     void setSelectedResultUndeformedOverlay(bool enabled);
+    void playSelectedResultAnimation(double speed);
+    void stopSelectedResultAnimation();
+    void applyAnimatedResultDeformationScale(double scale);
+    void exportSelectedResultCsv();
+    void exportSelectedResultReport();
     void exportRenderScreenshot();
     void openSelectedResultDirectory();
     void renameSelectedResult();
@@ -130,4 +136,5 @@ private:
     UndoStackController m_undoStackController;
     AppSettings m_appSettings;
     QString m_activeProjectFile;
+    ResultAnimationController m_resultAnimationController;
 };

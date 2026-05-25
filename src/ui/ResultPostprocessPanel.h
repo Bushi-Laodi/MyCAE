@@ -25,6 +25,10 @@ signals:
     void deformationScaleChanged(double scale);
     void meshEdgesChanged(bool enabled);
     void undeformedOverlayChanged(bool enabled);
+    void animationPlayRequested(double speed);
+    void animationStopRequested();
+    void exportCsvRequested();
+    void exportReportRequested();
     void exportScreenshotRequested();
     void openResultDirectoryRequested();
     void renameResultRequested();
@@ -40,8 +44,15 @@ private:
     QLabel *m_resultNameLabel = nullptr;
     QLabel *m_scalarRangeLabel = nullptr;
     QLabel *m_coverageLabel = nullptr;
+    QLabel *m_extremaLabel = nullptr;
     QLabel *m_fileStatusLabel = nullptr;
     QLabel *m_messagesLabel = nullptr;
+    QDoubleSpinBox *m_animationSpeedSpinBox = nullptr;
+    QLabel *m_animationFrameLabel = nullptr;
+    QPushButton *m_playAnimationButton = nullptr;
+    QPushButton *m_stopAnimationButton = nullptr;
+    QPushButton *m_exportCsvButton = nullptr;
+    QPushButton *m_exportReportButton = nullptr;
     QPushButton *m_exportScreenshotButton = nullptr;
     QPushButton *m_openDirectoryButton = nullptr;
     QPushButton *m_renameButton = nullptr;

@@ -1,5 +1,7 @@
 #include "solver/calculix/CalculiXResultGridBuilder.h"
 
+#include "solver/calculix/CalculiXResultMath.h"
+
 #include <vtkDoubleArray.h>
 #include <vtkCellData.h>
 #include <vtkNew.h>
@@ -9,7 +11,6 @@
 #include <vtkTetra.h>
 #include <vtkUnstructuredGrid.h>
 
-#include <cmath>
 #include <limits>
 #include <vector>
 #include <unordered_map>
@@ -21,25 +22,6 @@ struct StressAccumulator
     double vonMisesSum = 0.0;
     int count = 0;
 };
-
-double displacementMagnitude(const CalculiXNodeDisplacement &value)
-{
-    return std::sqrt(value.ux * value.ux + value.uy * value.uy + value.uz * value.uz);
-}
-
-double vonMisesStress(const CalculiXElementStress &stress)
-{
-    const double normal =
-        (stress.sxx - stress.syy) * (stress.sxx - stress.syy)
-        + (stress.syy - stress.szz) * (stress.syy - stress.szz)
-        + (stress.szz - stress.sxx) * (stress.szz - stress.sxx);
-    const double shear = 6.0 * (
-        stress.sxy * stress.sxy
-        + stress.sxz * stress.sxz
-        + stress.syz * stress.syz
-    );
-    return std::sqrt(0.5 * (normal + shear));
-}
 
 bool isDisplacementField(const QString &fieldName)
 {
@@ -60,7 +42,7 @@ double displacementScalar(const CalculiXNodeDisplacement &value, const QString &
     if (fieldName == CalculiXResultFields::Uz) {
         return value.uz;
     }
-    return displacementMagnitude(value);
+    return CalculiXResultMath::displacementMagnitude(value);
 }
 
 void updateRange(double value, double &scalarMin, double &scalarMax)
@@ -110,7 +92,7 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
     stressByElementId.reserve(result.stresses.size());
     for (const CalculiXElementStress &stress : result.stresses) {
         StressAccumulator &accumulator = stressByElementId[stress.elementId];
-        accumulator.vonMisesSum += vonMisesStress(stress);
+        accumulator.vonMisesSum += CalculiXResultMath::vonMisesStress(stress);
         ++accumulator.count;
     }
 
@@ -153,7 +135,7 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
         }
 
         const CalculiXNodeDisplacement &displacement = displacementIt->second;
-        const double magnitude = displacementMagnitude(displacement);
+        const double magnitude = CalculiXResultMath::displacementMagnitude(displacement);
         const vtkIdType vtkPointId = points->InsertNextPoint(
             node.x + deformationScale * displacement.ux,
             node.y + deformationScale * displacement.uy,

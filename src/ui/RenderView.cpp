@@ -104,7 +104,8 @@ void RenderView::showResultGrid(
     bool useCellScalars,
     double scalarMin,
     double scalarMax,
-    bool showMeshEdges
+    bool showMeshEdges,
+    bool resetCamera
 )
 {
     m_titleLabel->setText(title);
@@ -122,7 +123,8 @@ void RenderView::showResultGrid(
         useCellScalars,
         scalarMin,
         scalarMax,
-        showMeshEdges
+        showMeshEdges,
+        resetCamera
     );
 }
 
@@ -147,4 +149,9 @@ void RenderView::clearHighlight()
 void RenderView::highlightFaceIndices(const std::vector<int> &faceIndices)
 {
     m_canvas->highlightFaceIndices(faceIndices);
+}
+
+void RenderView::highlightResultPosition(double x, double y, double z)
+{
+    m_canvas->highlightResultPosition(x, y, z);
 }
