@@ -4,6 +4,7 @@
 
 #include <QFile>
 #include <QFileInfo>
+#include <QDir>
 #include <QProcess>
 #include <QProcessEnvironment>
 #include <QTextStream>
@@ -34,6 +35,48 @@ bool isExplicitExecutablePath(const QString &executablePath)
 {
     const QFileInfo executableInfo(executablePath);
     return executableInfo.isAbsolute() || executablePath.contains('/') || executablePath.contains('\\');
+}
+
+QProcessEnvironment processEnvironmentForCalculiX(const QString &program)
+{
+    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    if (!isExplicitExecutablePath(program)) {
+        return environment;
+    }
+
+    const QFileInfo executableInfo(program);
+    QDir envRootDir = executableInfo.absoluteDir();
+    if (envRootDir.dirName().compare("bin", Qt::CaseInsensitive) == 0) {
+        envRootDir.cdUp();
+        if (envRootDir.dirName().compare("Library", Qt::CaseInsensitive) == 0) {
+            envRootDir.cdUp();
+        }
+    }
+
+    const QString envRoot = envRootDir.absolutePath();
+    const QStringList condaRuntimePaths = {
+        envRoot,
+        envRoot + "/Library/mingw-w64/bin",
+        envRoot + "/Library/usr/bin",
+        envRoot + "/Library/bin",
+        envRoot + "/Scripts",
+        envRoot + "/bin",
+    };
+
+    QStringList pathEntries;
+    for (const QString &path : condaRuntimePaths) {
+        if (QDir(path).exists()) {
+            pathEntries.append(QDir::toNativeSeparators(path));
+        }
+    }
+
+    const QString existingPath = environment.value("PATH");
+    if (!existingPath.isEmpty()) {
+        pathEntries.append(existingPath);
+    }
+    environment.insert("PATH", pathEntries.join(';'));
+    environment.insert("CONDA_PREFIX", QDir::toNativeSeparators(envRoot));
+    return environment;
 }
 
 bool writeRunLog(const SolverRunResult &result, const QString &logFile, QString *errorMessage)
@@ -101,10 +144,11 @@ SolverRunResult CalculiXRunner::run(const SolverCaseContext &context) const
     }
 
     QProcess process;
-    const QStringList arguments = {paths.jobName};
+    const QStringList arguments = {"-i", paths.jobName};
     process.setProgram(program);
     process.setArguments(arguments);
     process.setWorkingDirectory(paths.caseDirectory);
+    process.setProcessEnvironment(processEnvironmentForCalculiX(program));
     result.command = program + " " + arguments.join(' ');
 
     process.start();

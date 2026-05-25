@@ -57,7 +57,7 @@ set(MYCAE_GMSH_EXECUTABLE
     CACHE FILEPATH "Path to the local Gmsh executable"
 )
 set(MYCAE_CALCULIX_EXECUTABLE
-    "ccx"
+    "E:/tools/Anaconda/envs/calculix/Library/bin/ccx.exe"
     CACHE FILEPATH "Path to the local CalculiX ccx executable"
 )
 
