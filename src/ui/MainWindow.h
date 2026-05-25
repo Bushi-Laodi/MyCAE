@@ -11,14 +11,14 @@
 #include "solver/plugin/SolverPluginManager.h"
 #include "ui/ActionRegistry.h"
 #include "ui/AppSettings.h"
+#include "ui/MainWindowActions.h"
+#include "ui/MainWindowDocks.h"
 
 #include <QMainWindow>
-#include <QVector>
 #include <QStringList>
 
 class QAction;
 class QCloseEvent;
-class QMenu;
 class QString;
 
 class LogPanel;
@@ -27,7 +27,12 @@ class ProjectTreePanel;
 class PropertyPanel;
 class RenderView;
 class ResultPostprocessPanel;
-class ResultWorkflowController;
+class RecentProjectController;
+class MainWindowToolController;
+class SelectionInteractionController;
+class FaceGroupRestoreController;
+class MainWindowResultController;
+class MainWindowViewController;
 struct WorkflowCommandContext;
 
 class MainWindow final : public QMainWindow
@@ -42,6 +47,7 @@ private:
     void createMenus();
     void createToolBar();
     void createDockWidgets();
+    void installLifecycle();
 
     // Delayed initialization: VTK OpenGL context may not be ready
     // during the constructor. We defer the first Render() call
@@ -77,54 +83,18 @@ private:
     void handleFacePicked(const PickSelection &selection);
     void updateActionStates();
     WorkflowCommandContext workflowCommandContext();
-    ResultWorkflowController resultWorkflowController();
+    RecentProjectController recentProjectController();
+    MainWindowToolController toolController();
+    SelectionInteractionController selectionInteractionController();
+    FaceGroupRestoreController faceGroupRestoreController();
+    MainWindowResultController resultController();
+    MainWindowViewController viewController();
     void writeLog(const QString &message);
     void writeLogMessages(const QStringList &messages);
 
-    QAction *m_newProjectAction = nullptr;
-    QAction *m_openProjectAction = nullptr;
-    QMenu *m_recentProjectsMenu = nullptr;
-    QVector<QAction *> m_recentProjectActions;
-    QAction *m_clearRecentProjectsAction = nullptr;
-    QAction *m_undoAction = nullptr;
-    QAction *m_redoAction = nullptr;
-    QAction *m_createBoxAction = nullptr;
-    QAction *m_createCylinderAction = nullptr;
-    QAction *m_checkGmshAction = nullptr;
-    QAction *m_generateMeshAction = nullptr;
-    QAction *m_readMeshInfoAction = nullptr;
-    QAction *m_showMeshAction = nullptr;
-    QAction *m_pickFaceAction = nullptr;
-    QAction *m_clearPickAction = nullptr;
-    QAction *m_createFaceGroupFromPickAction = nullptr;
-    QAction *m_addPickedFacesToFaceGroupAction = nullptr;
-    QAction *m_removePickedFacesFromFaceGroupAction = nullptr;
-    QAction *m_clearFaceGroupFacesAction = nullptr;
-    QAction *m_renameFaceGroupAction = nullptr;
-    QAction *m_deleteFaceGroupAction = nullptr;
-    QAction *m_setFaceGroupLocalMeshSizeAction = nullptr;
-    QAction *m_toggleFaceGroupPhysicalGroupAction = nullptr;
-    QAction *m_exitAction = nullptr;
-    QVector<QAction *> m_runSolverActions;
+    MainWindowActions m_actions;
 
-    QAction *m_createMaterialAction = nullptr;
-    QAction *m_createBoundaryConditionAction = nullptr;
-    QAction *m_createLoadAction = nullptr;
-    QAction *m_editSolverDataAction = nullptr;
-    QAction *m_deleteSolverDataAction = nullptr;
-    QVector<QAction *> m_resultFieldActions;
-    QVector<QAction *> m_resultScaleActions;
-    QAction *m_exportScreenshotAction = nullptr;
-    QAction *m_projectResourcesAction = nullptr;
-    QAction *m_validateSamplesAction = nullptr;
-    QAction *m_clearDiagnosticsAction = nullptr;
-
-    ProjectTreePanel *m_projectTreePanel = nullptr;
-    DiagnosticPanel *m_diagnosticPanel = nullptr;
-    PropertyPanel *m_propertyPanel = nullptr;
-    ResultPostprocessPanel *m_resultPostprocessPanel = nullptr;
-    LogPanel *m_logPanel = nullptr;
-    RenderView *m_renderView = nullptr;
+    MainWindowDockWidgets m_docks;
 
     ProjectManager m_projectManager;
     GeometryManager m_geometryManager;

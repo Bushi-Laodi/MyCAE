@@ -5,6 +5,7 @@ project(MyCAE VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+include(CTest)
 
 set(MYCAE_QT_ROOT "D:\\qt\\6.6.3\\msvc2019_64" CACHE PATH "Root directory of the local Qt 6 installation")
 if (EXISTS "${MYCAE_QT_ROOT}/lib/cmake/Qt6/Qt6Config.cmake")
@@ -324,26 +325,50 @@ qt_add_executable(MyCAE
     src/ui/AppSettings.h
     src/ui/CylinderDialog.cpp
     src/ui/CylinderDialog.h
+    src/ui/FaceGroupRestoreController.cpp
+    src/ui/FaceGroupRestoreController.h
     src/ui/DiagnosticPanel.cpp
     src/ui/DiagnosticPanel.h
     src/ui/LoadDialog.cpp
     src/ui/LoadDialog.h
     src/ui/LogPanel.cpp
     src/ui/LogPanel.h
+    src/ui/MainWindowActions.cpp
+    src/ui/MainWindowActions.h
+    src/ui/MainWindowDocks.cpp
+    src/ui/MainWindowDocks.h
+    src/ui/MainWindowLifecycleController.cpp
+    src/ui/MainWindowLifecycleController.h
     src/ui/MainWindow.cpp
     src/ui/MainWindow.h
+    src/ui/MainWindowMenuBuilder.cpp
+    src/ui/MainWindowMenuBuilder.h
+    src/ui/MainWindowResultController.cpp
+    src/ui/MainWindowResultController.h
+    src/ui/MainWindowStateController.cpp
+    src/ui/MainWindowStateController.h
+    src/ui/MainWindowToolController.cpp
+    src/ui/MainWindowToolController.h
+    src/ui/MainWindowToolBarBuilder.cpp
+    src/ui/MainWindowToolBarBuilder.h
+    src/ui/MainWindowViewController.cpp
+    src/ui/MainWindowViewController.h
     src/ui/MaterialDialog.cpp
     src/ui/MaterialDialog.h
     src/ui/ProjectResourceDialog.cpp
     src/ui/ProjectResourceDialog.h
     src/ui/ProjectTreePanel.cpp
     src/ui/ProjectTreePanel.h
+    src/ui/RecentProjectController.cpp
+    src/ui/RecentProjectController.h
     src/ui/PropertyPanel.cpp
     src/ui/PropertyPanel.h
     src/ui/ResultPostprocessPanel.cpp
     src/ui/ResultPostprocessPanel.h
     src/ui/SampleValidationDialog.cpp
     src/ui/SampleValidationDialog.h
+    src/ui/SelectionInteractionController.cpp
+    src/ui/SelectionInteractionController.h
     src/ui/property/FaceGroupPropertyView.cpp
     src/ui/property/FaceGroupPropertyView.h
     src/ui/property/GeometryPropertyView.cpp
@@ -380,6 +405,8 @@ qt_add_executable(MyCAE
     src/validation/DemoProjectValidator.h
     src/validation/SampleProjectValidator.cpp
     src/validation/SampleProjectValidator.h
+    src/validation/UiSmokeValidator.cpp
+    src/validation/UiSmokeValidator.h
 )
 
 target_include_directories(MyCAE PRIVATE src ${OpenCASCADE_INCLUDE_DIR})
@@ -410,6 +437,26 @@ add_custom_target(MyCAESamples ALL
     COMMAND_EXPAND_LISTS
 )
 add_dependencies(MyCAE MyCAESamples)
+
+if (BUILD_TESTING)
+    add_test(
+        NAME MyCAEValidateSamples
+        COMMAND $<TARGET_FILE:MyCAE> --validate-samples
+    )
+    set_tests_properties(MyCAEValidateSamples PROPERTIES
+        WORKING_DIRECTORY "$<TARGET_FILE_DIR:MyCAE>"
+        TIMEOUT 180
+    )
+
+    add_test(
+        NAME MyCAEValidateUi
+        COMMAND $<TARGET_FILE:MyCAE> --validate-ui
+    )
+    set_tests_properties(MyCAEValidateUi PROPERTIES
+        WORKING_DIRECTORY "$<TARGET_FILE_DIR:MyCAE>"
+        TIMEOUT 60
+    )
+endif()
 
 if (WIN32)
     add_custom_command(TARGET MyCAE POST_BUILD
