@@ -101,83 +101,101 @@ ExternalProcessSolverPlugin::ExternalProcessSolverPlugin(QString pluginDirectory
 {
 }
 
-QString ExternalProcessSolverPlugin::id() const
-{
-    return ExternalSolverPluginConfigLoader::load(m_pluginDirectory).id;
-}
-
-QString ExternalProcessSolverPlugin::name() const
-{
-    return ExternalSolverPluginConfigLoader::load(m_pluginDirectory).name;
-}
-
-bool ExternalProcessSolverPlugin::exportCase(
-    const SimulationCase &simulationCase,
-    const QString &caseDirectory,
-    QString *errorMessage
-) const
+SolverPluginDescriptor ExternalProcessSolverPlugin::descriptor() const
 {
     const ExternalSolverPluginConfig config = ExternalSolverPluginConfigLoader::load(m_pluginDirectory);
-    const QString caseFilePath = QDir(caseDirectory).filePath(config.inputFile);
-    return SimulationCaseJsonWriter::writeCaseFile(simulationCase, caseFilePath, errorMessage);
+    SolverPluginDescriptor descriptor;
+    descriptor.id = config.id;
+    descriptor.name = config.name;
+    descriptor.vendor = "External";
+    descriptor.solverFamily = config.type;
+    descriptor.description = config.description;
+    descriptor.status = SolverPluginStatus::Ready;
+    descriptor.capabilities.canExportCase = true;
+    descriptor.capabilities.canRunCase = true;
+    descriptor.capabilities.canReadResult = true;
+    descriptor.capabilities.analysisTypes = config.supportedAnalysisTypes;
+    descriptor.capabilities.inputFormats = {config.inputFile};
+    descriptor.capabilities.outputFormats = {config.outputFile};
+    return descriptor;
 }
 
-bool ExternalProcessSolverPlugin::runCase(
-    const QString &caseDirectory,
-    QString *logText,
-    QString *errorMessage
-) const
+SolverCaseWriterResult ExternalProcessSolverPlugin::exportCase(const SolverCaseContext &context) const
 {
+    SolverCaseWriterResult result;
+    if (!context.isValid()) {
+        result.errors.append("External solver export failed: invalid solver case context.");
+        return result;
+    }
+
     const ExternalSolverPluginConfig config = ExternalSolverPluginConfigLoader::load(m_pluginDirectory);
-    const QString caseFilePath = QDir(caseDirectory).filePath(config.inputFile);
+    const QString caseFilePath = QDir(context.caseDirectory).filePath(config.inputFile);
+    QString errorMessage;
+    if (!SimulationCaseJsonWriter::writeCaseFile(*context.simulationCase, caseFilePath, &errorMessage)) {
+        result.errors.append(errorMessage);
+        return result;
+    }
+
+    result.success = true;
+    result.caseRootPath = context.caseDirectory;
+    result.writtenFiles.append(caseFilePath);
+    result.logMessages.append("External solver input exported: " + caseFilePath);
+    return result;
+}
+
+SolverRunResult ExternalProcessSolverPlugin::runCase(const SolverCaseContext &context) const
+{
+    SolverRunResult result;
+    if (!context.isValid()) {
+        result.errors.append("External solver run failed: invalid solver case context.");
+        return result;
+    }
+
+    const ExternalSolverPluginConfig config = ExternalSolverPluginConfigLoader::load(m_pluginDirectory);
+    const QString caseFilePath = QDir(context.caseDirectory).filePath(config.inputFile);
     if (!QFileInfo::exists(caseFilePath)) {
-        if (errorMessage) {
-            *errorMessage = "External solver input does not exist: " + caseFilePath;
-        }
-        return false;
+        result.errors.append("External solver input does not exist: " + caseFilePath);
+        return result;
     }
 
     const QString pluginConfigPath = ExternalSolverPluginConfigLoader::configPath(m_pluginDirectory);
     if (!QFileInfo::exists(pluginConfigPath)) {
-        if (errorMessage) {
-            *errorMessage = "External solver plugin description does not exist: " + pluginConfigPath;
-        }
-        return false;
+        result.errors.append("External solver plugin description does not exist: " + pluginConfigPath);
+        return result;
     }
 
     if (!config.script.isEmpty()
             && !QFileInfo::exists(ExternalSolverPluginConfigLoader::scriptPath(m_pluginDirectory, config))) {
-        if (errorMessage) {
-            *errorMessage = "External solver script does not exist: "
-                + ExternalSolverPluginConfigLoader::scriptPath(m_pluginDirectory, config);
-        }
-        return false;
+        result.errors.append(
+            "External solver script does not exist: "
+            + ExternalSolverPluginConfigLoader::scriptPath(m_pluginDirectory, config)
+        );
+        return result;
     }
 
-    const QString resultFilePath = QDir(caseDirectory).filePath(config.outputFile);
+    const QString resultFilePath = QDir(context.caseDirectory).filePath(config.outputFile);
     const std::vector<ProcessCommand> commands = commandsForConfig(config, m_pluginDirectory, caseFilePath, resultFilePath);
     if (commands.empty()) {
-        if (errorMessage) {
-            *errorMessage = "External solver plugin has no runnable command: " + pluginConfigPath;
-        }
-        return false;
+        result.errors.append("External solver plugin has no runnable command: " + pluginConfigPath);
+        return result;
     }
 
     QStringList failureMessages;
     for (const ProcessCommand &command : commands) {
         QString standardOutput;
         QString standardError;
-        if (runProcess(command.program, command.arguments, caseDirectory, &standardOutput, &standardError)) {
-            if (logText) {
-                *logText = QString("External solver plugin: %1 (%2)\nConfig: %3\nCommand: %4 %5\n%6")
-                    .arg(config.name)
-                    .arg(config.id)
-                    .arg(pluginConfigPath)
-                    .arg(command.program)
-                    .arg(command.arguments.join(' '))
-                    .arg(standardOutput.isEmpty() ? QString("<no stdout>") : standardOutput);
-            }
-            return true;
+        if (runProcess(command.program, command.arguments, context.caseDirectory, &standardOutput, &standardError)) {
+            result.success = true;
+            result.exitCode = 0;
+            result.command = command.program + " " + command.arguments.join(' ');
+            result.workingDirectory = context.caseDirectory;
+            result.standardOutput = standardOutput;
+            result.standardError = standardError;
+            result.logMessages.append(QString("External solver plugin: %1 (%2)").arg(config.name, config.id));
+            result.logMessages.append("Config: " + pluginConfigPath);
+            result.logMessages.append("Command: " + result.command);
+            result.logMessages.append(standardOutput.isEmpty() ? QString("<no stdout>") : standardOutput);
+            return result;
         }
 
         failureMessages.append(QString("%1 failed: %2")
@@ -185,43 +203,40 @@ bool ExternalProcessSolverPlugin::runCase(
             .arg(standardError.isEmpty() ? QString("<no stderr>") : standardError));
     }
 
-    if (errorMessage) {
-        *errorMessage = "Failed to run external solver. " + failureMessages.join(" | ");
-    }
-    return false;
+    result.errors.append("Failed to run external solver. " + failureMessages.join(" | "));
+    return result;
 }
 
-bool ExternalProcessSolverPlugin::readResult(
-    const QString &caseDirectory,
-    QString *resultText,
-    QString *errorMessage
-) const
+SolverResultReadResult ExternalProcessSolverPlugin::readResult(const SolverCaseContext &context) const
 {
+    SolverResultReadResult result;
+    if (!context.isValid()) {
+        result.errors.append("External solver result read failed: invalid solver case context.");
+        return result;
+    }
+
     const ExternalSolverPluginConfig config = ExternalSolverPluginConfigLoader::load(m_pluginDirectory);
-    const QString resultFilePath = QDir(caseDirectory).filePath(config.outputFile);
+    const QString resultFilePath = QDir(context.caseDirectory).filePath(config.outputFile);
     QFile file(resultFilePath);
     if (!file.open(QIODevice::ReadOnly)) {
-        if (errorMessage) {
-            *errorMessage = "Failed to read external solver result: " + file.errorString();
-        }
-        return false;
+        result.errors.append("Failed to read external solver result: " + file.errorString());
+        return result;
     }
 
     const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
     if (!document.isObject()) {
-        if (errorMessage) {
-            *errorMessage = "Invalid external solver result: root is not a JSON object.";
-        }
-        return false;
+        result.errors.append("Invalid external solver result: root is not a JSON object.");
+        return result;
     }
 
-    const QJsonObject result = document.object();
-    if (resultText) {
-        *resultText = QString("%1: %2, iterations=%3, maxResidual=%4")
-            .arg(result.value("solverName").toString(config.name))
-            .arg(result.value("status").toString("unknown"))
-            .arg(result.value("iterations").toInt())
-            .arg(result.value("maxResidual").toDouble());
-    }
-    return true;
+    const QJsonObject resultObject = document.object();
+    result.success = true;
+    result.resultFiles.append(resultFilePath);
+    result.summary = QString("%1: %2, iterations=%3, maxResidual=%4")
+        .arg(resultObject.value("solverName").toString(config.name))
+        .arg(resultObject.value("status").toString("unknown"))
+        .arg(resultObject.value("iterations").toInt())
+        .arg(resultObject.value("maxResidual").toDouble());
+    result.logMessages.append("External solver result read: " + resultFilePath);
+    return result;
 }

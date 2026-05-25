@@ -1,32 +1,31 @@
 #pragma once
 
-#include <QString>
+#include "solver/export/SolverCaseWriterResult.h"
+#include "solver/plugin/SolverCaseContext.h"
+#include "solver/plugin/SolverPluginDescriptor.h"
+#include "solver/plugin/SolverResultReadResult.h"
+#include "solver/plugin/SolverRunResult.h"
 
-struct SimulationCase;
+#include <QString>
 
 class SolverPlugin
 {
 public:
     virtual ~SolverPlugin() = default;
 
-    virtual QString id() const = 0;
-    virtual QString name() const = 0;
+    virtual SolverPluginDescriptor descriptor() const = 0;
 
-    virtual bool exportCase(
-        const SimulationCase &simulationCase,
-        const QString &caseDirectory,
-        QString *errorMessage = nullptr
-    ) const = 0;
+    QString id() const
+    {
+        return descriptor().id;
+    }
 
-    virtual bool runCase(
-        const QString &caseDirectory,
-        QString *logText = nullptr,
-        QString *errorMessage = nullptr
-    ) const = 0;
+    QString name() const
+    {
+        return descriptor().name;
+    }
 
-    virtual bool readResult(
-        const QString &caseDirectory,
-        QString *resultText = nullptr,
-        QString *errorMessage = nullptr
-    ) const = 0;
+    virtual SolverCaseWriterResult exportCase(const SolverCaseContext &context) const = 0;
+    virtual SolverRunResult runCase(const SolverCaseContext &context) const = 0;
+    virtual SolverResultReadResult readResult(const SolverCaseContext &context) const = 0;
 };

@@ -1,16 +1,12 @@
 #pragma once
 
 #include "solver/export/SolverCaseWriterResult.h"
+#include "solver/plugin/SolverCaseContext.h"
 
-#include <QString>
-
-class ProjectModel;
+class SolverPlugin;
 
 class SolverCaseWriter
 {
 public:
-    SolverCaseWriterResult writeOpenFoamCase(
-        const ProjectModel &projectModel,
-        const QString &caseName
-    ) const;
+    SolverCaseWriterResult writeCase(const SolverPlugin &plugin, const SolverCaseContext &context) const;
 };

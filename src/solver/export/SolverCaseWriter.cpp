@@ -1,15 +1,8 @@
 #include "solver/export/SolverCaseWriter.h"
 
-#include "project/ProjectModel.h"
-#include "solver/SimulationCaseBuilder.h"
-#include "solver/export/OpenFoamCaseWriter.h"
+#include "solver/plugin/SolverPlugin.h"
 
-SolverCaseWriterResult SolverCaseWriter::writeOpenFoamCase(
-    const ProjectModel &projectModel,
-    const QString &caseName
-) const
+SolverCaseWriterResult SolverCaseWriter::writeCase(const SolverPlugin &plugin, const SolverCaseContext &context) const
 {
-    const SimulationCase simulationCase = SimulationCaseBuilder::fromProjectModel(projectModel);
-    const OpenFoamCaseWriter openFoamCaseWriter;
-    return openFoamCaseWriter.write(projectModel, simulationCase, caseName);
+    return plugin.exportCase(context);
 }

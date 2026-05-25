@@ -12,6 +12,7 @@
 #include "commands/SolverCommands.h"
 #include "commands/UtilityCommands.h"
 #include "commands/WorkflowCommandContext.h"
+#include "solver/plugin/SolverPluginDescriptorFormatter.h"
 #include "workflow/SelectionController.h"
 
 #include <QAction>
@@ -83,6 +84,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     statusBar()->showMessage("Ready");
     writeLog("MyCAE started.");
+    writeLogMessages(m_solverPluginManager.diagnostics());
 }
 
 void MainWindow::showEvent(QShowEvent *event)
@@ -374,15 +376,17 @@ void MainWindow::createMenus()
     );
 
     simulationMenu->addSeparator();
-    if (m_solverPluginManager.plugins().empty()) {
+    if (m_solverPluginManager.pluginDescriptors().empty()) {
         QAction *noSolverAction = simulationMenu->addAction("No solver plugins found");
         noSolverAction->setEnabled(false);
     } else {
-        for (const std::unique_ptr<SolverPlugin> &plugin : m_solverPluginManager.plugins()) {
-            const QString pluginId = plugin->id();
-            QAction *runSolverAction = simulationMenu->addAction("Run " + plugin->name());
+        for (const SolverPluginDescriptor &descriptor : m_solverPluginManager.pluginDescriptors()) {
+            const QString pluginId = descriptor.id;
+            QAction *runSolverAction =
+                simulationMenu->addAction(SolverPluginDescriptorFormatter::menuText(descriptor));
+            runSolverAction->setProperty("solverUsable", descriptor.isUsable());
             m_runSolverActions.append(runSolverAction);
-            runSolverAction->setStatusTip("Run solver plugin: " + pluginId);
+            runSolverAction->setStatusTip(SolverPluginDescriptorFormatter::statusTip(descriptor));
             m_actionRegistry.registerActionCommand(
                 solverRunCommandId(pluginId),
                 runSolverAction,
@@ -537,7 +541,7 @@ void MainWindow::updateActionStates()
     }
     for (QAction *runSolverAction : m_runSolverActions) {
         if (runSolverAction) {
-            runSolverAction->setEnabled(hasProject);
+            runSolverAction->setEnabled(hasProject && runSolverAction->property("solverUsable").toBool());
         }
     }
 }

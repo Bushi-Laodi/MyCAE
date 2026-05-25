@@ -221,18 +221,57 @@ qt_add_executable(MyCAE
     src/solver/SimulationCaseManager.h
     src/solver/SolverDataService.cpp
     src/solver/SolverDataService.h
+    src/solver/calculix/CalculiXCasePaths.cpp
+    src/solver/calculix/CalculiXCasePaths.h
+    src/solver/calculix/CalculiXCaseData.h
+    src/solver/calculix/CalculiXCaseDataBuilder.cpp
+    src/solver/calculix/CalculiXCaseDataBuilder.h
+    src/solver/calculix/CalculiXCaseWriter.cpp
+    src/solver/calculix/CalculiXCaseWriter.h
+    src/solver/calculix/CalculiXBoundaryMapper.cpp
+    src/solver/calculix/CalculiXBoundaryMapper.h
+    src/solver/calculix/CalculiXDeckFormatting.cpp
+    src/solver/calculix/CalculiXDeckFormatting.h
+    src/solver/calculix/CalculiXDeckSectionWriter.cpp
+    src/solver/calculix/CalculiXDeckSectionWriter.h
+    src/solver/calculix/CalculiXDeckTypes.h
+    src/solver/calculix/CalculiXInputDeck.cpp
+    src/solver/calculix/CalculiXInputDeck.h
+    src/solver/calculix/CalculiXInputDeckBuilder.cpp
+    src/solver/calculix/CalculiXInputDeckBuilder.h
+    src/solver/calculix/CalculiXLoadWriter.cpp
+    src/solver/calculix/CalculiXLoadWriter.h
+    src/solver/calculix/CalculiXPlugin.cpp
+    src/solver/calculix/CalculiXPlugin.h
+    src/solver/calculix/CalculiXResultReader.cpp
+    src/solver/calculix/CalculiXResultReader.h
+    src/solver/calculix/CalculiXRunner.cpp
+    src/solver/calculix/CalculiXRunner.h
+    src/solver/calculix/CalculiXSurfaceMapper.cpp
+    src/solver/calculix/CalculiXSurfaceMapper.h
     src/solver/export/OpenFoamCaseWriter.cpp
     src/solver/export/OpenFoamCaseWriter.h
     src/solver/export/SolverCaseWriter.cpp
     src/solver/export/SolverCaseWriter.h
     src/solver/export/SolverCaseWriterResult.h
+    src/solver/openfoam/OpenFoamPlugin.cpp
+    src/solver/openfoam/OpenFoamPlugin.h
+    src/solver/plugin/BuiltInSolverPluginRegistry.cpp
+    src/solver/plugin/BuiltInSolverPluginRegistry.h
     src/solver/plugin/ExternalProcessSolverPlugin.cpp
     src/solver/plugin/ExternalProcessSolverPlugin.h
     src/solver/plugin/ExternalSolverPluginConfig.cpp
     src/solver/plugin/ExternalSolverPluginConfig.h
+    src/solver/plugin/SolverCapabilities.h
+    src/solver/plugin/SolverCaseContext.h
     src/solver/plugin/SolverPlugin.h
+    src/solver/plugin/SolverPluginDescriptor.h
+    src/solver/plugin/SolverPluginDescriptorFormatter.cpp
+    src/solver/plugin/SolverPluginDescriptorFormatter.h
     src/solver/plugin/SolverPluginManager.cpp
     src/solver/plugin/SolverPluginManager.h
+    src/solver/plugin/SolverResultReadResult.h
+    src/solver/plugin/SolverRunResult.h
     src/ui/BoxDialog.cpp
     src/ui/BoxDialog.h
     src/ui/BooleanOperationDialog.cpp
@@ -279,6 +318,8 @@ qt_add_executable(MyCAE
     src/workflow/ProjectWorkflowController.h
     src/workflow/SelectionController.cpp
     src/workflow/SelectionController.h
+    src/workflow/SolverCaseWorkflowController.cpp
+    src/workflow/SolverCaseWorkflowController.h
     src/workflow/SolverWorkflowController.cpp
     src/workflow/SolverWorkflowController.h
 )

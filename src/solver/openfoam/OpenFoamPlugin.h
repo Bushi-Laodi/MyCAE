@@ -2,16 +2,11 @@
 
 #include "solver/plugin/SolverPlugin.h"
 
-class ExternalProcessSolverPlugin final : public SolverPlugin
+class OpenFoamPlugin final : public SolverPlugin
 {
 public:
-    explicit ExternalProcessSolverPlugin(QString pluginDirectory);
-
     SolverPluginDescriptor descriptor() const override;
     SolverCaseWriterResult exportCase(const SolverCaseContext &context) const override;
     SolverRunResult runCase(const SolverCaseContext &context) const override;
     SolverResultReadResult readResult(const SolverCaseContext &context) const override;
-
-private:
-    QString m_pluginDirectory;
 };
