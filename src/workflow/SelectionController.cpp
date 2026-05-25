@@ -97,7 +97,7 @@ SelectionControllerResult SelectionController::apply(const Selection &selection)
 SelectionControllerResult SelectionController::showResult(const QString &resultId) const
 {
     SelectionControllerResult result;
-    const ResultObject *resultObject = m_projectModel.findResultById(resultId);
+    ResultObject *resultObject = m_projectModel.findResultById(resultId);
     if (!resultObject) {
         result.logMessages.append("Result selection failed: not found: " + resultId);
         return result;
@@ -112,6 +112,9 @@ SelectionControllerResult SelectionController::showResult(const QString &resultI
     const ResultDisplayResult displayResult =
         displayController.displayResult(m_projectModel, *resultObject, m_renderView);
     result.logMessages.append(displayResult.logMessages);
+    if (m_propertyPanel) {
+        m_propertyPanel->showResult(*resultObject);
+    }
     result.logMessages.append("Result selected: " + resultObject->id);
     result.accepted = true;
     return result;

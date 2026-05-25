@@ -37,6 +37,7 @@ public:
     ProjectWorkflowResult loadGeometries() const;
     ProjectWorkflowResult loadMeshes() const;
     ProjectWorkflowResult loadSimulationCase() const;
+    ProjectWorkflowResult loadResults() const;
     ProjectWorkflowResult saveSimulationCase() const;
     void refreshProjectTree() const;
     void refreshGeometryTree() const;

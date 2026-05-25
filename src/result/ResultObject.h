@@ -17,6 +17,18 @@ struct ResultObject
     QStringList resultFiles;
     QStringList availableFields;
     QString primaryFieldName;
+    QString displayFieldName;
+    double deformationScale = 0.0;
+    bool showMeshEdges = true;
+    bool showUndeformedOverlay = false;
+    bool resultFilesComplete = false;
+    int matchedNodeCount = 0;
+    int meshNodeCount = 0;
+    int matchedElementCount = 0;
+    int meshElementCount = 0;
+    double scalarMin = 0.0;
+    double scalarMax = 0.0;
+    QStringList checkMessages;
     QString createdAt;
     bool success = false;
     QString summary;

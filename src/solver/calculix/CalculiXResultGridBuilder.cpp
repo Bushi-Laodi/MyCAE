@@ -1,6 +1,7 @@
 #include "solver/calculix/CalculiXResultGridBuilder.h"
 
 #include <vtkDoubleArray.h>
+#include <vtkCellData.h>
 #include <vtkNew.h>
 #include <vtkPointData.h>
 #include <vtkPoints.h>
@@ -10,31 +11,92 @@
 
 #include <cmath>
 #include <limits>
+#include <vector>
 #include <unordered_map>
 
 namespace
 {
+struct StressAccumulator
+{
+    double vonMisesSum = 0.0;
+    int count = 0;
+};
+
 double displacementMagnitude(const CalculiXNodeDisplacement &value)
 {
     return std::sqrt(value.ux * value.ux + value.uy * value.uy + value.uz * value.uz);
 }
+
+double vonMisesStress(const CalculiXElementStress &stress)
+{
+    const double normal =
+        (stress.sxx - stress.syy) * (stress.sxx - stress.syy)
+        + (stress.syy - stress.szz) * (stress.syy - stress.szz)
+        + (stress.szz - stress.sxx) * (stress.szz - stress.sxx);
+    const double shear = 6.0 * (
+        stress.sxy * stress.sxy
+        + stress.sxz * stress.sxz
+        + stress.syz * stress.syz
+    );
+    return std::sqrt(0.5 * (normal + shear));
 }
 
-CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildDisplacementGrid(
+bool isDisplacementField(const QString &fieldName)
+{
+    return fieldName == CalculiXResultFields::Ux
+        || fieldName == CalculiXResultFields::Uy
+        || fieldName == CalculiXResultFields::Uz
+        || fieldName == CalculiXResultFields::DisplacementMagnitude;
+}
+
+double displacementScalar(const CalculiXNodeDisplacement &value, const QString &fieldName)
+{
+    if (fieldName == CalculiXResultFields::Ux) {
+        return value.ux;
+    }
+    if (fieldName == CalculiXResultFields::Uy) {
+        return value.uy;
+    }
+    if (fieldName == CalculiXResultFields::Uz) {
+        return value.uz;
+    }
+    return displacementMagnitude(value);
+}
+
+void updateRange(double value, double &scalarMin, double &scalarMax)
+{
+    scalarMin = std::min(scalarMin, value);
+    scalarMax = std::max(scalarMax, value);
+}
+}
+
+CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
     const MeshData &meshData,
-    const CalculiXDatResult &result
+    const CalculiXDatResult &result,
+    const QString &fieldName,
+    double deformationScale
 ) const
 {
     CalculiXResultGridBuildResult buildResult;
-    buildResult.scalarName = "Displacement Magnitude";
+    buildResult.scalarName = fieldName.isEmpty()
+        ? QString(CalculiXResultFields::DisplacementMagnitude)
+        : fieldName;
+    buildResult.scalarAssociation = buildResult.scalarName == CalculiXResultFields::VonMisesStress
+        ? CalculiXResultScalarAssociation::Cell
+        : CalculiXResultScalarAssociation::Point;
     buildResult.meshNodeCount = meshData.nodeCount();
+    buildResult.meshElementCount = meshData.tetraCount();
 
     if (meshData.nodes.empty() || meshData.tetraElements.empty()) {
         buildResult.errors.append("Cannot build result grid: mesh has no nodes or tetrahedra.");
         return buildResult;
     }
-    if (result.displacements.empty()) {
+    if (result.displacements.empty() && isDisplacementField(buildResult.scalarName)) {
         buildResult.errors.append("Cannot build result grid: displacement field is empty.");
+        return buildResult;
+    }
+    if (buildResult.scalarName == CalculiXResultFields::VonMisesStress && result.stresses.empty()) {
+        buildResult.errors.append("Cannot build result grid: stress field is empty.");
         return buildResult;
     }
 
@@ -44,12 +106,28 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildDisplacementGrid(
         displacementByNodeId.insert_or_assign(displacement.nodeId, displacement);
     }
 
+    std::unordered_map<int, StressAccumulator> stressByElementId;
+    stressByElementId.reserve(result.stresses.size());
+    for (const CalculiXElementStress &stress : result.stresses) {
+        StressAccumulator &accumulator = stressByElementId[stress.elementId];
+        accumulator.vonMisesSum += vonMisesStress(stress);
+        ++accumulator.count;
+    }
+
     vtkNew<vtkPoints> points;
     vtkNew<vtkDoubleArray> displacementVector;
+    vtkNew<vtkDoubleArray> uxArray;
+    vtkNew<vtkDoubleArray> uyArray;
+    vtkNew<vtkDoubleArray> uzArray;
     vtkNew<vtkDoubleArray> displacementMagnitudeArray;
+    vtkNew<vtkDoubleArray> selectedPointScalar;
     displacementVector->SetName("Displacement");
     displacementVector->SetNumberOfComponents(3);
-    displacementMagnitudeArray->SetName(buildResult.scalarName.toUtf8().constData());
+    uxArray->SetName(CalculiXResultFields::Ux);
+    uyArray->SetName(CalculiXResultFields::Uy);
+    uzArray->SetName(CalculiXResultFields::Uz);
+    displacementMagnitudeArray->SetName(CalculiXResultFields::DisplacementMagnitude);
+    selectedPointScalar->SetName(buildResult.scalarName.toUtf8().constData());
 
     std::unordered_map<int, vtkIdType> nodeIdToVtkId;
     nodeIdToVtkId.reserve(meshData.nodes.size());
@@ -58,29 +136,48 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildDisplacementGrid(
     double scalarMax = std::numeric_limits<double>::lowest();
 
     for (const MeshNode &node : meshData.nodes) {
-        const vtkIdType vtkPointId = points->InsertNextPoint(node.x, node.y, node.z);
-        nodeIdToVtkId.insert({node.id, vtkPointId});
-
         const auto displacementIt = displacementByNodeId.find(node.id);
         if (displacementIt == displacementByNodeId.end()) {
+            const vtkIdType vtkPointId = points->InsertNextPoint(node.x, node.y, node.z);
+            nodeIdToVtkId.insert({node.id, vtkPointId});
             displacementVector->InsertNextTuple3(0.0, 0.0, 0.0);
+            uxArray->InsertNextValue(0.0);
+            uyArray->InsertNextValue(0.0);
+            uzArray->InsertNextValue(0.0);
             displacementMagnitudeArray->InsertNextValue(0.0);
-            scalarMin = std::min(scalarMin, 0.0);
-            scalarMax = std::max(scalarMax, 0.0);
+            if (isDisplacementField(buildResult.scalarName)) {
+                selectedPointScalar->InsertNextValue(0.0);
+                updateRange(0.0, scalarMin, scalarMax);
+            }
             continue;
         }
 
         const CalculiXNodeDisplacement &displacement = displacementIt->second;
         const double magnitude = displacementMagnitude(displacement);
+        const vtkIdType vtkPointId = points->InsertNextPoint(
+            node.x + deformationScale * displacement.ux,
+            node.y + deformationScale * displacement.uy,
+            node.z + deformationScale * displacement.uz
+        );
+        nodeIdToVtkId.insert({node.id, vtkPointId});
+
         displacementVector->InsertNextTuple3(displacement.ux, displacement.uy, displacement.uz);
+        uxArray->InsertNextValue(displacement.ux);
+        uyArray->InsertNextValue(displacement.uy);
+        uzArray->InsertNextValue(displacement.uz);
         displacementMagnitudeArray->InsertNextValue(magnitude);
-        scalarMin = std::min(scalarMin, magnitude);
-        scalarMax = std::max(scalarMax, magnitude);
+        if (isDisplacementField(buildResult.scalarName)) {
+            const double scalar = displacementScalar(displacement, buildResult.scalarName);
+            selectedPointScalar->InsertNextValue(scalar);
+            updateRange(scalar, scalarMin, scalarMax);
+        }
         ++buildResult.matchedNodeCount;
     }
 
     auto grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
     grid->SetPoints(points);
+    vtkNew<vtkDoubleArray> vonMisesArray;
+    vonMisesArray->SetName(CalculiXResultFields::VonMisesStress);
 
     for (const TetraElement &element : meshData.tetraElements) {
         const auto node1 = nodeIdToVtkId.find(element.node1);
@@ -101,17 +198,49 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildDisplacementGrid(
         tetra->GetPointIds()->SetId(2, node3->second);
         tetra->GetPointIds()->SetId(3, node4->second);
         grid->InsertNextCell(tetra->GetCellType(), tetra->GetPointIds());
+
+        double cellStress = 0.0;
+        const auto stressIt = stressByElementId.find(element.id);
+        if (stressIt != stressByElementId.end() && stressIt->second.count > 0) {
+            cellStress = stressIt->second.vonMisesSum / static_cast<double>(stressIt->second.count);
+            ++buildResult.matchedElementCount;
+        }
+        vonMisesArray->InsertNextValue(cellStress);
+        if (buildResult.scalarName == CalculiXResultFields::VonMisesStress) {
+            updateRange(cellStress, scalarMin, scalarMax);
+        }
     }
 
     grid->GetPointData()->AddArray(displacementVector);
+    grid->GetPointData()->AddArray(uxArray);
+    grid->GetPointData()->AddArray(uyArray);
+    grid->GetPointData()->AddArray(uzArray);
     grid->GetPointData()->AddArray(displacementMagnitudeArray);
+    if (isDisplacementField(buildResult.scalarName)
+            && buildResult.scalarName != CalculiXResultFields::Ux
+            && buildResult.scalarName != CalculiXResultFields::Uy
+            && buildResult.scalarName != CalculiXResultFields::Uz
+            && buildResult.scalarName != CalculiXResultFields::DisplacementMagnitude) {
+        grid->GetPointData()->AddArray(selectedPointScalar);
+    }
+    grid->GetCellData()->AddArray(vonMisesArray);
     grid->GetPointData()->SetActiveVectors("Displacement");
-    grid->GetPointData()->SetActiveScalars(buildResult.scalarName.toUtf8().constData());
+    if (buildResult.scalarAssociation == CalculiXResultScalarAssociation::Point) {
+        grid->GetPointData()->SetActiveScalars(buildResult.scalarName.toUtf8().constData());
+    } else {
+        grid->GetCellData()->SetActiveScalars(buildResult.scalarName.toUtf8().constData());
+    }
 
     if (buildResult.matchedNodeCount < buildResult.meshNodeCount) {
         buildResult.warnings.append(QString("Only %1 of %2 mesh nodes have displacement values; missing nodes use 0.")
             .arg(buildResult.matchedNodeCount)
             .arg(buildResult.meshNodeCount));
+    }
+    if (buildResult.scalarName == CalculiXResultFields::VonMisesStress
+            && buildResult.matchedElementCount < buildResult.meshElementCount) {
+        buildResult.warnings.append(QString("Only %1 of %2 tetrahedra have stress values; missing cells use 0.")
+            .arg(buildResult.matchedElementCount)
+            .arg(buildResult.meshElementCount));
     }
 
     buildResult.scalarMin = scalarMin == std::numeric_limits<double>::max() ? 0.0 : scalarMin;

@@ -4,6 +4,7 @@
 #include "VtkRenderCanvas.h"
 
 #include <QLabel>
+#include <QPixmap>
 #include <QString>
 #include <QVBoxLayout>
 
@@ -95,20 +96,42 @@ void RenderView::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const Q
 
 void RenderView::showResultGrid(
     vtkSmartPointer<vtkUnstructuredGrid> grid,
+    vtkSmartPointer<vtkUnstructuredGrid> overlayGrid,
     const QString &title,
     const QString &subtitle,
     const QString &scalarName,
+    const QString &scalarUnit,
+    bool useCellScalars,
     double scalarMin,
-    double scalarMax
+    double scalarMax,
+    bool showMeshEdges
 )
 {
     m_titleLabel->setText(title);
     m_subtitleLabel->setText(subtitle);
-    m_detailLabel->setText(QString("CalculiX scalar field: %1 [%2, %3]")
+    m_detailLabel->setText(QString("CalculiX scalar field: %1 [%2, %3] %4")
         .arg(scalarName)
         .arg(scalarMin, 0, 'g', 6)
-        .arg(scalarMax, 0, 'g', 6));
-    m_canvas->showResultGrid(grid, scalarName, scalarMin, scalarMax);
+        .arg(scalarMax, 0, 'g', 6)
+        .arg(scalarUnit));
+    m_canvas->showResultGrid(
+        grid,
+        overlayGrid,
+        scalarName,
+        scalarUnit,
+        useCellScalars,
+        scalarMin,
+        scalarMax,
+        showMeshEdges
+    );
+}
+
+bool RenderView::saveScreenshot(const QString &filePath)
+{
+    if (filePath.isEmpty()) {
+        return false;
+    }
+    return grab().save(filePath);
 }
 
 void RenderView::setPickMode(PickMode mode)

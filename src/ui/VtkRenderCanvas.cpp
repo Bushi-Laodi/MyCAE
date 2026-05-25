@@ -5,6 +5,7 @@
 #include "render/VtkPickAdapter.h"
 
 #include <algorithm>
+#include <cmath>
 #include <vector>
 #include <QSizePolicy>
 #include <QVBoxLayout>
@@ -163,11 +164,21 @@ void VtkRenderCanvas::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid)
 
 void VtkRenderCanvas::showResultGrid(
     vtkSmartPointer<vtkUnstructuredGrid> grid,
+    vtkSmartPointer<vtkUnstructuredGrid> overlayGrid,
     const QString &scalarName,
+    const QString &scalarUnit,
+    bool useCellScalars,
     double scalarMin,
-    double scalarMax
+    double scalarMax,
+    bool showMeshEdges
 )
 {
+    if (scalarMin == scalarMax) {
+        const double delta = scalarMin == 0.0 ? 1.0 : std::abs(scalarMin) * 0.05;
+        scalarMin -= delta;
+        scalarMax += delta;
+    }
+
     vtkNew<vtkLookupTable> lookupTable;
     lookupTable->SetHueRange(0.667, 0.0);
     lookupTable->SetSaturationRange(0.82, 0.92);
@@ -181,19 +192,25 @@ void VtkRenderCanvas::showResultGrid(
     mapper->SetLookupTable(lookupTable);
     mapper->SetScalarRange(scalarMin, scalarMax);
     mapper->ScalarVisibilityOn();
-    mapper->SetScalarModeToUsePointFieldData();
+    if (useCellScalars) {
+        mapper->SetScalarModeToUseCellFieldData();
+    } else {
+        mapper->SetScalarModeToUsePointFieldData();
+    }
     mapper->SelectColorArray(scalarName.toUtf8().constData());
 
     vtkNew<vtkActor> actor;
     actor->SetMapper(mapper);
     actor->GetProperty()->SetEdgeColor(0.08, 0.10, 0.12);
-    actor->GetProperty()->EdgeVisibilityOn();
+    actor->GetProperty()->SetEdgeVisibility(showMeshEdges);
     actor->GetProperty()->SetLineWidth(0.45);
     actor->GetProperty()->SetOpacity(0.96);
 
     vtkNew<vtkScalarBarActor> scalarBar;
     scalarBar->SetLookupTable(lookupTable);
-    scalarBar->SetTitle(scalarName.toUtf8().constData());
+    const QString title = scalarUnit.isEmpty() ? scalarName : scalarName + " (" + scalarUnit + ")";
+    scalarBar->SetTitle(title.toUtf8().constData());
+    scalarBar->SetLabelFormat("%.3e");
     scalarBar->SetNumberOfLabels(5);
     scalarBar->SetMaximumWidthInPixels(90);
     scalarBar->SetMaximumHeightInPixels(420);
@@ -202,6 +219,19 @@ void VtkRenderCanvas::showResultGrid(
     m_primaryActor = actor;
     m_scalarBarActor = scalarBar;
     m_renderer->RemoveAllViewProps();
+    if (overlayGrid) {
+        vtkNew<vtkDataSetMapper> overlayMapper;
+        overlayMapper->SetInputData(overlayGrid);
+
+        vtkNew<vtkActor> overlayActor;
+        overlayActor->SetMapper(overlayMapper);
+        overlayActor->GetProperty()->SetColor(0.88, 0.88, 0.88);
+        overlayActor->GetProperty()->SetOpacity(0.18);
+        overlayActor->GetProperty()->SetEdgeColor(0.15, 0.15, 0.15);
+        overlayActor->GetProperty()->EdgeVisibilityOn();
+        overlayActor->GetProperty()->SetLineWidth(0.35);
+        m_renderer->AddActor(overlayActor);
+    }
     m_renderer->AddActor(m_primaryActor);
     m_renderer->AddActor2D(m_scalarBarActor);
     resetCamera();

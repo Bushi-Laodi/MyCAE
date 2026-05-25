@@ -37,8 +37,25 @@ void ResultPropertyView::populate(QWidget *parent, const ResultObject &resultObj
     if (!resultObject.primaryFieldName.isEmpty()) {
         form->addRow("Primary Field:", valueLabel(resultObject.primaryFieldName, parent));
     }
+    if (!resultObject.displayFieldName.isEmpty()) {
+        form->addRow("Display Field:", valueLabel(resultObject.displayFieldName, parent));
+    }
+    form->addRow("Deformation Scale:", valueLabel(QString::number(resultObject.deformationScale, 'g', 6), parent));
     if (!resultObject.availableFields.isEmpty()) {
         form->addRow("Available Fields:", valueLabel(resultObject.availableFields.join(", "), parent));
+    }
+    form->addRow("Scalar Range:", valueLabel(QString("%1 to %2")
+        .arg(resultObject.scalarMin, 0, 'g', 6)
+        .arg(resultObject.scalarMax, 0, 'g', 6), parent));
+    form->addRow("Node Coverage:", valueLabel(QString("%1 / %2")
+        .arg(resultObject.matchedNodeCount)
+        .arg(resultObject.meshNodeCount), parent));
+    form->addRow("Element Coverage:", valueLabel(QString("%1 / %2")
+        .arg(resultObject.matchedElementCount)
+        .arg(resultObject.meshElementCount), parent));
+    form->addRow("Result Files:", valueLabel(resultObject.resultFilesComplete ? "Complete" : "Incomplete", parent));
+    if (!resultObject.checkMessages.isEmpty()) {
+        form->addRow("Checks:", valueLabel(resultObject.checkMessages.join("; "), parent));
     }
     form->addRow("Created At:", valueLabel(resultObject.createdAt, parent));
     form->addRow("Success:", valueLabel(resultObject.success ? "Yes" : "No", parent));

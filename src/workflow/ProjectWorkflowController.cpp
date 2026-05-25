@@ -97,6 +97,7 @@ ProjectWorkflowResult ProjectWorkflowController::openProject() const
     result.logMessages.append(loadGeometries().logMessages);
     result.logMessages.append(loadMeshes().logMessages);
     result.logMessages.append(loadSimulationCase().logMessages);
+    result.logMessages.append(loadResults().logMessages);
     refreshProjectTree();
     result.logMessages.append("Project opened: " + project.rootPath);
     result.success = true;
@@ -187,6 +188,24 @@ ProjectWorkflowResult ProjectWorkflowController::loadSimulationCase() const
         .arg(solverRepository.materials().size())
         .arg(solverRepository.boundaryConditions().size())
         .arg(solverRepository.loads().size()));
+    result.success = true;
+    return result;
+}
+
+ProjectWorkflowResult ProjectWorkflowController::loadResults() const
+{
+    ProjectWorkflowResult result;
+    QString errorMessage;
+    ProjectModelLoader loader(m_geometryManager);
+    if (!loader.loadResults(m_projectModel, &errorMessage)) {
+        QMessageBox::warning(m_window, "Load results failed", errorMessage);
+        result.logMessages.append("Load results failed: " + errorMessage);
+        return result;
+    }
+
+    result.logMessages.append(
+        QString("Loaded %1 solver result(s).").arg(m_projectModel.resultRepository().results().size())
+    );
     result.success = true;
     return result;
 }

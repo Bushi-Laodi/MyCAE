@@ -19,6 +19,7 @@ class LogPanel;
 class ProjectTreePanel;
 class PropertyPanel;
 class RenderView;
+class ResultPostprocessPanel;
 struct WorkflowCommandContext;
 
 class MainWindow final : public QMainWindow
@@ -42,6 +43,16 @@ private:
     bool m_vtkInitialized = false;
 
     void applySelection(const Selection &selection);
+    void setSelectedResultField(const QString &fieldName);
+    void setSelectedResultDeformationScale(double scale);
+    void setSelectedResultMeshEdges(bool enabled);
+    void setSelectedResultUndeformedOverlay(bool enabled);
+    void exportRenderScreenshot();
+    void openSelectedResultDirectory();
+    void renameSelectedResult();
+    void deleteSelectedResultHistory();
+    void redisplaySelectedResult();
+    void saveResultIndex();
     void handleFacePicked(const PickSelection &selection);
     void updateActionStates();
     WorkflowCommandContext workflowCommandContext();
@@ -74,9 +85,13 @@ private:
     QAction *m_createLoadAction = nullptr;
     QAction *m_editSolverDataAction = nullptr;
     QAction *m_deleteSolverDataAction = nullptr;
+    QVector<QAction *> m_resultFieldActions;
+    QVector<QAction *> m_resultScaleActions;
+    QAction *m_exportScreenshotAction = nullptr;
 
     ProjectTreePanel *m_projectTreePanel = nullptr;
     PropertyPanel *m_propertyPanel = nullptr;
+    ResultPostprocessPanel *m_resultPostprocessPanel = nullptr;
     LogPanel *m_logPanel = nullptr;
     RenderView *m_renderView = nullptr;
 

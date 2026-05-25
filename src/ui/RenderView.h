@@ -28,12 +28,17 @@ public:
     void showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const QString &title, const QString &subtitle);
     void showResultGrid(
         vtkSmartPointer<vtkUnstructuredGrid> grid,
+        vtkSmartPointer<vtkUnstructuredGrid> overlayGrid,
         const QString &title,
         const QString &subtitle,
         const QString &scalarName,
+        const QString &scalarUnit,
+        bool useCellScalars,
         double scalarMin,
-        double scalarMax
+        double scalarMax,
+        bool showMeshEdges
     );
+    bool saveScreenshot(const QString &filePath);
     void setPickMode(PickMode mode);
     void clearHighlight();
     void highlightFaceIndices(const std::vector<int> &faceIndices);

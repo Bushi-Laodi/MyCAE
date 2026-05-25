@@ -14,6 +14,7 @@ public:
     bool loadGeometries(ProjectModel &projectModel, QString *errorMessage = nullptr) const;
     bool loadMeshes(ProjectModel &projectModel, QString *errorMessage = nullptr) const;
     bool loadSimulationCase(ProjectModel &projectModel, QString *errorMessage = nullptr) const;
+    bool loadResults(ProjectModel &projectModel, QString *errorMessage = nullptr) const;
 
 private:
     const GeometryManager &m_geometryManager;

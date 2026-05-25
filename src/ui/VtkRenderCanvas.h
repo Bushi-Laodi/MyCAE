@@ -34,9 +34,13 @@ public:
     void showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid);
     void showResultGrid(
         vtkSmartPointer<vtkUnstructuredGrid> grid,
+        vtkSmartPointer<vtkUnstructuredGrid> overlayGrid,
         const QString &scalarName,
+        const QString &scalarUnit,
+        bool useCellScalars,
         double scalarMin,
-        double scalarMax
+        double scalarMax,
+        bool showMeshEdges
     );
     void setPickMode(PickMode mode);
     void clearHighlight();

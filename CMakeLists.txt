@@ -216,6 +216,8 @@ qt_add_executable(MyCAE
     src/render/VtkPickAdapter.h
     src/result/ResultDisplayController.cpp
     src/result/ResultDisplayController.h
+    src/result/ResultManager.cpp
+    src/result/ResultManager.h
     src/result/ResultObject.h
     src/solver/BoundaryCondition.h
     src/solver/Load.h
@@ -310,6 +312,8 @@ qt_add_executable(MyCAE
     src/ui/ProjectTreePanel.h
     src/ui/PropertyPanel.cpp
     src/ui/PropertyPanel.h
+    src/ui/ResultPostprocessPanel.cpp
+    src/ui/ResultPostprocessPanel.h
     src/ui/property/FaceGroupPropertyView.cpp
     src/ui/property/FaceGroupPropertyView.h
     src/ui/property/GeometryPropertyView.cpp

@@ -4,6 +4,7 @@
 #include "ProjectTreePanel.h"
 #include "PropertyPanel.h"
 #include "RenderView.h"
+#include "ResultPostprocessPanel.h"
 #include "commands/FaceGroupEditCommands.h"
 #include "commands/GeometryCommands.h"
 #include "commands/MeshCommands.h"
@@ -12,16 +13,28 @@
 #include "commands/SolverCommands.h"
 #include "commands/UtilityCommands.h"
 #include "commands/WorkflowCommandContext.h"
+#include "result/ResultManager.h"
+#include "solver/calculix/CalculiXResultGridBuilder.h"
 #include "solver/plugin/SolverPluginDescriptorFormatter.h"
 #include "workflow/SelectionController.h"
 
 #include <QAction>
+#include <QActionGroup>
+#include <QDesktopServices>
 #include <QDockWidget>
+#include <QDir>
+#include <QFileDialog>
+#include <QInputDialog>
+#include <QLineEdit>
 #include <QMenu>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QShowEvent>
 #include <QStatusBar>
 #include <QToolBar>
+#include <QUrl>
+
+#include <algorithm>
 
 namespace
 {
@@ -73,6 +86,9 @@ MainWindow::MainWindow(QWidget *parent)
     createMenus();
     createToolBar();
     m_actionRegistry.setAfterExecuteCallback([this]() {
+        if (m_resultPostprocessPanel) {
+            m_resultPostprocessPanel->setResult(m_projectModel.resultForSelection());
+        }
         updateActionStates();
     });
     updateActionStates();
@@ -314,6 +330,43 @@ void MainWindow::createActions()
         this,
         makeSolverDataCommand(context, SolverDataCommandType::DeleteSelected)
     );
+
+    const QStringList resultFields{
+        CalculiXResultFields::Ux,
+        CalculiXResultFields::Uy,
+        CalculiXResultFields::Uz,
+        CalculiXResultFields::DisplacementMagnitude,
+        CalculiXResultFields::VonMisesStress
+    };
+    auto *fieldGroup = new QActionGroup(this);
+    fieldGroup->setExclusive(true);
+    for (const QString &field : resultFields) {
+        QAction *fieldAction = new QAction(field, this);
+        fieldAction->setCheckable(true);
+        fieldAction->setData(field);
+        fieldGroup->addAction(fieldAction);
+        m_resultFieldActions.append(fieldAction);
+        connect(fieldAction, &QAction::triggered, this, [this, field]() {
+            setSelectedResultField(field);
+        });
+    }
+
+    const QList<double> resultScales{0.0, 1.0, 10.0, 100.0};
+    auto *scaleGroup = new QActionGroup(this);
+    scaleGroup->setExclusive(true);
+    for (double scale : resultScales) {
+        QAction *scaleAction = new QAction(QString("Deformation %1x").arg(scale, 0, 'g', 6), this);
+        scaleAction->setCheckable(true);
+        scaleAction->setData(scale);
+        scaleGroup->addAction(scaleAction);
+        m_resultScaleActions.append(scaleAction);
+        connect(scaleAction, &QAction::triggered, this, [this, scale]() {
+            setSelectedResultDeformationScale(scale);
+        });
+    }
+
+    m_exportScreenshotAction = new QAction("Export Render Screenshot", this);
+    connect(m_exportScreenshotAction, &QAction::triggered, this, &MainWindow::exportRenderScreenshot);
 }
 
 void MainWindow::createMenus()
@@ -395,6 +448,18 @@ void MainWindow::createMenus()
             );
         }
     }
+
+    auto *postMenu = menuBar()->addMenu("Postprocess");
+    auto *fieldMenu = postMenu->addMenu("Result Field");
+    for (QAction *fieldAction : m_resultFieldActions) {
+        fieldMenu->addAction(fieldAction);
+    }
+    auto *scaleMenu = postMenu->addMenu("Deformation Scale");
+    for (QAction *scaleAction : m_resultScaleActions) {
+        scaleMenu->addAction(scaleAction);
+    }
+    postMenu->addSeparator();
+    postMenu->addAction(m_exportScreenshotAction);
 }
 
 void MainWindow::createToolBar()
@@ -426,6 +491,45 @@ void MainWindow::createDockWidgets()
     propertyDock->setWidget(m_propertyPanel);
     addDockWidget(Qt::RightDockWidgetArea, propertyDock);
 
+    auto *postprocessDock = new QDockWidget("Result Postprocess", this);
+    m_resultPostprocessPanel = new ResultPostprocessPanel(postprocessDock);
+    connect(m_resultPostprocessPanel, &ResultPostprocessPanel::fieldChanged, this, &MainWindow::setSelectedResultField);
+    connect(
+        m_resultPostprocessPanel,
+        &ResultPostprocessPanel::deformationScaleChanged,
+        this,
+        &MainWindow::setSelectedResultDeformationScale
+    );
+    connect(m_resultPostprocessPanel, &ResultPostprocessPanel::meshEdgesChanged, this, &MainWindow::setSelectedResultMeshEdges);
+    connect(
+        m_resultPostprocessPanel,
+        &ResultPostprocessPanel::undeformedOverlayChanged,
+        this,
+        &MainWindow::setSelectedResultUndeformedOverlay
+    );
+    connect(
+        m_resultPostprocessPanel,
+        &ResultPostprocessPanel::exportScreenshotRequested,
+        this,
+        &MainWindow::exportRenderScreenshot
+    );
+    connect(
+        m_resultPostprocessPanel,
+        &ResultPostprocessPanel::openResultDirectoryRequested,
+        this,
+        &MainWindow::openSelectedResultDirectory
+    );
+    connect(m_resultPostprocessPanel, &ResultPostprocessPanel::renameResultRequested, this, &MainWindow::renameSelectedResult);
+    connect(
+        m_resultPostprocessPanel,
+        &ResultPostprocessPanel::deleteResultRequested,
+        this,
+        &MainWindow::deleteSelectedResultHistory
+    );
+    postprocessDock->setWidget(m_resultPostprocessPanel);
+    addDockWidget(Qt::RightDockWidgetArea, postprocessDock);
+    tabifyDockWidget(propertyDock, postprocessDock);
+
     auto *logDock = new QDockWidget("Log", this);
     m_logPanel = new LogPanel(logDock);
     logDock->setWidget(m_logPanel);
@@ -444,9 +548,195 @@ void MainWindow::applySelection(const Selection &selection)
     }
     const SelectionControllerResult result = controller.apply(selection);
     writeLogMessages(result.logMessages);
+    if (m_resultPostprocessPanel) {
+        m_resultPostprocessPanel->setResult(m_projectModel.resultForSelection());
+    }
     if (selection.kind != SelectionKind::FaceGroup) {
         m_pickController.clear(m_renderView);
     }
+    updateActionStates();
+}
+
+void MainWindow::setSelectedResultField(const QString &fieldName)
+{
+    ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        writeLog("Result field change skipped: no result is selected.");
+        return;
+    }
+
+    resultObject->displayFieldName = fieldName;
+    saveResultIndex();
+    redisplaySelectedResult();
+}
+
+void MainWindow::setSelectedResultDeformationScale(double scale)
+{
+    ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        writeLog("Result deformation scale change skipped: no result is selected.");
+        return;
+    }
+
+    resultObject->deformationScale = scale;
+    saveResultIndex();
+    redisplaySelectedResult();
+}
+
+void MainWindow::setSelectedResultMeshEdges(bool enabled)
+{
+    ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        writeLog("Mesh edge toggle skipped: no result is selected.");
+        return;
+    }
+
+    resultObject->showMeshEdges = enabled;
+    saveResultIndex();
+    redisplaySelectedResult();
+}
+
+void MainWindow::setSelectedResultUndeformedOverlay(bool enabled)
+{
+    ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        writeLog("Undeformed overlay toggle skipped: no result is selected.");
+        return;
+    }
+
+    resultObject->showUndeformedOverlay = enabled;
+    saveResultIndex();
+    redisplaySelectedResult();
+}
+
+void MainWindow::saveResultIndex()
+{
+    QString saveError;
+    if (m_projectModel.hasProject()
+            && !ResultManager().save(m_projectModel.project(), m_projectModel.resultRepository().results(), &saveError)) {
+        writeLog("Save result index failed: " + saveError);
+    }
+}
+
+void MainWindow::redisplaySelectedResult()
+{
+    const ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        return;
+    }
+    applySelection(Selection::item(SelectionKind::Result, resultObject->id, resultObject->name));
+}
+
+void MainWindow::exportRenderScreenshot()
+{
+    if (!m_renderView) {
+        writeLog("Export screenshot failed: render view is not available.");
+        return;
+    }
+
+    const QString initialPath = m_projectModel.hasProject()
+        ? QDir(m_projectModel.project().rootPath).filePath("solver/render_screenshot.png")
+        : QString();
+    const QString filePath = QFileDialog::getSaveFileName(
+        this,
+        "Export Render Screenshot",
+        initialPath,
+        "PNG Image (*.png);;JPEG Image (*.jpg *.jpeg);;Bitmap Image (*.bmp)"
+    );
+    if (filePath.isEmpty()) {
+        writeLog("Export screenshot canceled.");
+        return;
+    }
+
+    if (!m_renderView->saveScreenshot(filePath)) {
+        writeLog("Export screenshot failed: " + filePath);
+        return;
+    }
+    writeLog("Render screenshot exported: " + filePath);
+}
+
+void MainWindow::openSelectedResultDirectory()
+{
+    const ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        writeLog("Open result directory skipped: no result is selected.");
+        return;
+    }
+    if (resultObject->casePath.isEmpty()) {
+        writeLog("Open result directory failed: result has no case path.");
+        return;
+    }
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(resultObject->casePath))) {
+        writeLog("Open result directory failed: " + resultObject->casePath);
+    }
+}
+
+void MainWindow::renameSelectedResult()
+{
+    ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        writeLog("Rename result skipped: no result is selected.");
+        return;
+    }
+
+    bool accepted = false;
+    const QString newName = QInputDialog::getText(
+        this,
+        "Rename Result",
+        "Result name",
+        QLineEdit::Normal,
+        resultObject->name,
+        &accepted
+    ).trimmed();
+    if (!accepted || newName.isEmpty()) {
+        writeLog("Rename result canceled.");
+        return;
+    }
+
+    resultObject->name = newName;
+    saveResultIndex();
+    if (m_projectTreePanel) {
+        m_projectTreePanel->setResultItems(m_projectModel.resultRepository().results());
+    }
+    redisplaySelectedResult();
+    writeLog("Result renamed: " + newName);
+}
+
+void MainWindow::deleteSelectedResultHistory()
+{
+    const ResultObject *selectedResult = m_projectModel.resultForSelection();
+    if (!selectedResult) {
+        writeLog("Delete result skipped: no result is selected.");
+        return;
+    }
+
+    const QString resultId = selectedResult->id;
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        this,
+        "Delete Result History",
+        "Remove this result from the project result list? Solver files on disk will not be deleted."
+    );
+    if (answer != QMessageBox::Yes) {
+        writeLog("Delete result canceled.");
+        return;
+    }
+
+    std::vector<ResultObject> &results = m_projectModel.resultRepository().results();
+    results.erase(std::remove_if(results.begin(), results.end(), [&resultId](const ResultObject &result) {
+        return result.id == resultId;
+    }), results.end());
+    m_projectModel.clearSelectionIfKind(SelectionKind::Result);
+    saveResultIndex();
+    if (m_projectTreePanel) {
+        m_projectTreePanel->setResultItems(results);
+    }
+    if (m_propertyPanel) {
+        m_propertyPanel->showResultCategory(results);
+    }
+    if (m_resultPostprocessPanel) {
+        m_resultPostprocessPanel->setResult(nullptr);
+    }
+    writeLog("Result history deleted: " + resultId);
     updateActionStates();
 }
 
@@ -477,6 +767,7 @@ void MainWindow::updateActionStates()
     const SelectionCapabilities capabilities = m_projectModel.selectionCapabilities();
     const bool hasPickedFaces = m_pickController.hasSelection();
     const bool hasSelectedFaceGroup = m_projectModel.selection().kind == SelectionKind::FaceGroup;
+    const ResultObject *selectedResult = m_projectModel.resultForSelection();
 
     if (m_createBoxAction) {
         m_createBoxAction->setEnabled(hasProject);
@@ -543,6 +834,32 @@ void MainWindow::updateActionStates()
         if (runSolverAction) {
             runSolverAction->setEnabled(hasProject && runSolverAction->property("solverUsable").toBool());
         }
+    }
+    for (QAction *fieldAction : m_resultFieldActions) {
+        if (!fieldAction) {
+            continue;
+        }
+        fieldAction->setEnabled(hasProject && selectedResult);
+        if (selectedResult) {
+            const QString field = fieldAction->data().toString();
+            fieldAction->setChecked(field == selectedResult->displayFieldName
+                || (selectedResult->displayFieldName.isEmpty() && field == selectedResult->primaryFieldName));
+        }
+    }
+    for (QAction *scaleAction : m_resultScaleActions) {
+        if (!scaleAction) {
+            continue;
+        }
+        scaleAction->setEnabled(hasProject && selectedResult);
+        if (selectedResult) {
+            scaleAction->setChecked(scaleAction->data().toDouble() == selectedResult->deformationScale);
+        }
+    }
+    if (m_exportScreenshotAction) {
+        m_exportScreenshotAction->setEnabled(hasProject);
+    }
+    if (m_resultPostprocessPanel) {
+        m_resultPostprocessPanel->setEnabledForResult(hasProject && selectedResult);
     }
 }
 

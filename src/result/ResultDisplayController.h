@@ -18,7 +18,7 @@ class ResultDisplayController
 public:
     ResultDisplayResult displayResult(
         const ProjectModel &projectModel,
-        const ResultObject &resultObject,
+        ResultObject &resultObject,
         RenderView *renderView
     ) const;
 };

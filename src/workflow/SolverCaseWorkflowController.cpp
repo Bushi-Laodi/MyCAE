@@ -2,6 +2,8 @@
 
 #include "project/ProjectModel.h"
 #include "result/ResultObject.h"
+#include "result/ResultManager.h"
+#include "solver/calculix/CalculiXResultGridBuilder.h"
 #include "solver/SimulationCase.h"
 #include "solver/SimulationCaseBuilder.h"
 #include "solver/export/SolverCaseWriter.h"
@@ -114,11 +116,15 @@ ResultObject makeResultObject(
         }
     }
     if (descriptor.id == "calculix") {
-        resultObject.primaryFieldName = "Displacement Magnitude";
+        resultObject.primaryFieldName = CalculiXResultFields::DisplacementMagnitude;
+        resultObject.displayFieldName = resultObject.primaryFieldName;
+        resultObject.deformationScale = 0.0;
         resultObject.availableFields = QStringList{
-            "Displacement",
-            "Displacement Magnitude",
-            "Stress"
+            CalculiXResultFields::Ux,
+            CalculiXResultFields::Uy,
+            CalculiXResultFields::Uz,
+            CalculiXResultFields::DisplacementMagnitude,
+            CalculiXResultFields::VonMisesStress
         };
     }
     resultObject.createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);
@@ -215,6 +221,12 @@ SolverCaseWorkflowResult SolverCaseWorkflowController::runPlugin(const QString &
     m_projectModel.resultRepository().results().push_back(
         makeResultObject(pluginId, *descriptor, simulationCase, caseDirectory, runResult, readResult)
     );
+    QString saveError;
+    if (!ResultManager().save(m_projectModel.project(), m_projectModel.resultRepository().results(), &saveError)) {
+        result.logMessages.append("Save result index failed: " + saveError);
+    } else {
+        result.logMessages.append("Result index saved: " + ResultManager::relativeResultsFilePath());
+    }
 
     result.logMessages.append("Solver result: " + readResult.summary);
     result.success = true;
