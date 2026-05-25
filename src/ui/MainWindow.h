@@ -5,6 +5,7 @@
 #include "project/ProjectModel.h"
 #include "project/ProjectManager.h"
 #include "project/SelectionState.h"
+#include "result/ResultAnimationController.h"
 #include "solver/plugin/SolverPluginManager.h"
 #include "ui/ActionRegistry.h"
 
@@ -47,6 +48,11 @@ private:
     void setSelectedResultDeformationScale(double scale);
     void setSelectedResultMeshEdges(bool enabled);
     void setSelectedResultUndeformedOverlay(bool enabled);
+    void playSelectedResultAnimation(double speed);
+    void stopSelectedResultAnimation();
+    void applyAnimatedResultDeformationScale(double scale);
+    void exportSelectedResultCsv();
+    void exportSelectedResultReport();
     void exportRenderScreenshot();
     void openSelectedResultDirectory();
     void renameSelectedResult();
@@ -101,4 +107,5 @@ private:
     SolverPluginManager m_solverPluginManager;
     ActionRegistry m_actionRegistry;
     PickController m_pickController;
+    ResultAnimationController m_resultAnimationController;
 };

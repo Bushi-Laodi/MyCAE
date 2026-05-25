@@ -214,11 +214,22 @@ qt_add_executable(MyCAE
     src/render/VtkHighlightActorFactory.h
     src/render/VtkPickAdapter.cpp
     src/render/VtkPickAdapter.h
+    src/result/ResultAnimationController.cpp
+    src/result/ResultAnimationController.h
+    src/result/ResultCsvExporter.cpp
+    src/result/ResultCsvExporter.h
+    src/result/ResultDataLoader.cpp
+    src/result/ResultDataLoader.h
     src/result/ResultDisplayController.cpp
     src/result/ResultDisplayController.h
+    src/result/ResultExtrema.h
+    src/result/ResultExtremaCalculator.cpp
+    src/result/ResultExtremaCalculator.h
     src/result/ResultManager.cpp
     src/result/ResultManager.h
     src/result/ResultObject.h
+    src/result/ResultReportExporter.cpp
+    src/result/ResultReportExporter.h
     src/solver/BoundaryCondition.h
     src/solver/Load.h
     src/solver/Material.h
@@ -263,6 +274,7 @@ qt_add_executable(MyCAE
     src/solver/calculix/CalculiXResultReader.h
     src/solver/calculix/CalculiXResultGridBuilder.cpp
     src/solver/calculix/CalculiXResultGridBuilder.h
+    src/solver/calculix/CalculiXResultMath.h
     src/solver/calculix/CalculiXRunner.cpp
     src/solver/calculix/CalculiXRunner.h
     src/solver/calculix/CalculiXSurfaceMapper.cpp

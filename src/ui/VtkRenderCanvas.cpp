@@ -29,6 +29,7 @@
 #include <vtkRenderer.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkScalarBarActor.h>
+#include <vtkSphereSource.h>
 #include <vtkUnstructuredGrid.h>
 
 VtkRenderCanvas::VtkRenderCanvas(QWidget *parent)
@@ -170,7 +171,8 @@ void VtkRenderCanvas::showResultGrid(
     bool useCellScalars,
     double scalarMin,
     double scalarMax,
-    bool showMeshEdges
+    bool showMeshEdges,
+    bool resetCameraView
 )
 {
     if (scalarMin == scalarMax) {
@@ -234,7 +236,9 @@ void VtkRenderCanvas::showResultGrid(
     }
     m_renderer->AddActor(m_primaryActor);
     m_renderer->AddActor2D(m_scalarBarActor);
-    resetCamera();
+    if (resetCameraView) {
+        resetCamera();
+    }
     m_renderWindow->Render();
 }
 
@@ -259,6 +263,46 @@ void VtkRenderCanvas::highlightFaceIndices(const std::vector<int> &faceIndices)
     if (m_highlightActor) {
         m_renderer->AddActor(m_highlightActor);
     }
+    m_renderWindow->Render();
+}
+
+void VtkRenderCanvas::highlightResultPosition(double x, double y, double z)
+{
+    if (m_highlightActor) {
+        m_renderer->RemoveActor(m_highlightActor);
+        m_highlightActor = nullptr;
+    }
+
+    double bounds[6] = {0.0, 1.0, 0.0, 1.0, 0.0, 1.0};
+    if (m_primaryActor) {
+        m_primaryActor->GetBounds(bounds);
+    }
+    const double diagonal = std::sqrt(
+        (bounds[1] - bounds[0]) * (bounds[1] - bounds[0])
+        + (bounds[3] - bounds[2]) * (bounds[3] - bounds[2])
+        + (bounds[5] - bounds[4]) * (bounds[5] - bounds[4])
+    );
+    const double radius = std::max(0.001, diagonal * 0.025);
+
+    vtkNew<vtkSphereSource> sphere;
+    sphere->SetCenter(x, y, z);
+    sphere->SetRadius(radius);
+    sphere->SetThetaResolution(24);
+    sphere->SetPhiResolution(16);
+    sphere->Update();
+
+    vtkNew<vtkPolyDataMapper> mapper;
+    mapper->SetInputConnection(sphere->GetOutputPort());
+
+    vtkNew<vtkActor> actor;
+    actor->SetMapper(mapper);
+    actor->GetProperty()->SetColor(1.0, 0.86, 0.18);
+    actor->GetProperty()->SetAmbient(0.35);
+    actor->GetProperty()->SetDiffuse(0.85);
+    actor->GetProperty()->SetSpecular(0.25);
+
+    m_highlightActor = actor;
+    m_renderer->AddActor(m_highlightActor);
     m_renderWindow->Render();
 }
 

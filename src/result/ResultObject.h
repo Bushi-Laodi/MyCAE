@@ -1,5 +1,7 @@
 #pragma once
 
+#include "result/ResultExtrema.h"
+
 #include <QString>
 #include <QStringList>
 
@@ -28,6 +30,7 @@ struct ResultObject
     int meshElementCount = 0;
     double scalarMin = 0.0;
     double scalarMax = 0.0;
+    ResultExtrema extrema;
     QStringList checkMessages;
     QString createdAt;
     bool success = false;

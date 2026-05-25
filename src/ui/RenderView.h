@@ -36,12 +36,14 @@ public:
         bool useCellScalars,
         double scalarMin,
         double scalarMax,
-        bool showMeshEdges
+        bool showMeshEdges,
+        bool resetCamera = true
     );
     bool saveScreenshot(const QString &filePath);
     void setPickMode(PickMode mode);
     void clearHighlight();
     void highlightFaceIndices(const std::vector<int> &faceIndices);
+    void highlightResultPosition(double x, double y, double z);
 
 signals:
     void facePicked(const PickSelection &selection);
