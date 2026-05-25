@@ -10,6 +10,7 @@ class PropertyPanel;
 class QMainWindow;
 class RenderView;
 class SolverPluginManager;
+class UndoStackController;
 
 struct WorkflowCommandContext
 {
@@ -23,4 +24,5 @@ struct WorkflowCommandContext
     LogPanel *logPanel = nullptr;
     QMainWindow *window = nullptr;
     PickController *pickController = nullptr;
+    UndoStackController *undoStackController = nullptr;
 };

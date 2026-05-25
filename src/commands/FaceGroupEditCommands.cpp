@@ -5,6 +5,7 @@
 #include "geometry/FaceGroup.h"
 #include "picking/PickController.h"
 #include "project/ProjectModel.h"
+#include "commands/UndoStackController.h"
 #include "workflow/ProjectWorkflowController.h"
 
 #include <QInputDialog>
@@ -77,11 +78,13 @@ private:
             return;
         }
 
+        const FaceGroupEditSnapshot before = UndoStackController::faceGroupEditSnapshot(m_context.projectModel);
         const FaceGroupWorkflowResult result = workflow.createOrReplacePickedFaces(
             m_context.pickController->geometryName(),
             faceGroupName,
             m_context.pickController->selections()
         );
+        pushUndoSnapshot(before, result, "Create Face Group");
         writeLogMessages(m_context.logPanel, result.logMessages);
     }
 
@@ -96,6 +99,8 @@ private:
             return;
         }
 
+        const FaceGroupEditSnapshot before = UndoStackController::faceGroupEditSnapshot(m_context.projectModel);
+        const QString beforeSelectionId = selectedFaceGroupId(m_context);
         FaceGroupWorkflowResult result;
         switch (type) {
         case FaceGroupEditCommandType::AddPickedFaces:
@@ -128,7 +133,73 @@ private:
             break;
         }
 
+        pushUndoSnapshot(before, beforeSelectionId, result, undoText(type));
         writeLogMessages(m_context.logPanel, result.logMessages);
+    }
+
+    void pushUndoSnapshot(
+        const FaceGroupEditSnapshot &before,
+        const FaceGroupWorkflowResult &result,
+        const QString &text
+    ) const
+    {
+        pushUndoSnapshot(before, {}, result, text);
+    }
+
+    void pushUndoSnapshot(
+        const FaceGroupEditSnapshot &before,
+        const QString &beforeSelectionId,
+        const FaceGroupWorkflowResult &result,
+        const QString &text
+    ) const
+    {
+        if (!result.success || !m_context.undoStackController) {
+            return;
+        }
+        const QString afterSelectionId = selectionIdAfterEdit(beforeSelectionId, result.faceGroupId, text);
+        m_context.undoStackController->pushFaceGroupSnapshot(
+            m_context.projectModel,
+            before,
+            UndoStackController::faceGroupEditSnapshot(m_context.projectModel),
+            text,
+            beforeSelectionId,
+            afterSelectionId
+        );
+    }
+
+    static QString selectionIdAfterEdit(
+        const QString &beforeSelectionId,
+        const QString &resultFaceGroupId,
+        const QString &text
+    )
+    {
+        if (text == "Delete Face Group") {
+            return {};
+        }
+        return resultFaceGroupId.isEmpty() ? beforeSelectionId : resultFaceGroupId;
+    }
+
+    static QString undoText(FaceGroupEditCommandType type)
+    {
+        switch (type) {
+        case FaceGroupEditCommandType::CreateFromPick:
+            return "Create Face Group";
+        case FaceGroupEditCommandType::AddPickedFaces:
+            return "Add Picked Faces";
+        case FaceGroupEditCommandType::RemovePickedFaces:
+            return "Remove Picked Faces";
+        case FaceGroupEditCommandType::ClearFaces:
+            return "Clear Face Group Faces";
+        case FaceGroupEditCommandType::Rename:
+            return "Rename Face Group";
+        case FaceGroupEditCommandType::Delete:
+            return "Delete Face Group";
+        case FaceGroupEditCommandType::SetLocalMeshSize:
+            return "Set Local Mesh Size";
+        case FaceGroupEditCommandType::TogglePhysicalGroup:
+            return "Toggle Physical Group";
+        }
+        return "Edit Face Group";
     }
 
     FaceGroupWorkflowResult renameFaceGroup(

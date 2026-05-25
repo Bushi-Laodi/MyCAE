@@ -1,21 +1,27 @@
 #pragma once
 
+#include "commands/UndoStackController.h"
 #include "geometry/GeometryManager.h"
+#include "diagnostics/DiagnosticCollector.h"
 #include "picking/PickController.h"
 #include "project/ProjectModel.h"
 #include "project/ProjectManager.h"
 #include "project/SelectionState.h"
 #include "solver/plugin/SolverPluginManager.h"
 #include "ui/ActionRegistry.h"
+#include "ui/AppSettings.h"
 
 #include <QMainWindow>
 #include <QVector>
 #include <QStringList>
 
 class QAction;
+class QCloseEvent;
+class QMenu;
 class QString;
 
 class LogPanel;
+class DiagnosticPanel;
 class ProjectTreePanel;
 class PropertyPanel;
 class RenderView;
@@ -40,6 +46,7 @@ private:
     // to the first showEvent to avoid a crash in MSVCP140.dll.
     void initializeVtkRender();
     void showEvent(QShowEvent *event) override;
+    void closeEvent(QCloseEvent *event) override;
     bool m_vtkInitialized = false;
 
     void applySelection(const Selection &selection);
@@ -53,6 +60,15 @@ private:
     void deleteSelectedResultHistory();
     void redisplaySelectedResult();
     void saveResultIndex();
+    void showProjectResources();
+    void openRecentProject(const QString &projectFilePath);
+    void updateRecentProjectActions();
+    void clearRecentProjects();
+    void clearDiagnostics();
+    void validateSamples();
+    void refreshDiagnosticsPanel();
+    void refreshResultViews();
+    void handleUndoStackFaceGroupsChanged(const QString &selectionId);
     void handleFacePicked(const PickSelection &selection);
     void updateActionStates();
     WorkflowCommandContext workflowCommandContext();
@@ -61,6 +77,11 @@ private:
 
     QAction *m_newProjectAction = nullptr;
     QAction *m_openProjectAction = nullptr;
+    QMenu *m_recentProjectsMenu = nullptr;
+    QVector<QAction *> m_recentProjectActions;
+    QAction *m_clearRecentProjectsAction = nullptr;
+    QAction *m_undoAction = nullptr;
+    QAction *m_redoAction = nullptr;
     QAction *m_createBoxAction = nullptr;
     QAction *m_createCylinderAction = nullptr;
     QAction *m_checkGmshAction = nullptr;
@@ -88,8 +109,12 @@ private:
     QVector<QAction *> m_resultFieldActions;
     QVector<QAction *> m_resultScaleActions;
     QAction *m_exportScreenshotAction = nullptr;
+    QAction *m_projectResourcesAction = nullptr;
+    QAction *m_validateSamplesAction = nullptr;
+    QAction *m_clearDiagnosticsAction = nullptr;
 
     ProjectTreePanel *m_projectTreePanel = nullptr;
+    DiagnosticPanel *m_diagnosticPanel = nullptr;
     PropertyPanel *m_propertyPanel = nullptr;
     ResultPostprocessPanel *m_resultPostprocessPanel = nullptr;
     LogPanel *m_logPanel = nullptr;
@@ -101,4 +126,8 @@ private:
     SolverPluginManager m_solverPluginManager;
     ActionRegistry m_actionRegistry;
     PickController m_pickController;
+    DiagnosticCollector m_diagnosticCollector;
+    UndoStackController m_undoStackController;
+    AppSettings m_appSettings;
+    QString m_activeProjectFile;
 };

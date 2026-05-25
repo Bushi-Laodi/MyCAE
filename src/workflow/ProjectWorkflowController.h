@@ -33,6 +33,7 @@ public:
 
     ProjectWorkflowResult createProject() const;
     ProjectWorkflowResult openProject() const;
+    ProjectWorkflowResult openProjectFile(const QString &projectFilePath) const;
     ProjectWorkflowResult setCurrentProject(const Project &project) const;
     ProjectWorkflowResult loadGeometries() const;
     ProjectWorkflowResult loadMeshes() const;

@@ -7,6 +7,8 @@ Single tetra smoke test for CalculiX
 4, 0.0, 0.0, 1.0
 *ELEMENT, TYPE=C3D4, ELSET=EALL
 1, 1, 2, 3, 4
+*NSET, NSET=NALL
+1, 2, 3, 4
 *MATERIAL, NAME=Steel
 *ELASTIC
 210000.0, 0.3
@@ -22,5 +24,9 @@ Single tetra smoke test for CalculiX
 *NODE FILE
 U
 *EL FILE
+S
+*NODE PRINT, NSET=NALL
+U
+*EL PRINT, ELSET=EALL
 S
 *END STEP

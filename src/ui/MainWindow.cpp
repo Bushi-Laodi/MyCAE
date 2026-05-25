@@ -1,10 +1,13 @@
 #include "MainWindow.h"
 
+#include "DiagnosticPanel.h"
 #include "LogPanel.h"
 #include "ProjectTreePanel.h"
 #include "PropertyPanel.h"
+#include "ProjectResourceDialog.h"
 #include "RenderView.h"
 #include "ResultPostprocessPanel.h"
+#include "SampleValidationDialog.h"
 #include "commands/FaceGroupEditCommands.h"
 #include "commands/GeometryCommands.h"
 #include "commands/MeshCommands.h"
@@ -16,14 +19,17 @@
 #include "result/ResultManager.h"
 #include "solver/calculix/CalculiXResultGridBuilder.h"
 #include "solver/plugin/SolverPluginDescriptorFormatter.h"
+#include "workflow/ProjectWorkflowController.h"
 #include "workflow/SelectionController.h"
 
 #include <QAction>
 #include <QActionGroup>
+#include <QCloseEvent>
 #include <QDesktopServices>
 #include <QDockWidget>
 #include <QDir>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QInputDialog>
 #include <QLineEdit>
 #include <QMenu>
@@ -32,6 +38,7 @@
 #include <QShowEvent>
 #include <QStatusBar>
 #include <QToolBar>
+#include <QTimer>
 #include <QUrl>
 
 #include <algorithm>
@@ -85,13 +92,26 @@ MainWindow::MainWindow(QWidget *parent)
     createActions();
     createMenus();
     createToolBar();
+    m_undoStackController.setFaceGroupRestoreCallback([this](const QString &selectionId) {
+        handleUndoStackFaceGroupsChanged(selectionId);
+    });
     m_actionRegistry.setAfterExecuteCallback([this]() {
+        if (m_projectModel.hasProject()) {
+            if (m_activeProjectFile != m_projectModel.project().projectFilePath) {
+                m_undoStackController.clear();
+                m_activeProjectFile = m_projectModel.project().projectFilePath;
+            }
+            m_appSettings.addRecentProject(m_projectModel.project().projectFilePath);
+            updateRecentProjectActions();
+        }
         if (m_resultPostprocessPanel) {
             m_resultPostprocessPanel->setResult(m_projectModel.resultForSelection());
         }
         updateActionStates();
     });
     updateActionStates();
+    updateRecentProjectActions();
+    m_appSettings.restoreMainWindow(*this);
 
     // NOTE: Do NOT call m_renderView->showEmpty() here!
     // The VTK OpenGL context is not fully ready during widget construction.
@@ -144,6 +164,20 @@ void MainWindow::createActions()
         this,
         makeProjectCommand(context, ProjectCommandType::Open)
     );
+
+    m_undoAction = m_undoStackController.stack().createUndoAction(this, "Undo");
+    m_redoAction = m_undoStackController.stack().createRedoAction(this, "Redo");
+
+    for (int i = 0; i < 8; ++i) {
+        QAction *recentAction = new QAction(this);
+        recentAction->setVisible(false);
+        m_recentProjectActions.append(recentAction);
+        connect(recentAction, &QAction::triggered, this, [this, recentAction]() {
+            openRecentProject(recentAction->data().toString());
+        });
+    }
+    m_clearRecentProjectsAction = new QAction("Clear Recent Projects", this);
+    connect(m_clearRecentProjectsAction, &QAction::triggered, this, &MainWindow::clearRecentProjects);
 
     m_createBoxAction = new QAction("Create Box", this);
     m_createBoxAction->setStatusTip("Create a box geometry from length, width, and height");
@@ -367,6 +401,15 @@ void MainWindow::createActions()
 
     m_exportScreenshotAction = new QAction("Export Render Screenshot", this);
     connect(m_exportScreenshotAction, &QAction::triggered, this, &MainWindow::exportRenderScreenshot);
+
+    m_projectResourcesAction = new QAction("Project Resources", this);
+    connect(m_projectResourcesAction, &QAction::triggered, this, &MainWindow::showProjectResources);
+
+    m_validateSamplesAction = new QAction("Validate Samples", this);
+    connect(m_validateSamplesAction, &QAction::triggered, this, &MainWindow::validateSamples);
+
+    m_clearDiagnosticsAction = new QAction("Clear Diagnostics", this);
+    connect(m_clearDiagnosticsAction, &QAction::triggered, this, &MainWindow::clearDiagnostics);
 }
 
 void MainWindow::createMenus()
@@ -376,8 +419,18 @@ void MainWindow::createMenus()
     auto *fileMenu = menuBar()->addMenu("File");
     fileMenu->addAction(m_newProjectAction);
     fileMenu->addAction(m_openProjectAction);
+    m_recentProjectsMenu = fileMenu->addMenu("Recent Projects");
+    for (QAction *recentAction : m_recentProjectActions) {
+        m_recentProjectsMenu->addAction(recentAction);
+    }
+    m_recentProjectsMenu->addSeparator();
+    m_recentProjectsMenu->addAction(m_clearRecentProjectsAction);
     fileMenu->addSeparator();
     fileMenu->addAction(m_exitAction);
+
+    auto *editMenu = menuBar()->addMenu("Edit");
+    editMenu->addAction(m_undoAction);
+    editMenu->addAction(m_redoAction);
 
     auto *geometryMenu = menuBar()->addMenu("Geometry");
     geometryMenu->addAction(m_createBoxAction);
@@ -460,6 +513,12 @@ void MainWindow::createMenus()
     }
     postMenu->addSeparator();
     postMenu->addAction(m_exportScreenshotAction);
+
+    auto *toolsMenu = menuBar()->addMenu("Tools");
+    toolsMenu->addAction(m_projectResourcesAction);
+    toolsMenu->addAction(m_validateSamplesAction);
+    toolsMenu->addSeparator();
+    toolsMenu->addAction(m_clearDiagnosticsAction);
 }
 
 void MainWindow::createToolBar()
@@ -485,6 +544,11 @@ void MainWindow::createDockWidgets()
     connect(m_projectTreePanel, &ProjectTreePanel::selectionChanged, this, &MainWindow::applySelection);
     projectDock->setWidget(m_projectTreePanel);
     addDockWidget(Qt::LeftDockWidgetArea, projectDock);
+
+    auto *diagnosticDock = new QDockWidget("Diagnostics", this);
+    m_diagnosticPanel = new DiagnosticPanel(diagnosticDock);
+    diagnosticDock->setWidget(m_diagnosticPanel);
+    addDockWidget(Qt::BottomDockWidgetArea, diagnosticDock);
 
     auto *propertyDock = new QDockWidget("Properties", this);
     m_propertyPanel = new PropertyPanel(propertyDock);
@@ -534,6 +598,7 @@ void MainWindow::createDockWidgets()
     m_logPanel = new LogPanel(logDock);
     logDock->setWidget(m_logPanel);
     addDockWidget(Qt::BottomDockWidgetArea, logDock);
+    tabifyDockWidget(logDock, diagnosticDock);
 }
 
 void MainWindow::applySelection(const Selection &selection)
@@ -618,6 +683,144 @@ void MainWindow::saveResultIndex()
     }
 }
 
+void MainWindow::showProjectResources()
+{
+    if (!m_projectModel.hasProject()) {
+        writeLog("Project resources skipped: open a project first.");
+        return;
+    }
+
+    ProjectResourceDialog dialog(m_projectModel, this);
+    connect(&dialog, &ProjectResourceDialog::logMessagesReady, this, &MainWindow::writeLogMessages);
+    connect(&dialog, &ProjectResourceDialog::resultsChanged, this, &MainWindow::refreshResultViews);
+    dialog.exec();
+}
+
+void MainWindow::openRecentProject(const QString &projectFilePath)
+{
+    if (projectFilePath.trimmed().isEmpty()) {
+        return;
+    }
+
+    ProjectWorkflowController projectWorkflow(
+        m_projectManager,
+        m_geometryManager,
+        m_projectModel,
+        m_projectTreePanel,
+        m_propertyPanel,
+        m_renderView,
+        this
+    );
+    const ProjectWorkflowResult result = projectWorkflow.openProjectFile(projectFilePath);
+    writeLogMessages(result.logMessages);
+    if (result.success) {
+        m_activeProjectFile = m_projectModel.project().projectFilePath;
+        m_undoStackController.clear();
+        m_appSettings.addRecentProject(m_activeProjectFile);
+        updateRecentProjectActions();
+    }
+    updateActionStates();
+}
+
+void MainWindow::updateRecentProjectActions()
+{
+    const QStringList projects = m_appSettings.recentProjects();
+    for (int i = 0; i < m_recentProjectActions.size(); ++i) {
+        QAction *action = m_recentProjectActions.at(i);
+        if (!action) {
+            continue;
+        }
+        const bool visible = i < projects.size();
+        action->setVisible(visible);
+        if (!visible) {
+            continue;
+        }
+        const QString path = projects.at(i);
+        action->setText(QFileInfo(path).dir().dirName() + " - " + QDir::toNativeSeparators(path));
+        action->setData(path);
+    }
+    if (m_recentProjectsMenu) {
+        m_recentProjectsMenu->setEnabled(!projects.isEmpty());
+    }
+    if (m_clearRecentProjectsAction) {
+        m_clearRecentProjectsAction->setEnabled(!projects.isEmpty());
+    }
+}
+
+void MainWindow::clearRecentProjects()
+{
+    m_appSettings.clearRecentProjects();
+    updateRecentProjectActions();
+    writeLog("Recent projects cleared.");
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    m_appSettings.saveMainWindow(*this);
+    QMainWindow::closeEvent(event);
+}
+
+void MainWindow::clearDiagnostics()
+{
+    m_diagnosticCollector.clear();
+    refreshDiagnosticsPanel();
+    writeLog("Diagnostics cleared.");
+}
+
+void MainWindow::validateSamples()
+{
+    SampleValidationDialog dialog(this);
+    connect(&dialog, &SampleValidationDialog::logMessagesReady, this, &MainWindow::writeLogMessages);
+    QTimer::singleShot(0, &dialog, &SampleValidationDialog::runValidation);
+    dialog.exec();
+}
+
+void MainWindow::refreshDiagnosticsPanel()
+{
+    if (m_diagnosticPanel) {
+        m_diagnosticPanel->setDiagnostics(m_diagnosticCollector.diagnostics());
+    }
+}
+
+void MainWindow::refreshResultViews()
+{
+    if (m_projectTreePanel) {
+        m_projectTreePanel->setResultItems(m_projectModel.resultRepository().results());
+    }
+    if (m_propertyPanel) {
+        m_propertyPanel->showResultCategory(m_projectModel.resultRepository().results());
+    }
+    if (m_resultPostprocessPanel) {
+        m_resultPostprocessPanel->setResult(m_projectModel.resultForSelection());
+    }
+    updateActionStates();
+}
+
+void MainWindow::handleUndoStackFaceGroupsChanged(const QString &selectionId)
+{
+    ProjectWorkflowController projectWorkflow(
+        m_projectManager,
+        m_geometryManager,
+        m_projectModel,
+        m_projectTreePanel,
+        m_propertyPanel,
+        m_renderView,
+        this
+    );
+    projectWorkflow.refreshFaceGroupTree();
+    writeLogMessages(projectWorkflow.saveSimulationCase().logMessages);
+
+    if (!selectionId.isEmpty() && m_projectModel.findFaceGroupById(selectionId)) {
+        applySelection(Selection::item(SelectionKind::FaceGroup, selectionId));
+    } else {
+        m_projectModel.clearSelectionIfKind(SelectionKind::FaceGroup);
+        if (m_propertyPanel) {
+            m_propertyPanel->showEmptySelection();
+        }
+    }
+    updateActionStates();
+}
+
 void MainWindow::redisplaySelectedResult()
 {
     const ResultObject *resultObject = m_projectModel.resultForSelection();
@@ -634,9 +837,13 @@ void MainWindow::exportRenderScreenshot()
         return;
     }
 
-    const QString initialPath = m_projectModel.hasProject()
-        ? QDir(m_projectModel.project().rootPath).filePath("solver/render_screenshot.png")
-        : QString();
+    QString initialPath;
+    const QString recentExportDirectory = m_appSettings.recentExportDirectory();
+    if (!recentExportDirectory.isEmpty()) {
+        initialPath = QDir(recentExportDirectory).filePath("render_screenshot.png");
+    } else if (m_projectModel.hasProject()) {
+        initialPath = QDir(m_projectModel.project().rootPath).filePath("solver/render_screenshot.png");
+    }
     const QString filePath = QFileDialog::getSaveFileName(
         this,
         "Export Render Screenshot",
@@ -652,6 +859,7 @@ void MainWindow::exportRenderScreenshot()
         writeLog("Export screenshot failed: " + filePath);
         return;
     }
+    m_appSettings.setRecentExportDirectory(QFileInfo(filePath).absolutePath());
     writeLog("Render screenshot exported: " + filePath);
 }
 
@@ -858,6 +1066,12 @@ void MainWindow::updateActionStates()
     if (m_exportScreenshotAction) {
         m_exportScreenshotAction->setEnabled(hasProject);
     }
+    if (m_projectResourcesAction) {
+        m_projectResourcesAction->setEnabled(hasProject);
+    }
+    if (m_clearDiagnosticsAction) {
+        m_clearDiagnosticsAction->setEnabled(!m_diagnosticCollector.diagnostics().isEmpty());
+    }
     if (m_resultPostprocessPanel) {
         m_resultPostprocessPanel->setEnabledForResult(hasProject && selectedResult);
     }
@@ -875,7 +1089,8 @@ WorkflowCommandContext MainWindow::workflowCommandContext()
         m_renderView,
         m_logPanel,
         this,
-        &m_pickController
+        &m_pickController,
+        &m_undoStackController
     };
 }
 
@@ -883,6 +1098,9 @@ void MainWindow::writeLog(const QString &message)
 {
     if (m_logPanel) {
         m_logPanel->appendMessage(message);
+    }
+    if (m_diagnosticCollector.addFromLogMessage(message)) {
+        refreshDiagnosticsPanel();
     }
 }
 

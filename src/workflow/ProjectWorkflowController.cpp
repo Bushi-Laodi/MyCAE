@@ -85,6 +85,12 @@ ProjectWorkflowResult ProjectWorkflowController::openProject() const
         return result;
     }
 
+    return openProjectFile(projectFilePath);
+}
+
+ProjectWorkflowResult ProjectWorkflowController::openProjectFile(const QString &projectFilePath) const
+{
+    ProjectWorkflowResult result;
     Project project;
     QString errorMessage;
     if (!m_projectManager.openProject(projectFilePath, &project, &errorMessage)) {

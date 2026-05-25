@@ -153,9 +153,15 @@ qt_add_executable(MyCAE
     src/commands/ProjectCommands.h
     src/commands/SolverCommands.cpp
     src/commands/SolverCommands.h
+    src/commands/UndoStackController.cpp
+    src/commands/UndoStackController.h
     src/commands/UtilityCommands.cpp
     src/commands/UtilityCommands.h
     src/commands/WorkflowCommandContext.h
+    src/diagnostics/DiagnosticCollector.cpp
+    src/diagnostics/DiagnosticCollector.h
+    src/diagnostics/DiagnosticMessage.cpp
+    src/diagnostics/DiagnosticMessage.h
     src/mesh/GmshCaseWriter.cpp
     src/mesh/GmshCaseWriter.h
     src/mesh/MeshBoundaryBuilder.cpp
@@ -196,6 +202,8 @@ qt_add_executable(MyCAE
     src/project/ProjectModelLoader.h
     src/project/ProjectManager.cpp
     src/project/ProjectManager.h
+    src/project/ProjectResourceManager.cpp
+    src/project/ProjectResourceManager.h
     src/project/ResultRepository.cpp
     src/project/ResultRepository.h
     src/project/SelectionState.cpp
@@ -249,6 +257,8 @@ qt_add_executable(MyCAE
     src/solver/calculix/CalculiXDeckTypes.h
     src/solver/calculix/CalculiXDatResultReader.cpp
     src/solver/calculix/CalculiXDatResultReader.h
+    src/solver/calculix/CalculiXEnvironment.cpp
+    src/solver/calculix/CalculiXEnvironment.h
     src/solver/calculix/CalculiXInputDeck.cpp
     src/solver/calculix/CalculiXInputDeck.h
     src/solver/calculix/CalculiXInputDeckBuilder.cpp
@@ -298,8 +308,12 @@ qt_add_executable(MyCAE
     src/ui/BoundaryConditionDialog.h
     src/ui/ActionRegistry.cpp
     src/ui/ActionRegistry.h
+    src/ui/AppSettings.cpp
+    src/ui/AppSettings.h
     src/ui/CylinderDialog.cpp
     src/ui/CylinderDialog.h
+    src/ui/DiagnosticPanel.cpp
+    src/ui/DiagnosticPanel.h
     src/ui/LoadDialog.cpp
     src/ui/LoadDialog.h
     src/ui/LogPanel.cpp
@@ -308,12 +322,16 @@ qt_add_executable(MyCAE
     src/ui/MainWindow.h
     src/ui/MaterialDialog.cpp
     src/ui/MaterialDialog.h
+    src/ui/ProjectResourceDialog.cpp
+    src/ui/ProjectResourceDialog.h
     src/ui/ProjectTreePanel.cpp
     src/ui/ProjectTreePanel.h
     src/ui/PropertyPanel.cpp
     src/ui/PropertyPanel.h
     src/ui/ResultPostprocessPanel.cpp
     src/ui/ResultPostprocessPanel.h
+    src/ui/SampleValidationDialog.cpp
+    src/ui/SampleValidationDialog.h
     src/ui/property/FaceGroupPropertyView.cpp
     src/ui/property/FaceGroupPropertyView.h
     src/ui/property/GeometryPropertyView.cpp
@@ -344,12 +362,15 @@ qt_add_executable(MyCAE
     src/workflow/SolverCaseWorkflowController.h
     src/workflow/SolverWorkflowController.cpp
     src/workflow/SolverWorkflowController.h
+    src/validation/SampleProjectValidator.cpp
+    src/validation/SampleProjectValidator.h
 )
 
 target_include_directories(MyCAE PRIVATE src ${OpenCASCADE_INCLUDE_DIR})
 target_compile_definitions(MyCAE PRIVATE
     MYCAE_GMSH_EXECUTABLE_PATH="${MYCAE_GMSH_EXECUTABLE}"
     MYCAE_CALCULIX_EXECUTABLE_PATH="${MYCAE_CALCULIX_EXECUTABLE}"
+    MYCAE_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
 )
 target_link_libraries(MyCAE PRIVATE Qt6::Widgets ${VTK_LIBRARIES} ${MYCAE_OCC_LIBRARIES})
 
@@ -365,6 +386,14 @@ add_custom_target(MyCAEResources ALL
     COMMAND_EXPAND_LISTS
 )
 add_dependencies(MyCAE MyCAEResources)
+
+add_custom_target(MyCAESamples ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/samples"
+        "$<TARGET_FILE_DIR:MyCAE>/samples"
+    COMMAND_EXPAND_LISTS
+)
+add_dependencies(MyCAE MyCAESamples)
 
 if (WIN32)
     add_custom_command(TARGET MyCAE POST_BUILD
