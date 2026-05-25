@@ -53,7 +53,7 @@ foreach(MYCAE_OCC_CMAKE_DIR IN LISTS MYCAE_OCC_CMAKE_CANDIDATES)
 endforeach()
 
 set(MYCAE_GMSH_EXECUTABLE
-    ""D:\\cpp_lib\\Gmsh\\gmsh-4.15.2-Windows64\\gmsh.exe""
+    "D:/cpp_lib/Gmsh/gmsh-4.15.2-Windows64/gmsh.exe"
     CACHE FILEPATH "Path to the local Gmsh executable"
 )
 set(MYCAE_CALCULIX_EXECUTABLE

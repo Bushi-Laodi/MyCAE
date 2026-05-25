@@ -23,6 +23,17 @@ QString loadValueText(const Load &load)
     }
     return valueText;
 }
+
+void appendMaterialExtraProperties(QFormLayout *form, QWidget *parent, const Material &material)
+{
+    for (const MaterialProperty &property : material.extraProperties) {
+        QString value = QString::number(property.value);
+        if (!property.unit.trimmed().isEmpty()) {
+            value += " " + property.unit;
+        }
+        form->addRow(property.name + ":", new QLabel(value, parent));
+    }
+}
 }
 
 void SolverPropertyView::populateMaterialCategory(QWidget *parent, const std::vector<Material> &materials)
@@ -57,6 +68,7 @@ void SolverPropertyView::populateMaterialCategory(QWidget *parent, const std::ve
                 new QLabel(QString::number(mat.kinematicViscosity) + " " + mat.kinematicViscosityUnit, parent)
             );
         }
+        appendMaterialExtraProperties(form, parent, mat);
         dynamicLayout->addLayout(form);
     }
 }
@@ -131,6 +143,7 @@ void SolverPropertyView::populateMaterial(QWidget *parent, const Material &mater
         "Kinematic Viscosity:",
         new QLabel(QString::number(material.kinematicViscosity) + " " + material.kinematicViscosityUnit, parent)
     );
+    appendMaterialExtraProperties(form, parent, material);
     dynamicLayout->addLayout(form);
 }
 

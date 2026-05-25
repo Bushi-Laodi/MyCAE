@@ -40,4 +40,7 @@ private:
 
     QCheckBox *m_hasKinematicViscosityCheck = nullptr;
     QDoubleSpinBox *m_kinematicViscositySpin = nullptr;
+
+    QDoubleSpinBox *m_youngModulusSpin = nullptr;
+    QDoubleSpinBox *m_poissonRatioSpin = nullptr;
 };
