@@ -1,8 +1,14 @@
 #include "ProjectModelLoader.h"
 
 #include "mesh/MeshManager.h"
+#include "mesh/MeshBoundaryBuilder.h"
+#include "mesh/MeshData.h"
+#include "mesh/MshReader.h"
 #include "project/ProjectModel.h"
 #include "solver/SimulationCaseManager.h"
+
+#include <QDir>
+#include <QFileInfo>
 
 #include <vector>
 
@@ -51,8 +57,18 @@ bool ProjectModelLoader::loadMeshes(ProjectModel &projectModel, QString *errorMe
 
     MeshRepository &meshRepository = projectModel.meshRepository();
     meshRepository.meshObjects().clear();
+    meshRepository.meshBoundaries().clear();
     for (const MeshObject &meshObject : loadedMeshes) {
         meshRepository.meshObjects().append(meshObject);
+
+        const QString meshPath = QFileInfo(meshObject.mshFile).isAbsolute()
+            ? meshObject.mshFile
+            : QDir(projectModel.project().rootPath).filePath(meshObject.mshFile);
+        MeshData meshData;
+        QString meshReadError;
+        if (QFileInfo::exists(meshPath) && MshReader::readMsh2(meshPath, meshData, &meshReadError)) {
+            meshRepository.replaceMeshBoundariesForMesh(meshObject.name, MeshBoundaryBuilder::build(meshData, meshObject));
+        }
     }
 
     projectModel.clearSelectionIfKind(SelectionKind::Mesh);

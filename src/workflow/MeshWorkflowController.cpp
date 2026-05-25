@@ -4,6 +4,7 @@
 #include "mesh/GmshCaseWriter.h"
 #include "mesh/GmshRunner.h"
 #include "mesh/MeshData.h"
+#include "mesh/MeshBoundaryBuilder.h"
 #include "mesh/MeshManager.h"
 #include "mesh/MeshToVtkConverter.h"
 #include "mesh/MshReader.h"
@@ -145,17 +146,29 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     const GmshCaseWriter gmshCaseWriter;
     const GmshCaseWriterResult gmshCaseResult = gmshCaseWriter.prepareFaceGroupExport(projectModel, geometry);
     workflowResult.logMessages.append(gmshCaseResult.logMessages);
+    for (const QString &warning : gmshCaseResult.warnings) {
+        workflowResult.logMessages.append("Gmsh case warning: " + warning);
+    }
+    for (const QString &error : gmshCaseResult.errors) {
+        workflowResult.logMessages.append("Gmsh case failed: " + error);
+    }
+    if (!gmshCaseResult.errors.isEmpty()) {
+        return workflowResult;
+    }
 
     const GmshRunner gmshRunner;
-    const GmshRunResult gmshResult = gmshRunner.generate3DMesh(stepAbsPath, meshAbsPath);
+    const QString gmshInputPath = gmshCaseResult.meshInputFile.isEmpty()
+        ? stepAbsPath
+        : gmshCaseResult.meshInputFile;
+    const GmshRunResult gmshResult = gmshRunner.generate3DMesh(gmshInputPath, meshAbsPath);
 
     workflowResult.logMessages.append("Geometry name: " + geometry.name);
     workflowResult.logMessages.append("Geometry type: " + geometry.type);
     workflowResult.logMessages.append("Gmsh path: " + gmshRunner.gmshExecutablePath());
     workflowResult.logMessages.append("Gmsh command: " + gmshRunner.gmshExecutablePath()
-        + " " + stepAbsPath
+        + " " + gmshInputPath
         + " -3 -format msh2 -o " + meshAbsPath);
-    workflowResult.logMessages.append("Gmsh input: " + stepAbsPath);
+    workflowResult.logMessages.append("Gmsh input: " + gmshInputPath);
     workflowResult.logMessages.append("Gmsh output: " + meshAbsPath);
     appendGmshRunLog(workflowResult, gmshRunner, gmshResult);
 
@@ -188,6 +201,8 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     meshObject.tetraCount = meshData.tetraCount();
     meshObject.createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);
 
+    const QVector<MeshBoundary> meshBoundaries = MeshBoundaryBuilder::build(meshData, meshObject);
+
     MeshManager meshManager(projectModel.project().rootPath);
     if (!meshManager.saveMeshObject(meshObject, &errorMessage)) {
         workflowResult.logMessages.append("MeshObject save failed: " + errorMessage);
@@ -206,11 +221,21 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     if (!replaced) {
         meshObjects.append(meshObject);
     }
+    projectModel.meshRepository().replaceMeshBoundariesForMesh(meshObject.name, meshBoundaries);
     projectModel.setSelection(Selection::item(SelectionKind::Mesh, meshObject.name, meshObject.name));
 
     workflowResult.meshTreeChanged = true;
     workflowResult.simulationCaseChanged = true;
     workflowResult.logMessages.append("MeshObject saved: mesh/" + safeGeometryName + "_mesh.json");
+    workflowResult.logMessages.append(QString("Mesh boundaries detected: %1").arg(meshBoundaries.size()));
+    for (const MeshBoundary &meshBoundary : meshBoundaries) {
+        workflowResult.logMessages.append(
+            QString("MeshBoundary: %1, physicalTag=%2, faces=%3")
+                .arg(meshBoundary.sourceFaceGroupId)
+                .arg(meshBoundary.physicalGroupTag)
+                .arg(meshBoundary.faceCount)
+        );
+    }
     return workflowResult;
 }
 

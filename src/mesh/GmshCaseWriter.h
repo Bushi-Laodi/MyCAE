@@ -26,8 +26,11 @@ struct GmshCaseWriterResult
 {
     bool hasRequestedFaceGroupExport = false;
     bool canWritePhysicalGroups = false;
+    QString meshInputFile;
     std::vector<GmshFaceGroupExportItem> items;
     QStringList logMessages;
+    QStringList warnings;
+    QStringList errors;
 };
 
 class GmshCaseWriter

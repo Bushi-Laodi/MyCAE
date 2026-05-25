@@ -157,6 +157,8 @@ qt_add_executable(MyCAE
     src/commands/WorkflowCommandContext.h
     src/mesh/GmshCaseWriter.cpp
     src/mesh/GmshCaseWriter.h
+    src/mesh/MeshBoundaryBuilder.cpp
+    src/mesh/MeshBoundaryBuilder.h
     src/mesh/MeshBoundary.h
     src/mesh/GmshRunner.cpp
     src/mesh/GmshRunner.h
