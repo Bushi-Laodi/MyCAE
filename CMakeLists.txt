@@ -323,6 +323,8 @@ qt_add_executable(MyCAE
     src/ui/ActionRegistry.h
     src/ui/AppSettings.cpp
     src/ui/AppSettings.h
+    src/ui/AppStyle.cpp
+    src/ui/AppStyle.h
     src/ui/CylinderDialog.cpp
     src/ui/CylinderDialog.h
     src/ui/FaceGroupRestoreController.cpp

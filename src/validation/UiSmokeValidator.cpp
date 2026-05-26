@@ -4,11 +4,13 @@
 #include "ui/ResultPostprocessPanel.h"
 
 #include <QAction>
+#include <QApplication>
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDockWidget>
 #include <QDir>
 #include <QFileInfo>
+#include <QFont>
 #include <QList>
 #include <QMainWindow>
 #include <QMenu>
@@ -147,6 +149,11 @@ bool hasIconOnlyToolBar(const QMainWindow &window, const QString &title)
     return false;
 }
 
+bool applicationStyleContains(const QString &token)
+{
+    return qApp && qApp->styleSheet().contains(token);
+}
+
 void addStep(UiValidationReport &report, const QString &name, bool passed, const QString &detail = {})
 {
     report.steps.append(UiValidationStep{name, passed, detail});
@@ -219,6 +226,12 @@ int treeItemChildCount(const QMainWindow &window, const QString &text)
         return item->childCount();
     }
     return -1;
+}
+
+bool treeItemHasCategoryStyle(const QMainWindow &window, const QString &text)
+{
+    QTreeWidgetItem *item = findTreeItemByText(window, text);
+    return item && item->font(0).bold() && !item->icon(0).isNull();
 }
 
 bool selectTreeItem(const QMainWindow &window, const QString &text)
@@ -344,6 +357,19 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
             childCount > 0,
             QString("children=%1").arg(childCount)
         );
+    }
+    const QStringList styledTreeGroups{
+        "Geometry",
+        "Face Groups",
+        "Materials",
+        "Boundary Conditions",
+        "Loads",
+        "Mesh",
+        "Solver",
+        "Results"
+    };
+    for (const QString &group : styledTreeGroups) {
+        addStep(report, "Project tree category styled: " + group, treeItemHasCategoryStyle(window, group));
     }
 
     addActionEnabledStep(report, window, "geometry.create.box");
@@ -484,6 +510,11 @@ UiValidationReport UiSmokeValidator::validate() const
     }
     addStep(report, "Toolbar exists: Main Toolbar", hasToolBarTitle(window, "Main Toolbar"));
     addStep(report, "Toolbar is icon-only", hasIconOnlyToolBar(window, "Main Toolbar"));
+    addStep(report, "Application white UI style applied", qApp && !qApp->styleSheet().isEmpty());
+    addStep(report, "Dock style applied", applicationStyleContains("QDockWidget"));
+    addStep(report, "Menu style applied", applicationStyleContains("QMenuBar"));
+    addStep(report, "Table style applied", applicationStyleContains("QTableWidget"));
+    addStep(report, "Input style applied", applicationStyleContains("QLineEdit"));
 
     const QStringList requiredCommandIds{
         "project.new",

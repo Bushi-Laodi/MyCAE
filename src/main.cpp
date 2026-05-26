@@ -1,3 +1,4 @@
+#include "ui/AppStyle.h"
 #include "ui/MainWindow.h"
 #include "validation/SampleProjectValidator.h"
 #include "validation/UiSmokeValidator.h"
@@ -63,6 +64,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     QApplication::setApplicationName("MyCAE");
     QApplication::setOrganizationName("MyCAE");
+    AppStyle::apply(app);
 
     QCommandLineParser parser;
     parser.setApplicationDescription("MyCAE desktop CAE integration tool.");
