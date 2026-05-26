@@ -51,7 +51,7 @@ MainWindowDockWidgets MainWindowDockBuilder::build(QMainWindow *window, const Ma
     });
     window->setCentralWidget(widgets.renderView);
 
-    auto *projectDock = new QDockWidget("Project / Model", window);
+    auto *projectDock = new QDockWidget(zh(u8"工程 / 模型"), window);
     widgets.projectTreePanel = new ProjectTreePanel(projectDock);
     QObject::connect(
         widgets.projectTreePanel,
@@ -66,12 +66,12 @@ MainWindowDockWidgets MainWindowDockBuilder::build(QMainWindow *window, const Ma
     projectDock->setWidget(widgets.projectTreePanel);
     window->addDockWidget(Qt::LeftDockWidgetArea, projectDock);
 
-    auto *diagnosticDock = new QDockWidget("Diagnostics", window);
+    auto *diagnosticDock = new QDockWidget(zh(u8"诊断"), window);
     widgets.diagnosticPanel = new DiagnosticPanel(diagnosticDock);
     diagnosticDock->setWidget(widgets.diagnosticPanel);
     window->addDockWidget(Qt::BottomDockWidgetArea, diagnosticDock);
 
-    auto *propertyDock = new QDockWidget("Properties", window);
+    auto *propertyDock = new QDockWidget(zh(u8"属性"), window);
     propertyDock->setMinimumWidth(340);
     widgets.propertyPanel = new PropertyPanel(propertyDock);
     propertyDock->setWidget(createDockScrollArea(widgets.propertyPanel, propertyDock, "property.scrollArea", 340));
@@ -226,7 +226,7 @@ MainWindowDockWidgets MainWindowDockBuilder::build(QMainWindow *window, const Ma
     window->addDockWidget(Qt::RightDockWidgetArea, postprocessDock);
     window->tabifyDockWidget(propertyDock, postprocessDock);
 
-    auto *logDock = new QDockWidget("Log", window);
+    auto *logDock = new QDockWidget(zh(u8"日志"), window);
     widgets.logPanel = new LogPanel(logDock);
     logDock->setWidget(widgets.logPanel);
     window->addDockWidget(Qt::BottomDockWidgetArea, logDock);

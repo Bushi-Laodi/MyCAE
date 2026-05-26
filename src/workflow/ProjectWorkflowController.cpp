@@ -18,6 +18,14 @@
 #include <QStatusBar>
 #include <QStringList>
 
+namespace
+{
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+}
+
 ProjectWorkflowController::ProjectWorkflowController(
     ProjectManager &projectManager,
     const GeometryManager &geometryManager,
@@ -42,29 +50,29 @@ ProjectWorkflowResult ProjectWorkflowController::createProject() const
     ProjectWorkflowResult result;
     const QString projectPath = QFileDialog::getExistingDirectory(
         m_window,
-        "Select Project Directory",
+        zh(u8"选择工程目录"),
         QString(),
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
     );
 
     if (projectPath.isEmpty()) {
         result.canceled = true;
-        result.logMessages.append("New project canceled.");
+        result.logMessages.append(zh(u8"已取消新建工程。"));
         return result;
     }
 
     Project project;
     QString errorMessage;
     if (!m_projectManager.createProject(projectPath, &project, &errorMessage)) {
-        QMessageBox::warning(m_window, "New project failed", errorMessage);
-        result.logMessages.append("New project failed: " + errorMessage);
+        QMessageBox::warning(m_window, zh(u8"新建工程失败"), errorMessage);
+        result.logMessages.append(zh(u8"新建工程失败：") + errorMessage);
         return result;
     }
 
     result.logMessages.append(setCurrentProject(project).logMessages);
     refreshProjectTree();
     result.logMessages.append(saveSimulationCase().logMessages);
-    result.logMessages.append("Project created: " + project.rootPath);
+    result.logMessages.append(zh(u8"工程已创建：") + project.rootPath);
     result.success = true;
     return result;
 }
@@ -74,14 +82,14 @@ ProjectWorkflowResult ProjectWorkflowController::openProject() const
     ProjectWorkflowResult result;
     const QString projectFilePath = QFileDialog::getOpenFileName(
         m_window,
-        "Open Project",
+        zh(u8"打开工程"),
         QString(),
         "MyCAE Project (project.json);;JSON Files (*.json)"
     );
 
     if (projectFilePath.isEmpty()) {
         result.canceled = true;
-        result.logMessages.append("Open project canceled.");
+        result.logMessages.append(zh(u8"已取消打开工程。"));
         return result;
     }
 
@@ -94,8 +102,8 @@ ProjectWorkflowResult ProjectWorkflowController::openProjectFile(const QString &
     Project project;
     QString errorMessage;
     if (!m_projectManager.openProject(projectFilePath, &project, &errorMessage)) {
-        QMessageBox::warning(m_window, "Open project failed", errorMessage);
-        result.logMessages.append("Open project failed: " + errorMessage);
+        QMessageBox::warning(m_window, zh(u8"打开工程失败"), errorMessage);
+        result.logMessages.append(zh(u8"打开工程失败：") + errorMessage);
         return result;
     }
 
@@ -105,7 +113,7 @@ ProjectWorkflowResult ProjectWorkflowController::openProjectFile(const QString &
     result.logMessages.append(loadSimulationCase().logMessages);
     result.logMessages.append(loadResults().logMessages);
     refreshProjectTree();
-    result.logMessages.append("Project opened: " + project.rootPath);
+    result.logMessages.append(zh(u8"工程已打开：") + project.rootPath);
     result.success = true;
     return result;
 }
@@ -119,7 +127,7 @@ ProjectWorkflowResult ProjectWorkflowController::setCurrentProject(const Project
     if (m_window) {
         m_window->setWindowTitle("MyCAE - " + project.name);
         if (m_window->statusBar()) {
-            m_window->statusBar()->showMessage("Current project: " + project.name);
+            m_window->statusBar()->showMessage(zh(u8"当前工程：") + project.name);
         }
     }
     if (m_projectTreePanel) {

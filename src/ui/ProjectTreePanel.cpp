@@ -23,6 +23,11 @@ constexpr int SelectionKindRole = Qt::UserRole + 1;
 constexpr int SelectionIdRole = Qt::UserRole + 2;
 constexpr int SelectionNameRole = Qt::UserRole + 3;
 
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 QString projectTreeStyleSheet()
 {
     return QStringLiteral(
@@ -265,12 +270,12 @@ void ProjectTreePanel::setResultItems(const std::vector<ResultObject> &results)
 
 void ProjectTreePanel::buildInitialTree()
 {
-    buildProjectTree("Unnamed Project", "");
+    buildProjectTree(zh(u8"未命名工程"), "");
 }
 
 void ProjectTreePanel::buildProjectTree(const QString &projectName, const QString &projectPath)
 {
-    auto *projectRoot = new QTreeWidgetItem(QStringList{"Unnamed Project"});
+    auto *projectRoot = new QTreeWidgetItem(QStringList{zh(u8"未命名工程")});
     projectRoot->setText(0, projectName);
     if (!projectPath.isEmpty()) {
         projectRoot->setToolTip(0, projectPath);
@@ -278,29 +283,29 @@ void ProjectTreePanel::buildProjectTree(const QString &projectName, const QStrin
     applyRootStyle(projectRoot);
 
     m_tree->clear();
-    m_geometryRoot = createStyledCategory("Geometry", UiIconFactory::treeBadge("G", QColor("#2563eb")), projectRoot);
+    m_geometryRoot = createStyledCategory(zh(u8"几何"), UiIconFactory::treeBadge("G", QColor("#2563eb")), projectRoot);
 
-    m_faceGroupRoot = createStyledCategory("Face Groups", UiIconFactory::treeBadge("F", QColor("#7c3aed")), projectRoot);
+    m_faceGroupRoot = createStyledCategory(zh(u8"面组"), UiIconFactory::treeBadge("F", QColor("#7c3aed")), projectRoot);
 
-    m_materialRoot = createStyledCategory("Materials", UiIconFactory::treeBadge("Mt", QColor("#16a34a")), projectRoot);
+    m_materialRoot = createStyledCategory(zh(u8"材料"), UiIconFactory::treeBadge("Mt", QColor("#16a34a")), projectRoot);
     setItemSelection(m_materialRoot, Selection::category(SelectionKind::MaterialCategory));
 
     m_boundaryConditionRoot = createStyledCategory(
-        "Boundary Conditions",
+        zh(u8"边界条件"),
         UiIconFactory::treeBadge("BC", QColor("#ca8a04")),
         projectRoot
     );
     setItemSelection(m_boundaryConditionRoot, Selection::category(SelectionKind::BoundaryConditionCategory));
 
-    m_loadRoot = createStyledCategory("Loads", UiIconFactory::treeBadge("L", QColor("#dc2626")), projectRoot);
+    m_loadRoot = createStyledCategory(zh(u8"载荷"), UiIconFactory::treeBadge("L", QColor("#dc2626")), projectRoot);
     setItemSelection(m_loadRoot, Selection::category(SelectionKind::LoadCategory));
 
-    m_meshRoot = createStyledCategory("Mesh", UiIconFactory::treeBadge("M", QColor("#0891b2")), projectRoot);
+    m_meshRoot = createStyledCategory(zh(u8"网格"), UiIconFactory::treeBadge("M", QColor("#0891b2")), projectRoot);
 
-    m_solverRoot = createStyledCategory("Solver", UiIconFactory::treeBadge("S", QColor("#475569")), projectRoot);
+    m_solverRoot = createStyledCategory(zh(u8"求解器"), UiIconFactory::treeBadge("S", QColor("#475569")), projectRoot);
     setItemSelection(m_solverRoot, Selection::category(SelectionKind::SolverCategory));
 
-    m_resultRoot = createStyledCategory("Results", UiIconFactory::treeBadge("R", QColor("#4f46e5")), projectRoot);
+    m_resultRoot = createStyledCategory(zh(u8"结果"), UiIconFactory::treeBadge("R", QColor("#4f46e5")), projectRoot);
     setItemSelection(m_resultRoot, Selection::category(SelectionKind::ResultCategory));
 
     m_tree->addTopLevelItem(projectRoot);

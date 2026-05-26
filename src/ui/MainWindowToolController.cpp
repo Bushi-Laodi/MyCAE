@@ -8,6 +8,14 @@
 
 #include <QTimer>
 
+namespace
+{
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+}
+
 MainWindowToolController::MainWindowToolController(MainWindowToolContext context, MainWindowToolCallbacks callbacks)
     : m_context(context)
     , m_callbacks(std::move(callbacks))
@@ -18,7 +26,7 @@ void MainWindowToolController::showProjectResources() const
 {
     if (!m_context.projectModel.hasProject()) {
         if (m_callbacks.writeLog) {
-            m_callbacks.writeLog("Project resources skipped: open a project first.");
+            m_callbacks.writeLog(zh(u8"跳过工程资源检查：请先打开工程。"));
         }
         return;
     }
@@ -56,6 +64,6 @@ void MainWindowToolController::clearDiagnostics() const
         m_callbacks.refreshDiagnosticsPanel();
     }
     if (m_callbacks.writeLog) {
-        m_callbacks.writeLog("Diagnostics cleared.");
+        m_callbacks.writeLog(zh(u8"诊断信息已清空。"));
     }
 }

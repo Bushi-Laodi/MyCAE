@@ -9,6 +9,11 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 QColor severityForeground(DiagnosticSeverity severity)
 {
     switch (severity) {
@@ -52,9 +57,9 @@ void setEmptyDiagnostics(QTableWidget *table)
         return;
     }
     table->setRowCount(1);
-    table->setItem(0, 0, item("Info", DiagnosticSeverity::Info, true));
+    table->setItem(0, 0, item(zh(u8"信息"), DiagnosticSeverity::Info, true));
     table->setItem(0, 1, item("UI"));
-    table->setItem(0, 2, item("No diagnostics."));
+    table->setItem(0, 2, item(zh(u8"暂无诊断信息。")));
     table->setItem(0, 3, item("-"));
     table->resizeRowsToContents();
 }
@@ -69,7 +74,7 @@ DiagnosticPanel::DiagnosticPanel(QWidget *parent)
     m_table = new QTableWidget(this);
     m_table->setObjectName("diagnostic.table");
     m_table->setColumnCount(4);
-    m_table->setHorizontalHeaderLabels({"Severity", "Category", "Message", "Suggested Fix"});
+    m_table->setHorizontalHeaderLabels({zh(u8"级别"), zh(u8"类别"), zh(u8"消息"), zh(u8"建议修复")});
     m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
     m_table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);

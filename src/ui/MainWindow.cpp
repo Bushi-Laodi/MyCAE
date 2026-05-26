@@ -18,6 +18,14 @@
 #include <QShowEvent>
 #include <QStatusBar>
 
+namespace
+{
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -36,8 +44,8 @@ MainWindow::MainWindow(QWidget *parent)
     // The first Render() call is deferred to showEvent() to avoid a crash
     // in MSVCP140.dll (0xc0000005 - access violation).
 
-    statusBar()->showMessage("Ready");
-    writeLog("MyCAE started.");
+    statusBar()->showMessage(zh(u8"就绪"));
+    writeLog(zh(u8"MyCAE 已启动。"));
     writeLogMessages(m_solverPluginManager.diagnostics());
 }
 
@@ -58,7 +66,7 @@ void MainWindow::initializeVtkRender()
         m_docks.renderView->showEmpty();
     }
     m_vtkInitialized = true;
-    writeLog("VTK renderer initialized.");
+    writeLog(zh(u8"VTK 渲染器已初始化。"));
 }
 
 void MainWindow::createActions()

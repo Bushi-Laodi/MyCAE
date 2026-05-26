@@ -20,6 +20,11 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 QLabel *createValueLabel(const QString &text, QWidget *parent, const QString &objectName)
 {
     auto *label = new QLabel(text, parent);
@@ -47,7 +52,7 @@ QFormLayout *createSection(QVBoxLayout *layout, const QString &title, QWidget *p
 
 QWidget *createDetailsSection(QVBoxLayout *layout, QWidget *parent)
 {
-    auto *group = new QGroupBox("Solver / Result Details", parent);
+    auto *group = new QGroupBox(zh(u8"求解 / 结果详情"), parent);
     group->setObjectName("property.section.details");
     layout->addWidget(group);
     return group;
@@ -62,7 +67,7 @@ PropertyPanel::PropertyPanel(QWidget *parent)
     m_mainLayout->setSpacing(8);
     m_mainLayout->setSizeConstraint(QLayout::SetMinimumSize);
 
-    m_selectionValue = createValueLabel("None", this, "property.selection.value");
+    m_selectionValue = createValueLabel(zh(u8"无"), this, "property.selection.value");
     m_typeValue = createValueLabel("-", this, "property.type.value");
     m_nameValue = createValueLabel("-", this, "property.name.value");
     m_radiusValue = createValueLabel("-", this, "property.radius.value");
@@ -77,25 +82,25 @@ PropertyPanel::PropertyPanel(QWidget *parent)
     m_tetraCountValue = createValueLabel("-", this, "property.tetraCount.value");
     m_createdAtValue = createValueLabel("-", this, "property.createdAt.value");
 
-    QFormLayout *identityForm = createSection(m_mainLayout, "Selection", this, "property.section.selection");
-    identityForm->addRow("Selection", m_selectionValue);
-    identityForm->addRow("Type", m_typeValue);
-    identityForm->addRow("Name", m_nameValue);
-    identityForm->addRow("Created At", m_createdAtValue);
-    identityForm->addRow("Source Geometry", m_sourceGeometryValue);
-    identityForm->addRow("Source Type", m_sourceGeometryTypeValue);
+    QFormLayout *identityForm = createSection(m_mainLayout, zh(u8"选择"), this, "property.section.selection");
+    identityForm->addRow(zh(u8"选择"), m_selectionValue);
+    identityForm->addRow(zh(u8"类型"), m_typeValue);
+    identityForm->addRow(zh(u8"名称"), m_nameValue);
+    identityForm->addRow(zh(u8"创建时间"), m_createdAtValue);
+    identityForm->addRow(zh(u8"源几何"), m_sourceGeometryValue);
+    identityForm->addRow(zh(u8"源类型"), m_sourceGeometryTypeValue);
 
-    QFormLayout *geometryForm = createSection(m_mainLayout, "Geometry", this, "property.section.geometry");
-    geometryForm->addRow("Radius", m_radiusValue);
-    geometryForm->addRow("Length", m_lengthValue);
-    geometryForm->addRow("Width", m_widthValue);
-    geometryForm->addRow("Height", m_heightValue);
+    QFormLayout *geometryForm = createSection(m_mainLayout, zh(u8"几何"), this, "property.section.geometry");
+    geometryForm->addRow(zh(u8"半径"), m_radiusValue);
+    geometryForm->addRow(zh(u8"长度"), m_lengthValue);
+    geometryForm->addRow(zh(u8"宽度"), m_widthValue);
+    geometryForm->addRow(zh(u8"高度"), m_heightValue);
 
-    QFormLayout *sourceForm = createSection(m_mainLayout, "Mesh", this, "property.section.sourceMesh");
-    sourceForm->addRow("Source STEP", m_sourceStepFileValue);
-    sourceForm->addRow("Mesh File", m_meshFileValue);
-    sourceForm->addRow("Node Count", m_nodeCountValue);
-    sourceForm->addRow("Tetra Count", m_tetraCountValue);
+    QFormLayout *sourceForm = createSection(m_mainLayout, zh(u8"网格"), this, "property.section.sourceMesh");
+    sourceForm->addRow(zh(u8"源 STEP"), m_sourceStepFileValue);
+    sourceForm->addRow(zh(u8"网格文件"), m_meshFileValue);
+    sourceForm->addRow(zh(u8"节点数"), m_nodeCountValue);
+    sourceForm->addRow(zh(u8"四面体数"), m_tetraCountValue);
 
     m_dynamicArea = createDetailsSection(m_mainLayout, this);
     m_mainLayout->addStretch();
@@ -103,7 +108,7 @@ PropertyPanel::PropertyPanel(QWidget *parent)
 
 void PropertyPanel::clearAll()
 {
-    m_selectionValue->setText("None");
+    m_selectionValue->setText(zh(u8"无"));
     m_typeValue->setText("-");
     m_nameValue->setText("-");
     m_radiusValue->setText("-");
@@ -127,7 +132,7 @@ QWidget *PropertyPanel::resetDynamicArea(bool visible)
         m_dynamicArea = nullptr;
     }
 
-    m_dynamicArea = new QGroupBox("Solver / Result Details", this);
+    m_dynamicArea = new QGroupBox(zh(u8"求解 / 结果详情"), this);
     m_dynamicArea->setObjectName("property.section.details");
     m_dynamicArea->setVisible(visible);
     m_mainLayout->insertWidget(m_mainLayout->count() - 1, m_dynamicArea);
@@ -144,7 +149,7 @@ void PropertyPanel::showBoxGeometry(const BoxGeometry &box)
 {
     const QString suffix = " " + box.unit;
     m_selectionValue->setText(box.name);
-    m_typeValue->setText("Box");
+    m_typeValue->setText(zh(u8"长方体"));
     m_nameValue->setText(box.name);
     m_radiusValue->setText("-");
     m_lengthValue->setText(QString::number(box.length) + suffix);
@@ -165,7 +170,7 @@ void PropertyPanel::showCylinderGeometry(const CylinderGeometry &cylinder)
 {
     const QString suffix = " " + cylinder.unit;
     m_selectionValue->setText(cylinder.name);
-    m_typeValue->setText("Cylinder");
+    m_typeValue->setText(zh(u8"圆柱体"));
     m_nameValue->setText(cylinder.name);
     m_radiusValue->setText(QString::number(cylinder.radius) + suffix);
     m_lengthValue->setText("-");
@@ -218,7 +223,7 @@ void PropertyPanel::showFaceGroup(const FaceGroup &faceGroup)
 {
     clearAll();
     m_selectionValue->setText(faceGroup.id);
-    m_typeValue->setText("Face Group");
+    m_typeValue->setText(zh(u8"面组"));
     m_nameValue->setText(faceGroup.name);
     m_sourceGeometryValue->setText(faceGroup.geometryName);
 
@@ -229,8 +234,8 @@ void PropertyPanel::showFaceGroup(const FaceGroup &faceGroup)
 void PropertyPanel::showPickState(PickMode mode, const QString &geometryName, const std::vector<int> &faceIndices)
 {
     clearAll();
-    m_selectionValue->setText("Pick");
-    m_typeValue->setText("Picking");
+    m_selectionValue->setText(zh(u8"拾取"));
+    m_typeValue->setText(zh(u8"拾取"));
     m_nameValue->setText(pickModeName(mode));
     m_sourceGeometryValue->setText(geometryName);
 
@@ -241,7 +246,7 @@ void PropertyPanel::showPickState(PickMode mode, const QString &geometryName, co
 void PropertyPanel::showMaterialCategory(const std::vector<Material> &materials)
 {
     clearAll();
-    m_selectionValue->setText("Materials");
+    m_selectionValue->setText(zh(u8"材料"));
 
     resetDynamicArea();
     SolverPropertyView::populateMaterialCategory(m_dynamicArea, materials);
@@ -250,7 +255,7 @@ void PropertyPanel::showMaterialCategory(const std::vector<Material> &materials)
 void PropertyPanel::showBoundaryConditionCategory(const std::vector<BoundaryCondition> &boundaryConditions)
 {
     clearAll();
-    m_selectionValue->setText("Boundary Conditions");
+    m_selectionValue->setText(zh(u8"边界条件"));
 
     resetDynamicArea();
     SolverPropertyView::populateBoundaryConditionCategory(m_dynamicArea, boundaryConditions);
@@ -259,7 +264,7 @@ void PropertyPanel::showBoundaryConditionCategory(const std::vector<BoundaryCond
 void PropertyPanel::showLoadCategory(const std::vector<Load> &loads)
 {
     clearAll();
-    m_selectionValue->setText("Loads");
+    m_selectionValue->setText(zh(u8"载荷"));
 
     resetDynamicArea();
     SolverPropertyView::populateLoadCategory(m_dynamicArea, loads);
@@ -269,7 +274,7 @@ void PropertyPanel::showMaterial(const Material &material)
 {
     clearAll();
     m_selectionValue->setText(material.name);
-    m_typeValue->setText("Material");
+    m_typeValue->setText(zh(u8"材料"));
     m_nameValue->setText(material.name);
 
     resetDynamicArea();
@@ -280,7 +285,7 @@ void PropertyPanel::showBoundaryCondition(const BoundaryCondition &boundaryCondi
 {
     clearAll();
     m_selectionValue->setText(boundaryCondition.name);
-    m_typeValue->setText("Boundary Condition");
+    m_typeValue->setText(zh(u8"边界条件"));
     m_nameValue->setText(boundaryCondition.name);
     m_sourceGeometryValue->setText(boundaryCondition.target.geometryName);
 
@@ -292,7 +297,7 @@ void PropertyPanel::showLoad(const Load &load)
 {
     clearAll();
     m_selectionValue->setText(load.name);
-    m_typeValue->setText("Load");
+    m_typeValue->setText(zh(u8"载荷"));
     m_nameValue->setText(load.name);
 
     resetDynamicArea();
@@ -311,13 +316,13 @@ void PropertyPanel::showSolverCategory(const SimulationCase &simulationCase)
 void PropertyPanel::showResultCategory(const std::vector<ResultObject> &results)
 {
     clearAll();
-    m_selectionValue->setText("Results");
-    m_typeValue->setText("Result Category");
+    m_selectionValue->setText(zh(u8"结果"));
+    m_typeValue->setText(zh(u8"结果分类"));
 
     QWidget *dynamicArea = resetDynamicArea();
     auto *dynamicLayout = new QVBoxLayout(dynamicArea);
     if (results.empty()) {
-        dynamicLayout->addWidget(new QLabel("No solver results.", dynamicArea));
+        dynamicLayout->addWidget(new QLabel(zh(u8"暂无求解结果。"), dynamicArea));
         return;
     }
 
@@ -327,7 +332,7 @@ void PropertyPanel::showResultCategory(const std::vector<ResultObject> &results)
             new QLabel(QString("<b>%1. %2</b> - %3")
                 .arg(i + 1)
                 .arg(resultObject.name)
-                .arg(resultObject.success ? "Success" : "Failed"),
+                .arg(resultObject.success ? zh(u8"成功") : zh(u8"失败")),
                 dynamicArea)
         );
     }
@@ -337,7 +342,7 @@ void PropertyPanel::showResult(const ResultObject &resultObject)
 {
     clearAll();
     m_selectionValue->setText(resultObject.name);
-    m_typeValue->setText("Result");
+    m_typeValue->setText(zh(u8"结果"));
     m_nameValue->setText(resultObject.name);
     m_sourceStepFileValue->setText(resultObject.casePath);
     m_createdAtValue->setText(resultObject.createdAt);

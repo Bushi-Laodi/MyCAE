@@ -30,6 +30,11 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 QString normalizedText(QString text)
 {
     return text.remove('&');
@@ -293,13 +298,13 @@ bool diagnosticEmptyStateVisible(const QMainWindow &window)
     return table
         && table->rowCount() == 1
         && table->item(0, 2)
-        && table->item(0, 2)->text() == "No diagnostics.";
+        && table->item(0, 2)->text() == zh(u8"暂无诊断信息。");
 }
 
 bool logPlaceholderConfigured(const QMainWindow &window)
 {
     const QPlainTextEdit *logView = window.findChild<QPlainTextEdit *>("log.view");
-    return logView && logView->placeholderText() == "No log messages yet.";
+    return logView && logView->placeholderText() == zh(u8"暂无日志消息。");
 }
 
 QString defaultDemoProjectFilePath()
@@ -371,7 +376,7 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
 
     settingsGuard.setRecentProjects(QStringList{demoProjectFilePath});
     MainWindow window;
-    QMenu *recentProjectsMenu = findSubMenu(findTopLevelMenu(window, "File"), "Recent Projects");
+    QMenu *recentProjectsMenu = findSubMenu(findTopLevelMenu(window, zh(u8"文件")), zh(u8"最近工程"));
     QAction *openDemoAction = nullptr;
     if (recentProjectsMenu) {
         for (QAction *action : recentProjectsMenu->actions()) {
@@ -394,13 +399,13 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
         findTreeItemByText(window, "Box Pressure Demo") != nullptr
     );
     const QStringList populatedTreeGroups{
-        "Geometry",
-        "Face Groups",
-        "Materials",
-        "Boundary Conditions",
-        "Loads",
-        "Mesh",
-        "Results"
+        zh(u8"几何"),
+        zh(u8"面组"),
+        zh(u8"材料"),
+        zh(u8"边界条件"),
+        zh(u8"载荷"),
+        zh(u8"网格"),
+        zh(u8"结果")
     };
     for (const QString &group : populatedTreeGroups) {
         const int childCount = treeItemChildCount(window, group);
@@ -412,14 +417,14 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
         );
     }
     const QStringList styledTreeGroups{
-        "Geometry",
-        "Face Groups",
-        "Materials",
-        "Boundary Conditions",
-        "Loads",
-        "Mesh",
-        "Solver",
-        "Results"
+        zh(u8"几何"),
+        zh(u8"面组"),
+        zh(u8"材料"),
+        zh(u8"边界条件"),
+        zh(u8"载荷"),
+        zh(u8"网格"),
+        zh(u8"求解器"),
+        zh(u8"结果")
     };
     for (const QString &group : styledTreeGroups) {
         addStep(report, "Project tree category styled: " + group, treeItemHasCategoryStyle(window, group));
@@ -432,7 +437,7 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
     addActionEnabledStep(report, window, "solverData.create.load");
     addActionEnabledStep(report, window, "solver.run.calculix");
 
-    QAction *projectResourcesAction = findActionByText(window, "Project Resources");
+    QAction *projectResourcesAction = findActionByText(window, zh(u8"工程资源"));
     addStep(
         report,
         "Project Resources enabled after demo open",
@@ -574,13 +579,13 @@ UiValidationReport UiSmokeValidator::validate() const
         MainWindow window;
 
         const QStringList menuTitles{
-            "File",
-            "Edit",
-            "Geometry",
-            "Case",
-            "Simulation",
-            "Results",
-            "Tools"
+            zh(u8"文件"),
+            zh(u8"编辑"),
+            zh(u8"几何"),
+            zh(u8"工况"),
+            zh(u8"仿真"),
+            zh(u8"结果"),
+            zh(u8"工具")
         };
         for (const QString &title : menuTitles) {
             addStep(report, "Menu exists: " + title, findTopLevelMenu(window, title) != nullptr);
@@ -600,8 +605,8 @@ UiValidationReport UiSmokeValidator::validate() const
         for (const QString &title : removedTopLevelMenus) {
             addStep(report, "Old top-level menu removed: " + title, findTopLevelMenu(window, title) == nullptr);
         }
-        QMenu *fileMenu = findTopLevelMenu(window, "File");
-        QMenu *recentProjectsMenu = findSubMenu(fileMenu, "Recent Projects");
+        QMenu *fileMenu = findTopLevelMenu(window, zh(u8"文件"));
+        QMenu *recentProjectsMenu = findSubMenu(fileMenu, zh(u8"最近工程"));
         addStep(report, "Recent Projects submenu exists", recentProjectsMenu != nullptr);
         addStep(
             report,
@@ -609,25 +614,25 @@ UiValidationReport UiSmokeValidator::validate() const
             countActionsBeforeFirstSeparator(recentProjectsMenu) == 8,
             recentProjectsMenu ? QString("slots=%1").arg(countActionsBeforeFirstSeparator(recentProjectsMenu)) : "Menu not found"
         );
-        QAction *clearRecentProjectsAction = findMenuActionByText(recentProjectsMenu, "Clear Recent Projects");
+        QAction *clearRecentProjectsAction = findMenuActionByText(recentProjectsMenu, zh(u8"清空最近工程"));
         addStep(
             report,
             "Clear Recent Projects is disabled initially",
             clearRecentProjectsAction && !clearRecentProjectsAction->isEnabled(),
             clearRecentProjectsAction ? QString() : "Action not found"
         );
-        QMenu *geometryMenu = findTopLevelMenu(window, "Geometry");
-        addStep(report, "Geometry Face Groups submenu exists", findSubMenu(geometryMenu, "Face Groups") != nullptr);
-        QMenu *resultsMenu = findTopLevelMenu(window, "Results");
-        addStep(report, "Results field submenu exists", findSubMenu(resultsMenu, "Result Field") != nullptr);
-        addStep(report, "Results deformation submenu exists", findSubMenu(resultsMenu, "Deformation Scale") != nullptr);
+        QMenu *geometryMenu = findTopLevelMenu(window, zh(u8"几何"));
+        addStep(report, "Geometry Face Groups submenu exists", findSubMenu(geometryMenu, zh(u8"面组")) != nullptr);
+        QMenu *resultsMenu = findTopLevelMenu(window, zh(u8"结果"));
+        addStep(report, "Results field submenu exists", findSubMenu(resultsMenu, zh(u8"结果场")) != nullptr);
+        addStep(report, "Results deformation submenu exists", findSubMenu(resultsMenu, zh(u8"变形比例")) != nullptr);
 
         const QStringList dockTitles{
-            "Project / Model",
-            "Diagnostics",
-            "Properties",
-            QString::fromUtf8(u8"结果后处理"),
-            "Log"
+            zh(u8"工程 / 模型"),
+            zh(u8"诊断"),
+            zh(u8"属性"),
+            zh(u8"结果后处理"),
+            zh(u8"日志")
         };
         for (const QString &title : dockTitles) {
             addStep(report, "Dock exists: " + title, hasDockWidgetTitle(window, title));
@@ -636,8 +641,8 @@ UiValidationReport UiSmokeValidator::validate() const
     addStep(report, "Diagnostics empty state visible", diagnosticEmptyStateVisible(window));
     addStep(report, "Log view exists", hasNamedWidget(window, "log.view"));
     addStep(report, "Log placeholder configured", logPlaceholderConfigured(window));
-        addStep(report, "Toolbar exists: Main Toolbar", hasToolBarTitle(window, "Main Toolbar"));
-        addStep(report, "Toolbar is icon-only", hasIconOnlyToolBar(window, "Main Toolbar"));
+        addStep(report, "Toolbar exists: Main Toolbar", hasToolBarTitle(window, zh(u8"主工具栏")));
+        addStep(report, "Toolbar is icon-only", hasIconOnlyToolBar(window, zh(u8"主工具栏")));
         addStep(report, "Application white UI style applied", qApp && !qApp->styleSheet().isEmpty());
         addStep(report, "Dock style applied", applicationStyleContains("QDockWidget"));
         addStep(report, "Menu style applied", applicationStyleContains("QMenuBar"));
@@ -695,7 +700,7 @@ UiValidationReport UiSmokeValidator::validate() const
             addActionDisabledStep(report, window, commandId);
         }
 
-        QAction *projectResourcesAction = findActionByText(window, "Project Resources");
+        QAction *projectResourcesAction = findActionByText(window, zh(u8"工程资源"));
         addStep(
             report,
             "Action disabled without project: Project Resources",

@@ -172,7 +172,7 @@ UiSampleScreenshotResult UiSampleScreenshotter::capture()
             result.messages.append("Failed to select demo geometry Box_1.");
             return result;
         }
-        raiseDock(window, "Properties");
+        raiseDock(window, QString::fromUtf8(u8"属性"));
         QApplication::processEvents();
         if (!saveWindowScreenshot(window, propertyScreenshot)) {
             result.messages.append("Failed to save screenshot: " + propertyScreenshot);

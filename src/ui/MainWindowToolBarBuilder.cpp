@@ -13,6 +13,11 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 void prepareToolAction(QAction *action, const QIcon &icon, const QString &toolTip)
 {
     if (!action) {
@@ -25,7 +30,7 @@ void prepareToolAction(QAction *action, const QIcon &icon, const QString &toolTi
 
 void MainWindowToolBarBuilder::build(QMainWindow *window, const MainWindowActions &actions)
 {
-    auto *toolBar = window->addToolBar("Main Toolbar");
+    auto *toolBar = window->addToolBar(zh(u8"主工具栏"));
     toolBar->setMovable(false);
     toolBar->setFloatable(false);
     toolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
@@ -34,30 +39,30 @@ void MainWindowToolBarBuilder::build(QMainWindow *window, const MainWindowAction
     prepareToolAction(
         actions.newProject,
         window->style()->standardIcon(QStyle::SP_FileIcon),
-        "New Project"
+        zh(u8"新建工程")
     );
     prepareToolAction(
         actions.openProject,
         window->style()->standardIcon(QStyle::SP_DialogOpenButton),
-        "Open Project"
+        zh(u8"打开工程")
     );
-    prepareToolAction(actions.createBox, UiIconFactory::toolbarBadge("B", QColor("#2563eb")), "Create Box");
-    prepareToolAction(actions.createCylinder, UiIconFactory::toolbarBadge("C", QColor("#0f766e")), "Create Cylinder");
-    prepareToolAction(actions.pickFace, UiIconFactory::toolbarBadge("P", QColor("#7c3aed")), "Pick Face");
+    prepareToolAction(actions.createBox, UiIconFactory::toolbarBadge("B", QColor("#2563eb")), zh(u8"创建长方体"));
+    prepareToolAction(actions.createCylinder, UiIconFactory::toolbarBadge("C", QColor("#0f766e")), zh(u8"创建圆柱体"));
+    prepareToolAction(actions.pickFace, UiIconFactory::toolbarBadge("P", QColor("#7c3aed")), zh(u8"拾取面"));
     prepareToolAction(
         actions.createFaceGroupFromPick,
         UiIconFactory::toolbarBadge("G+", QColor("#15803d")),
-        "Create Face Group from Pick"
+        zh(u8"从拾取创建面组")
     );
     prepareToolAction(
         actions.addPickedFacesToFaceGroup,
         UiIconFactory::toolbarBadge("F+", QColor("#ca8a04")),
-        "Add Picked Faces to Face Group"
+        zh(u8"将拾取面加入面组")
     );
     prepareToolAction(
         actions.removePickedFacesFromFaceGroup,
         UiIconFactory::toolbarBadge("F-", QColor("#dc2626")),
-        "Remove Picked Faces from Face Group"
+        zh(u8"从面组移除拾取面")
     );
 
     toolBar->addAction(actions.newProject);

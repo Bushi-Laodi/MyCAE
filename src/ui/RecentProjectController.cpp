@@ -14,6 +14,14 @@
 #include <QFileInfo>
 #include <QMenu>
 
+namespace
+{
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+}
+
 RecentProjectController::RecentProjectController(RecentProjectContext context, RecentProjectCallbacks callbacks)
     : m_context(context)
     , m_callbacks(std::move(callbacks))
@@ -81,6 +89,6 @@ void RecentProjectController::clearProjects() const
     m_context.appSettings.clearRecentProjects();
     updateActions();
     if (m_callbacks.writeLog) {
-        m_callbacks.writeLog("Recent projects cleared.");
+        m_callbacks.writeLog(zh(u8"已清空最近工程。"));
     }
 }

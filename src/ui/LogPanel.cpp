@@ -3,6 +3,14 @@
 #include <QPlainTextEdit>
 #include <QVBoxLayout>
 
+namespace
+{
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+}
+
 LogPanel::LogPanel(QWidget *parent)
     : QWidget(parent)
 {
@@ -12,7 +20,7 @@ LogPanel::LogPanel(QWidget *parent)
     m_logView = new QPlainTextEdit(this);
     m_logView->setObjectName("log.view");
     m_logView->setReadOnly(true);
-    m_logView->setPlaceholderText("No log messages yet.");
+    m_logView->setPlaceholderText(zh(u8"暂无日志消息。"));
 
     layout->addWidget(m_logView);
 }
