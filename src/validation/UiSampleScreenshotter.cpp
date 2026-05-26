@@ -185,7 +185,7 @@ UiSampleScreenshotResult UiSampleScreenshotter::capture()
             result.messages.append("Failed to select demo result.");
             return result;
         }
-        raiseDock(window, "Result Postprocess");
+        raiseDock(window, QString::fromUtf8(u8"结果后处理"));
         QApplication::processEvents();
         if (!saveWindowScreenshot(window, resultScreenshot)) {
             result.messages.append("Failed to save screenshot: " + resultScreenshot);

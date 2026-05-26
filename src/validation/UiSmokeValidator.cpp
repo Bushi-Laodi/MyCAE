@@ -489,10 +489,11 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
         const QStringList resultSections{
             "result.section.identity",
             "result.section.display",
+            "result.section.probe",
+            "result.section.extremes",
             "result.section.status",
             "result.section.animation",
-            "result.section.export",
-            "result.section.history"
+            "result.section.exportHistory"
         };
         for (const QString &section : resultSections) {
             addStep(report, "Result postprocess section exists: " + section, hasNamedWidget(window, section));
@@ -517,13 +518,13 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
         addStep(
             report,
             "Result postprocess status populated",
-            namedLabelText(window, "result.coverage.label").startsWith("Coverage: Nodes"),
+            namedLabelText(window, "result.coverage.label").startsWith(QString::fromUtf8(u8"覆盖率：节点")),
             namedLabelText(window, "result.coverage.label")
         );
         addStep(
             report,
             "Result postprocess field unit populated",
-            namedLabelText(window, "result.fieldUnit.label").contains("unit: model length"),
+            namedLabelText(window, "result.fieldUnit.label").contains(QString::fromUtf8(u8"单位：model length")),
             namedLabelText(window, "result.fieldUnit.label")
         );
         addStep(report, "Result scalar range lock exists", hasNamedWidget(window, "result.scalarRange.lock"));
@@ -532,7 +533,7 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
         addStep(
             report,
             "Result probe prompt visible",
-            namedLabelText(window, "result.probe.label").startsWith("Probe: click"),
+            namedLabelText(window, "result.probe.label").contains(QString::fromUtf8(u8"点击结果模型")),
             namedLabelText(window, "result.probe.label")
         );
     }
@@ -625,7 +626,7 @@ UiValidationReport UiSmokeValidator::validate() const
             "Project / Model",
             "Diagnostics",
             "Properties",
-            "Result Postprocess",
+            QString::fromUtf8(u8"结果后处理"),
             "Log"
         };
         for (const QString &title : dockTitles) {

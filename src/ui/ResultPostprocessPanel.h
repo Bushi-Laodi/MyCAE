@@ -41,6 +41,22 @@ signals:
 private:
     void setStatusText(const ResultObject *resultObject);
 
+    QLabel *m_probeHintLabel = nullptr;
+    QLabel *m_probeNodeIdValue = nullptr;
+    QLabel *m_probeElementIdValue = nullptr;
+    QLabel *m_probeCoordinateValue = nullptr;
+    QLabel *m_probeUxValue = nullptr;
+    QLabel *m_probeUyValue = nullptr;
+    QLabel *m_probeUzValue = nullptr;
+    QLabel *m_probeMagnitudeValue = nullptr;
+    QLabel *m_probeVonMisesValue = nullptr;
+    QLabel *m_currentMinValue = nullptr;
+    QLabel *m_currentMaxValue = nullptr;
+    QLabel *m_maxDisplacementValue = nullptr;
+    QLabel *m_maxUxValue = nullptr;
+    QLabel *m_maxUyValue = nullptr;
+    QLabel *m_maxUzValue = nullptr;
+    QLabel *m_maxVonMisesValue = nullptr;
     QComboBox *m_fieldComboBox = nullptr;
     QDoubleSpinBox *m_scaleSpinBox = nullptr;
     QCheckBox *m_meshEdgesCheckBox = nullptr;
@@ -52,10 +68,8 @@ private:
     QLabel *m_fieldUnitLabel = nullptr;
     QLabel *m_scalarRangeLabel = nullptr;
     QLabel *m_coverageLabel = nullptr;
-    QLabel *m_extremaLabel = nullptr;
     QLabel *m_fileStatusLabel = nullptr;
     QLabel *m_messagesLabel = nullptr;
-    QLabel *m_probeLabel = nullptr;
     QDoubleSpinBox *m_animationSpeedSpinBox = nullptr;
     QLabel *m_animationFrameLabel = nullptr;
     QPushButton *m_playAnimationButton = nullptr;

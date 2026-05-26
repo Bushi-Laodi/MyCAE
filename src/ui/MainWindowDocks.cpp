@@ -14,6 +14,11 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 QScrollArea *createDockScrollArea(QWidget *content, QWidget *parent, const QString &objectName, int minimumWidth)
 {
     auto *scrollArea = new QScrollArea(parent);
@@ -72,7 +77,7 @@ MainWindowDockWidgets MainWindowDockBuilder::build(QMainWindow *window, const Ma
     propertyDock->setWidget(createDockScrollArea(widgets.propertyPanel, propertyDock, "property.scrollArea", 340));
     window->addDockWidget(Qt::RightDockWidgetArea, propertyDock);
 
-    auto *postprocessDock = new QDockWidget("Result Postprocess", window);
+    auto *postprocessDock = new QDockWidget(zh(u8"结果后处理"), window);
     postprocessDock->setMinimumWidth(380);
     widgets.resultPostprocessPanel = new ResultPostprocessPanel(postprocessDock);
     QObject::connect(
