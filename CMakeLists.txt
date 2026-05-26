@@ -371,6 +371,8 @@ qt_add_executable(MyCAE
     src/ui/SampleValidationDialog.h
     src/ui/SelectionInteractionController.cpp
     src/ui/SelectionInteractionController.h
+    src/ui/UiIconFactory.cpp
+    src/ui/UiIconFactory.h
     src/ui/property/FaceGroupPropertyView.cpp
     src/ui/property/FaceGroupPropertyView.h
     src/ui/property/GeometryPropertyView.cpp
