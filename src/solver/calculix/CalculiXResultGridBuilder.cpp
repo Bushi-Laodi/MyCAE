@@ -103,6 +103,7 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
     vtkNew<vtkDoubleArray> uzArray;
     vtkNew<vtkDoubleArray> displacementMagnitudeArray;
     vtkNew<vtkDoubleArray> selectedPointScalar;
+    vtkNew<vtkIntArray> nodeIdArray;
     displacementVector->SetName("Displacement");
     displacementVector->SetNumberOfComponents(3);
     uxArray->SetName(CalculiXResultFields::Ux);
@@ -110,6 +111,7 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
     uzArray->SetName(CalculiXResultFields::Uz);
     displacementMagnitudeArray->SetName(CalculiXResultFields::DisplacementMagnitude);
     selectedPointScalar->SetName(buildResult.scalarName.toUtf8().constData());
+    nodeIdArray->SetName("MyCAE_NodeId");
 
     std::unordered_map<int, vtkIdType> nodeIdToVtkId;
     nodeIdToVtkId.reserve(meshData.nodes.size());
@@ -122,6 +124,7 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
         if (displacementIt == displacementByNodeId.end()) {
             const vtkIdType vtkPointId = points->InsertNextPoint(node.x, node.y, node.z);
             nodeIdToVtkId.insert({node.id, vtkPointId});
+            nodeIdArray->InsertNextValue(node.id);
             displacementVector->InsertNextTuple3(0.0, 0.0, 0.0);
             uxArray->InsertNextValue(0.0);
             uyArray->InsertNextValue(0.0);
@@ -143,6 +146,7 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
         );
         nodeIdToVtkId.insert({node.id, vtkPointId});
 
+        nodeIdArray->InsertNextValue(node.id);
         displacementVector->InsertNextTuple3(displacement.ux, displacement.uy, displacement.uz);
         uxArray->InsertNextValue(displacement.ux);
         uyArray->InsertNextValue(displacement.uy);
@@ -159,7 +163,9 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
     auto grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
     grid->SetPoints(points);
     vtkNew<vtkDoubleArray> vonMisesArray;
+    vtkNew<vtkIntArray> elementIdArray;
     vonMisesArray->SetName(CalculiXResultFields::VonMisesStress);
+    elementIdArray->SetName("MyCAE_ElementId");
 
     for (const TetraElement &element : meshData.tetraElements) {
         const auto node1 = nodeIdToVtkId.find(element.node1);
@@ -180,6 +186,7 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
         tetra->GetPointIds()->SetId(2, node3->second);
         tetra->GetPointIds()->SetId(3, node4->second);
         grid->InsertNextCell(tetra->GetCellType(), tetra->GetPointIds());
+        elementIdArray->InsertNextValue(element.id);
 
         double cellStress = 0.0;
         const auto stressIt = stressByElementId.find(element.id);
@@ -198,6 +205,7 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
     grid->GetPointData()->AddArray(uyArray);
     grid->GetPointData()->AddArray(uzArray);
     grid->GetPointData()->AddArray(displacementMagnitudeArray);
+    grid->GetPointData()->AddArray(nodeIdArray);
     if (isDisplacementField(buildResult.scalarName)
             && buildResult.scalarName != CalculiXResultFields::Ux
             && buildResult.scalarName != CalculiXResultFields::Uy
@@ -206,6 +214,7 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
         grid->GetPointData()->AddArray(selectedPointScalar);
     }
     grid->GetCellData()->AddArray(vonMisesArray);
+    grid->GetCellData()->AddArray(elementIdArray);
     grid->GetPointData()->SetActiveVectors("Displacement");
     if (buildResult.scalarAssociation == CalculiXResultScalarAssociation::Point) {
         grid->GetPointData()->SetActiveScalars(buildResult.scalarName.toUtf8().constData());

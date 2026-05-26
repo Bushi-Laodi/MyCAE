@@ -13,51 +13,90 @@
 #include "ui/property/SolverPropertyView.h"
 
 #include <QFormLayout>
+#include <QGroupBox>
 #include <QLabel>
 #include <QString>
 #include <QVBoxLayout>
+
+namespace
+{
+QLabel *createValueLabel(const QString &text, QWidget *parent, const QString &objectName)
+{
+    auto *label = new QLabel(text, parent);
+    label->setObjectName(objectName);
+    label->setWordWrap(true);
+    label->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    return label;
+}
+
+QFormLayout *createSection(QVBoxLayout *layout, const QString &title, QWidget *parent, const QString &objectName)
+{
+    auto *group = new QGroupBox(title, parent);
+    group->setObjectName(objectName);
+
+    auto *form = new QFormLayout(group);
+    form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+    form->setLabelAlignment(Qt::AlignRight | Qt::AlignTop);
+    form->setFormAlignment(Qt::AlignTop);
+    form->setHorizontalSpacing(10);
+    form->setVerticalSpacing(5);
+
+    layout->addWidget(group);
+    return form;
+}
+
+QWidget *createDetailsSection(QVBoxLayout *layout, QWidget *parent)
+{
+    auto *group = new QGroupBox("Solver / Result Details", parent);
+    group->setObjectName("property.section.details");
+    layout->addWidget(group);
+    return group;
+}
+}
 
 PropertyPanel::PropertyPanel(QWidget *parent)
     : QWidget(parent)
 {
     m_mainLayout = new QVBoxLayout(this);
+    m_mainLayout->setContentsMargins(8, 8, 8, 8);
+    m_mainLayout->setSpacing(8);
 
-    auto *form = new QFormLayout;
-    m_selectionValue = new QLabel("None", this);
-    m_typeValue = new QLabel("-", this);
-    m_nameValue = new QLabel("-", this);
-    m_radiusValue = new QLabel("-", this);
-    m_lengthValue = new QLabel("-", this);
-    m_widthValue = new QLabel("-", this);
-    m_heightValue = new QLabel("-", this);
-    m_sourceGeometryValue = new QLabel("-", this);
-    m_sourceGeometryTypeValue = new QLabel("-", this);
-    m_sourceStepFileValue = new QLabel("-", this);
-    m_meshFileValue = new QLabel("-", this);
-    m_nodeCountValue = new QLabel("-", this);
-    m_tetraCountValue = new QLabel("-", this);
-    m_createdAtValue = new QLabel("-", this);
+    m_selectionValue = createValueLabel("None", this, "property.selection.value");
+    m_typeValue = createValueLabel("-", this, "property.type.value");
+    m_nameValue = createValueLabel("-", this, "property.name.value");
+    m_radiusValue = createValueLabel("-", this, "property.radius.value");
+    m_lengthValue = createValueLabel("-", this, "property.length.value");
+    m_widthValue = createValueLabel("-", this, "property.width.value");
+    m_heightValue = createValueLabel("-", this, "property.height.value");
+    m_sourceGeometryValue = createValueLabel("-", this, "property.sourceGeometry.value");
+    m_sourceGeometryTypeValue = createValueLabel("-", this, "property.sourceType.value");
+    m_sourceStepFileValue = createValueLabel("-", this, "property.sourceStep.value");
+    m_meshFileValue = createValueLabel("-", this, "property.meshFile.value");
+    m_nodeCountValue = createValueLabel("-", this, "property.nodeCount.value");
+    m_tetraCountValue = createValueLabel("-", this, "property.tetraCount.value");
+    m_createdAtValue = createValueLabel("-", this, "property.createdAt.value");
 
-    form->addRow("Selection", m_selectionValue);
-    form->addRow("Type", m_typeValue);
-    form->addRow("Name", m_nameValue);
-    form->addRow("Radius", m_radiusValue);
-    form->addRow("Length", m_lengthValue);
-    form->addRow("Width", m_widthValue);
-    form->addRow("Height", m_heightValue);
-    form->addRow("Source Geometry", m_sourceGeometryValue);
-    form->addRow("Source Type", m_sourceGeometryTypeValue);
-    form->addRow("Source STEP", m_sourceStepFileValue);
-    form->addRow("Mesh File", m_meshFileValue);
-    form->addRow("Node Count", m_nodeCountValue);
-    form->addRow("Tetra Count", m_tetraCountValue);
-    form->addRow("Created At", m_createdAtValue);
+    QFormLayout *identityForm = createSection(m_mainLayout, "Selection", this, "property.section.selection");
+    identityForm->addRow("Selection", m_selectionValue);
+    identityForm->addRow("Type", m_typeValue);
+    identityForm->addRow("Name", m_nameValue);
+    identityForm->addRow("Created At", m_createdAtValue);
+    identityForm->addRow("Source Geometry", m_sourceGeometryValue);
+    identityForm->addRow("Source Type", m_sourceGeometryTypeValue);
 
-    m_mainLayout->addLayout(form);
+    QFormLayout *geometryForm = createSection(m_mainLayout, "Geometry", this, "property.section.geometry");
+    geometryForm->addRow("Radius", m_radiusValue);
+    geometryForm->addRow("Length", m_lengthValue);
+    geometryForm->addRow("Width", m_widthValue);
+    geometryForm->addRow("Height", m_heightValue);
 
-    // Dynamic area for solver data (materials, BCs, loads)
-    m_dynamicArea = new QWidget(this);
-    m_mainLayout->addWidget(m_dynamicArea);
+    QFormLayout *sourceForm = createSection(m_mainLayout, "Mesh", this, "property.section.sourceMesh");
+    sourceForm->addRow("Source STEP", m_sourceStepFileValue);
+    sourceForm->addRow("Mesh File", m_meshFileValue);
+    sourceForm->addRow("Node Count", m_nodeCountValue);
+    sourceForm->addRow("Tetra Count", m_tetraCountValue);
+
+    m_dynamicArea = createDetailsSection(m_mainLayout, this);
     m_mainLayout->addStretch();
 }
 
@@ -79,22 +118,25 @@ void PropertyPanel::clearAll()
     m_createdAtValue->setText("-");
 }
 
-QWidget *PropertyPanel::resetDynamicArea()
+QWidget *PropertyPanel::resetDynamicArea(bool visible)
 {
     if (m_dynamicArea) {
         m_mainLayout->removeWidget(m_dynamicArea);
-        m_dynamicArea->deleteLater();
+        delete m_dynamicArea;
+        m_dynamicArea = nullptr;
     }
 
-    m_dynamicArea = new QWidget(this);
-    m_mainLayout->insertWidget(1, m_dynamicArea);
+    m_dynamicArea = new QGroupBox("Solver / Result Details", this);
+    m_dynamicArea->setObjectName("property.section.details");
+    m_dynamicArea->setVisible(visible);
+    m_mainLayout->insertWidget(m_mainLayout->count() - 1, m_dynamicArea);
     return m_dynamicArea;
 }
 
 void PropertyPanel::showEmptySelection()
 {
     clearAll();
-    resetDynamicArea();
+    resetDynamicArea(false);
 }
 
 void PropertyPanel::showBoxGeometry(const BoxGeometry &box)
@@ -115,7 +157,7 @@ void PropertyPanel::showBoxGeometry(const BoxGeometry &box)
     m_tetraCountValue->setText("-");
     m_createdAtValue->setText("-");
 
-    resetDynamicArea();
+    resetDynamicArea(false);
 }
 
 void PropertyPanel::showCylinderGeometry(const CylinderGeometry &cylinder)
@@ -136,7 +178,7 @@ void PropertyPanel::showCylinderGeometry(const CylinderGeometry &cylinder)
     m_tetraCountValue->setText("-");
     m_createdAtValue->setText("-");
 
-    resetDynamicArea();
+    resetDynamicArea(false);
 }
 
 void PropertyPanel::showGeometryObject(const GeometryObject &geometry)
@@ -168,7 +210,7 @@ void PropertyPanel::showMeshObject(const MeshObject &meshObject)
     m_tetraCountValue->setText(QString::number(meshObject.tetraCount));
     m_createdAtValue->setText(meshObject.createdAt);
 
-    resetDynamicArea();
+    resetDynamicArea(false);
 }
 
 void PropertyPanel::showFaceGroup(const FaceGroup &faceGroup)

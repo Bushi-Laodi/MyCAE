@@ -80,6 +80,9 @@ QJsonObject toJsonObject(const ResultObject &result)
     object.insert("meshElementCount", result.meshElementCount);
     object.insert("scalarMin", result.scalarMin);
     object.insert("scalarMax", result.scalarMax);
+    object.insert("scalarRangeLocked", result.scalarRangeLocked);
+    object.insert("lockedScalarMin", result.lockedScalarMin);
+    object.insert("lockedScalarMax", result.lockedScalarMax);
     object.insert("checkMessages", toJsonArray(result.checkMessages));
     object.insert("createdAt", result.createdAt);
     object.insert("success", result.success);
@@ -113,6 +116,9 @@ ResultObject fromJsonObject(const QJsonObject &object)
     result.meshElementCount = object.value("meshElementCount").toInt(0);
     result.scalarMin = object.value("scalarMin").toDouble(0.0);
     result.scalarMax = object.value("scalarMax").toDouble(0.0);
+    result.scalarRangeLocked = object.value("scalarRangeLocked").toBool(false);
+    result.lockedScalarMin = object.value("lockedScalarMin").toDouble(0.0);
+    result.lockedScalarMax = object.value("lockedScalarMax").toDouble(0.0);
     result.checkMessages = toStringList(object.value("checkMessages").toArray());
     result.createdAt = object.value("createdAt").toString();
     result.success = object.value("success").toBool(false);

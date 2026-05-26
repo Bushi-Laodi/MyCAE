@@ -46,10 +46,19 @@ bool loadProjectData(ProjectModel &projectModel, QString *errorMessage)
 {
     const GeometryManager geometryManager;
     const ProjectModelLoader loader(geometryManager);
-    return loader.loadGeometries(projectModel, errorMessage)
-        && loader.loadMeshes(projectModel, errorMessage)
-        && loader.loadSimulationCase(projectModel, errorMessage)
-        && loader.loadResults(projectModel, errorMessage);
+    if (!loader.loadGeometries(projectModel, errorMessage)) {
+        return false;
+    }
+    if (!loader.loadMeshes(projectModel, errorMessage)) {
+        return false;
+    }
+    if (!loader.loadSimulationCase(projectModel, errorMessage)) {
+        return false;
+    }
+    if (!loader.loadResults(projectModel, errorMessage)) {
+        return false;
+    }
+    return true;
 }
 
 void validateProjectModel(const ProjectModel &projectModel, SampleValidationReport &report)

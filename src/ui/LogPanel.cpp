@@ -7,10 +7,13 @@ LogPanel::LogPanel(QWidget *parent)
     : QWidget(parent)
 {
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setContentsMargins(6, 6, 6, 6);
 
     m_logView = new QPlainTextEdit(this);
+    m_logView->setObjectName("log.view");
     m_logView->setReadOnly(true);
+    m_logView->setPlaceholderText("No log messages yet.");
+
     layout->addWidget(m_logView);
 }
 

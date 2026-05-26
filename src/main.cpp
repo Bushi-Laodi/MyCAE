@@ -1,6 +1,7 @@
 #include "ui/AppStyle.h"
 #include "ui/MainWindow.h"
 #include "validation/SampleProjectValidator.h"
+#include "validation/UiSampleScreenshotter.h"
 #include "validation/UiSmokeValidator.h"
 
 #include <QApplication>
@@ -9,8 +10,6 @@
 #include <QSurfaceFormat>
 #include <QTextStream>
 #include <QVTKOpenGLNativeWidget.h>
-
-#include <cstdio>
 
 namespace
 {
@@ -55,6 +54,25 @@ int runUiValidation()
 
     return report.success() ? 0 : 1;
 }
+
+int runUiSampleCapture(const QCommandLineParser &parser)
+{
+    const UiSampleScreenshotResult result = UiSampleScreenshotter(parser.value("ui-screenshot-dir")).capture();
+
+    QTextStream out(stdout);
+    out << "MyCAE UI sample screenshots\n";
+    out << "Status: " << (result.success ? "success" : "failed") << "\n";
+    out << "Output: " << result.outputDirectory << "\n";
+    for (const QString &filePath : result.screenshotFiles) {
+        out << "Screenshot: " << filePath << "\n";
+    }
+    for (const QString &message : result.messages) {
+        out << message << "\n";
+    }
+    out.flush();
+
+    return result.success ? 0 : 1;
+}
 }
 
 int main(int argc, char *argv[])
@@ -71,6 +89,8 @@ int main(int argc, char *argv[])
     parser.addHelpOption();
     parser.addOption(QCommandLineOption("validate-samples", "Run demo and CalculiX sample validation, then exit."));
     parser.addOption(QCommandLineOption("validate-ui", "Run UI smoke validation, then exit."));
+    parser.addOption(QCommandLineOption("capture-ui-sample", "Open box_pressure_demo, capture UI screenshots, then exit."));
+    parser.addOption(QCommandLineOption("ui-screenshot-dir", "Directory for --capture-ui-sample screenshots.", "path"));
     parser.addOption(QCommandLineOption("samples-root", "Samples root directory.", "path"));
     parser.addOption(QCommandLineOption("validation-work-root", "Validation work directory.", "path"));
     parser.process(app);
@@ -80,6 +100,9 @@ int main(int argc, char *argv[])
     }
     if (parser.isSet("validate-ui")) {
         return runUiValidation();
+    }
+    if (parser.isSet("capture-ui-sample")) {
+        return runUiSampleCapture(parser);
     }
 
     MainWindow window;

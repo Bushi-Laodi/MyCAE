@@ -2,6 +2,8 @@
 
 #include "picking/PickMode.h"
 #include "picking/PickSelection.h"
+#include "result/ResultExtrema.h"
+#include "result/ResultProbe.h"
 
 #include <QFrame>
 #include <QString>
@@ -37,6 +39,8 @@ public:
         double scalarMin,
         double scalarMax,
         bool showMeshEdges,
+        const ResultExtremeMarker &minimumMarker,
+        const ResultExtremeMarker &maximumMarker,
         bool resetCamera = true
     );
     bool saveScreenshot(const QString &filePath);
@@ -44,9 +48,11 @@ public:
     void clearHighlight();
     void highlightFaceIndices(const std::vector<int> &faceIndices);
     void highlightResultPosition(double x, double y, double z);
+    void highlightResultExtrema(const ResultExtremeMarker &minimum, const ResultExtremeMarker &maximum);
 
 signals:
     void facePicked(const PickSelection &selection);
+    void resultProbePicked(const ResultProbe &probe);
 
 private:
     QLabel *m_titleLabel = nullptr;

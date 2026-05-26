@@ -231,12 +231,15 @@ qt_add_executable(MyCAE
     src/result/ResultDataLoader.h
     src/result/ResultDisplayController.cpp
     src/result/ResultDisplayController.h
+    src/result/ResultFieldMetadata.cpp
+    src/result/ResultFieldMetadata.h
     src/result/ResultExtrema.h
     src/result/ResultExtremaCalculator.cpp
     src/result/ResultExtremaCalculator.h
     src/result/ResultManager.cpp
     src/result/ResultManager.h
     src/result/ResultObject.h
+    src/result/ResultProbe.h
     src/result/ResultReportExporter.cpp
     src/result/ResultReportExporter.h
     src/solver/BoundaryCondition.h
@@ -411,6 +414,8 @@ qt_add_executable(MyCAE
     src/validation/SampleProjectValidator.h
     src/validation/UiSmokeValidator.cpp
     src/validation/UiSmokeValidator.h
+    src/validation/UiSampleScreenshotter.cpp
+    src/validation/UiSampleScreenshotter.h
 )
 
 target_include_directories(MyCAE PRIVATE src ${OpenCASCADE_INCLUDE_DIR})
@@ -459,6 +464,15 @@ if (BUILD_TESTING)
     set_tests_properties(MyCAEValidateUi PROPERTIES
         WORKING_DIRECTORY "$<TARGET_FILE_DIR:MyCAE>"
         TIMEOUT 60
+    )
+
+    add_test(
+        NAME MyCAECaptureUiSample
+        COMMAND $<TARGET_FILE:MyCAE> --capture-ui-sample --ui-screenshot-dir "$<TARGET_FILE_DIR:MyCAE>/ui_screenshots"
+    )
+    set_tests_properties(MyCAECaptureUiSample PROPERTIES
+        WORKING_DIRECTORY "$<TARGET_FILE_DIR:MyCAE>"
+        TIMEOUT 90
     )
 endif()
 

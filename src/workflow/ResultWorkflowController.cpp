@@ -7,6 +7,7 @@
 #include "result/ResultDisplayController.h"
 #include "result/ResultManager.h"
 #include "result/ResultObject.h"
+#include "result/ResultProbe.h"
 #include "result/ResultReportExporter.h"
 #include "ui/AppSettings.h"
 #include "ui/ProjectTreePanel.h"
@@ -122,6 +123,66 @@ QStringList ResultWorkflowController::setSelectedUndeformedOverlay(bool enabled)
     saveResultIndex(logMessages);
     logMessages.append(redisplaySelectedResult());
     return logMessages;
+}
+
+QStringList ResultWorkflowController::setSelectedScalarRangeLock(bool locked)
+{
+    QStringList logMessages;
+    ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        return {"Scalar range lock skipped: no result is selected."};
+    }
+
+    resultObject->scalarRangeLocked = locked;
+    if (locked && resultObject->lockedScalarMin == resultObject->lockedScalarMax) {
+        resultObject->lockedScalarMin = resultObject->scalarMin;
+        resultObject->lockedScalarMax = resultObject->scalarMax;
+    }
+    saveResultIndex(logMessages);
+    logMessages.append(redisplaySelectedResult(false));
+    logMessages.append(locked ? "Result scalar range locked." : "Result scalar range set to automatic.");
+    return logMessages;
+}
+
+QStringList ResultWorkflowController::setSelectedScalarRange(double minimum, double maximum)
+{
+    QStringList logMessages;
+    ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        return {"Scalar range change skipped: no result is selected."};
+    }
+
+    resultObject->scalarRangeLocked = true;
+    resultObject->lockedScalarMin = minimum;
+    resultObject->lockedScalarMax = maximum;
+    saveResultIndex(logMessages);
+    logMessages.append(redisplaySelectedResult(false));
+    logMessages.append(QString("Result scalar range locked: [%1, %2].")
+        .arg(minimum, 0, 'g', 6)
+        .arg(maximum, 0, 'g', 6));
+    return logMessages;
+}
+
+QStringList ResultWorkflowController::setSelectedProbe(const ResultProbe &probe)
+{
+    ResultObject *resultObject = m_projectModel.resultForSelection();
+    if (!resultObject) {
+        return {"Result probe skipped: no result is selected."};
+    }
+
+    if (m_resultPostprocessPanel) {
+        m_resultPostprocessPanel->setProbe(probe);
+    }
+    if (!probe.valid) {
+        return {"Result probe cleared."};
+    }
+    return {QString("Result probe: node=%1, element=%2, U=(%3,%4,%5), Von Mises=%6.")
+        .arg(probe.nodeId)
+        .arg(probe.elementId)
+        .arg(probe.ux, 0, 'g', 6)
+        .arg(probe.uy, 0, 'g', 6)
+        .arg(probe.uz, 0, 'g', 6)
+        .arg(probe.vonMisesStress, 0, 'g', 6)};
 }
 
 QStringList ResultWorkflowController::playSelectedAnimation(double speed)

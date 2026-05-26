@@ -11,6 +11,7 @@ class RenderView;
 class ResultPostprocessPanel;
 class QString;
 struct PickSelection;
+struct ResultProbe;
 struct Selection;
 
 struct MainWindowDockWidgets
@@ -26,11 +27,14 @@ struct MainWindowDockWidgets
 struct MainWindowDockCallbacks
 {
     std::function<void(const PickSelection &)> facePicked;
+    std::function<void(const ResultProbe &)> resultProbePicked;
     std::function<void(const Selection &)> selectionChanged;
     std::function<void(const QString &)> resultFieldChanged;
     std::function<void(double)> resultDeformationScaleChanged;
     std::function<void(bool)> resultMeshEdgesChanged;
     std::function<void(bool)> resultUndeformedOverlayChanged;
+    std::function<void(bool)> resultScalarRangeLockChanged;
+    std::function<void(double, double)> resultScalarRangeChanged;
     std::function<void(double)> resultAnimationPlayRequested;
     std::function<void()> resultAnimationStopRequested;
     std::function<void()> resultExportCsvRequested;

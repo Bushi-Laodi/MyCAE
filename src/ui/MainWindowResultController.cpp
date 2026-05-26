@@ -32,6 +32,21 @@ void MainWindowResultController::setSelectedUndeformedOverlay(bool enabled) cons
     writeMessagesAndUpdate(workflow().setSelectedUndeformedOverlay(enabled));
 }
 
+void MainWindowResultController::setSelectedScalarRangeLock(bool locked) const
+{
+    writeMessagesAndUpdate(workflow().setSelectedScalarRangeLock(locked));
+}
+
+void MainWindowResultController::setSelectedScalarRange(double minimum, double maximum) const
+{
+    writeMessagesAndUpdate(workflow().setSelectedScalarRange(minimum, maximum));
+}
+
+void MainWindowResultController::setSelectedProbe(const ResultProbe &probe) const
+{
+    writeMessagesAndUpdate(workflow().setSelectedProbe(probe));
+}
+
 void MainWindowResultController::playSelectedAnimation(double speed) const
 {
     writeMessagesAndUpdate(workflow().playSelectedAnimation(speed));

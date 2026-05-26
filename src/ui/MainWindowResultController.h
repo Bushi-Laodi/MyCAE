@@ -10,6 +10,7 @@ class ProjectModel;
 class ResultAnimationController;
 class ResultWorkflowController;
 class QWidget;
+struct ResultProbe;
 struct MainWindowDockWidgets;
 
 struct MainWindowResultCallbacks
@@ -36,6 +37,9 @@ public:
     void setSelectedDeformationScale(double scale) const;
     void setSelectedMeshEdges(bool enabled) const;
     void setSelectedUndeformedOverlay(bool enabled) const;
+    void setSelectedScalarRangeLock(bool locked) const;
+    void setSelectedScalarRange(double minimum, double maximum) const;
+    void setSelectedProbe(const ResultProbe &probe) const;
     void playSelectedAnimation(double speed) const;
     void stopSelectedAnimation() const;
     void applyAnimatedDeformationScale(double scale) const;

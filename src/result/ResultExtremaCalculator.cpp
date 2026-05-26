@@ -22,10 +22,11 @@ void updateNodeExtreme(
     double y,
     double z,
     double value,
-    const QString &fieldName
+    const QString &fieldName,
+    bool minimum
 )
 {
-    if (!extreme.valid || value > extreme.value) {
+    if (!extreme.valid || (minimum ? value < extreme.value : value > extreme.value)) {
         extreme.valid = true;
         extreme.nodeId = nodeId;
         extreme.x = x;
@@ -43,10 +44,11 @@ void updateElementExtreme(
     double y,
     double z,
     double value,
-    const QString &fieldName
+    const QString &fieldName,
+    bool minimum
 )
 {
-    if (!extreme.valid || value > extreme.value) {
+    if (!extreme.valid || (minimum ? value < extreme.value : value > extreme.value)) {
         extreme.valid = true;
         extreme.elementId = elementId;
         extreme.x = x;
@@ -193,17 +195,32 @@ ResultExtrema ResultExtremaCalculator::calculate(
         }
 
         const MeshNode &node = *nodeIt->second;
-        updateNodeExtreme(extrema.maxUx, node.id, node.x, node.y, node.z, displacement.ux, CalculiXResultFields::Ux);
-        updateNodeExtreme(extrema.maxUy, node.id, node.x, node.y, node.z, displacement.uy, CalculiXResultFields::Uy);
-        updateNodeExtreme(extrema.maxUz, node.id, node.x, node.y, node.z, displacement.uz, CalculiXResultFields::Uz);
+        updateNodeExtreme(extrema.minUx, node.id, node.x, node.y, node.z, displacement.ux, CalculiXResultFields::Ux, true);
+        updateNodeExtreme(extrema.maxUx, node.id, node.x, node.y, node.z, displacement.ux, CalculiXResultFields::Ux, false);
+        updateNodeExtreme(extrema.minUy, node.id, node.x, node.y, node.z, displacement.uy, CalculiXResultFields::Uy, true);
+        updateNodeExtreme(extrema.maxUy, node.id, node.x, node.y, node.z, displacement.uy, CalculiXResultFields::Uy, false);
+        updateNodeExtreme(extrema.minUz, node.id, node.x, node.y, node.z, displacement.uz, CalculiXResultFields::Uz, true);
+        updateNodeExtreme(extrema.maxUz, node.id, node.x, node.y, node.z, displacement.uz, CalculiXResultFields::Uz, false);
+        const double displacementMagnitude = CalculiXResultMath::displacementMagnitude(displacement);
+        updateNodeExtreme(
+            extrema.minDisplacementMagnitude,
+            node.id,
+            node.x,
+            node.y,
+            node.z,
+            displacementMagnitude,
+            CalculiXResultFields::DisplacementMagnitude,
+            true
+        );
         updateNodeExtreme(
             extrema.maxDisplacementMagnitude,
             node.id,
             node.x,
             node.y,
             node.z,
-            CalculiXResultMath::displacementMagnitude(displacement),
-            CalculiXResultFields::DisplacementMagnitude
+            displacementMagnitude,
+            CalculiXResultFields::DisplacementMagnitude,
+            false
         );
     }
 
@@ -228,30 +245,34 @@ ResultExtrema ResultExtremaCalculator::calculate(
             continue;
         }
 
-        updateElementExtreme(
-            extrema.maxVonMisesStress,
-            element.id,
-            x,
-            y,
-            z,
-            stressIt->second.vonMisesSum / static_cast<double>(stressIt->second.count),
-            CalculiXResultFields::VonMisesStress
-        );
+        const double vonMises = stressIt->second.vonMisesSum / static_cast<double>(stressIt->second.count);
+        updateElementExtreme(extrema.minVonMisesStress, element.id, x, y, z, vonMises,
+            CalculiXResultFields::VonMisesStress, true);
+        updateElementExtreme(extrema.maxVonMisesStress, element.id, x, y, z, vonMises,
+            CalculiXResultFields::VonMisesStress, false);
     }
 
     if (selectedFieldName == CalculiXResultFields::Ux) {
-        extrema.selectedMarker = markerForNode(extrema.maxUx, displacementsByNodeId, deformationScale);
+        extrema.selectedMinimumMarker = markerForNode(extrema.minUx, displacementsByNodeId, deformationScale);
+        extrema.selectedMaximumMarker = markerForNode(extrema.maxUx, displacementsByNodeId, deformationScale);
     } else if (selectedFieldName == CalculiXResultFields::Uy) {
-        extrema.selectedMarker = markerForNode(extrema.maxUy, displacementsByNodeId, deformationScale);
+        extrema.selectedMinimumMarker = markerForNode(extrema.minUy, displacementsByNodeId, deformationScale);
+        extrema.selectedMaximumMarker = markerForNode(extrema.maxUy, displacementsByNodeId, deformationScale);
     } else if (selectedFieldName == CalculiXResultFields::Uz) {
-        extrema.selectedMarker = markerForNode(extrema.maxUz, displacementsByNodeId, deformationScale);
+        extrema.selectedMinimumMarker = markerForNode(extrema.minUz, displacementsByNodeId, deformationScale);
+        extrema.selectedMaximumMarker = markerForNode(extrema.maxUz, displacementsByNodeId, deformationScale);
     } else if (selectedFieldName == CalculiXResultFields::VonMisesStress) {
-        extrema.selectedMarker =
+        extrema.selectedMinimumMarker =
+            markerForElement(extrema.minVonMisesStress, meshData, nodesById, displacementsByNodeId, deformationScale);
+        extrema.selectedMaximumMarker =
             markerForElement(extrema.maxVonMisesStress, meshData, nodesById, displacementsByNodeId, deformationScale);
     } else {
-        extrema.selectedMarker =
+        extrema.selectedMinimumMarker =
+            markerForNode(extrema.minDisplacementMagnitude, displacementsByNodeId, deformationScale);
+        extrema.selectedMaximumMarker =
             markerForNode(extrema.maxDisplacementMagnitude, displacementsByNodeId, deformationScale);
     }
+    extrema.selectedMarker = extrema.selectedMaximumMarker;
 
     return extrema;
 }

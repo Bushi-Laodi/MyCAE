@@ -6,7 +6,6 @@
 #include "picking/PickController.h"
 #include "project/ProjectModel.h"
 #include "project/ProjectManager.h"
-#include "project/SelectionState.h"
 #include "result/ResultAnimationController.h"
 #include "solver/plugin/SolverPluginManager.h"
 #include "ui/ActionRegistry.h"
@@ -33,6 +32,9 @@ class SelectionInteractionController;
 class FaceGroupRestoreController;
 class MainWindowResultController;
 class MainWindowViewController;
+struct PickSelection;
+struct ResultProbe;
+struct Selection;
 struct WorkflowCommandContext;
 
 class MainWindow final : public QMainWindow
@@ -41,6 +43,7 @@ class MainWindow final : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
+    bool openProjectFileForAutomation(const QString &projectFilePath);
 
 private:
     void createActions();
@@ -62,6 +65,8 @@ private:
     void setSelectedResultDeformationScale(double scale);
     void setSelectedResultMeshEdges(bool enabled);
     void setSelectedResultUndeformedOverlay(bool enabled);
+    void setSelectedResultScalarRangeLock(bool locked);
+    void setSelectedResultScalarRange(double minimum, double maximum);
     void playSelectedResultAnimation(double speed);
     void stopSelectedResultAnimation();
     void applyAnimatedResultDeformationScale(double scale);
@@ -81,6 +86,7 @@ private:
     void refreshResultViews();
     void handleUndoStackFaceGroupsChanged(const QString &selectionId);
     void handleFacePicked(const PickSelection &selection);
+    void handleResultProbePicked(const ResultProbe &probe);
     void updateActionStates();
     WorkflowCommandContext workflowCommandContext();
     RecentProjectController recentProjectController();

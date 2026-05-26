@@ -3,22 +3,17 @@
 #include "mesh/MeshToVtkConverter.h"
 #include "result/ResultDataLoader.h"
 #include "result/ResultExtremaCalculator.h"
+#include "result/ResultFieldMetadata.h"
 #include "solver/calculix/CalculiXResultGridBuilder.h"
 #include "ui/RenderView.h"
 
 #include <QFileInfo>
 #include <vtkUnstructuredGrid.h>
 
+#include <algorithm>
+
 namespace
 {
-QString scalarUnit(const QString &fieldName)
-{
-    if (fieldName == CalculiXResultFields::VonMisesStress) {
-        return "Pa";
-    }
-    return "model length";
-}
-
 bool fileExistsOrEmpty(const QString &filePath)
 {
     return !filePath.isEmpty() && QFileInfo::exists(filePath);
@@ -90,6 +85,16 @@ ResultDisplayResult ResultDisplayController::displayResult(
     resultObject.meshElementCount = gridResult.meshElementCount;
     resultObject.scalarMin = gridResult.scalarMin;
     resultObject.scalarMax = gridResult.scalarMax;
+    const QString unit = ResultFieldMetadata::unitForField(gridResult.scalarName);
+    if (!resultObject.scalarRangeLocked) {
+        resultObject.lockedScalarMin = gridResult.scalarMin;
+        resultObject.lockedScalarMax = gridResult.scalarMax;
+    }
+    double displayScalarMin = resultObject.scalarRangeLocked ? resultObject.lockedScalarMin : gridResult.scalarMin;
+    double displayScalarMax = resultObject.scalarRangeLocked ? resultObject.lockedScalarMax : gridResult.scalarMax;
+    if (displayScalarMin > displayScalarMax) {
+        std::swap(displayScalarMin, displayScalarMax);
+    }
     resultObject.extrema = ResultExtremaCalculator().calculate(
         loaded.meshData,
         loaded.datResult,
@@ -113,13 +118,14 @@ ResultDisplayResult ResultDisplayController::displayResult(
         }
     }
 
-    const QString unit = scalarUnit(gridResult.scalarName);
-    const QString subtitle = QString("%1 nodes matched, %2 tetrahedra, scale=%3, range [%4, %5] %6")
+    const QString rangeMode = resultObject.scalarRangeLocked ? "locked" : "auto";
+    const QString subtitle = QString("%1 nodes matched, %2 tetrahedra, scale=%3, %4 range [%5, %6] %7")
         .arg(gridResult.matchedNodeCount)
         .arg(loaded.meshData.tetraCount())
         .arg(resultObject.deformationScale, 0, 'g', 6)
-        .arg(gridResult.scalarMin, 0, 'g', 6)
-        .arg(gridResult.scalarMax, 0, 'g', 6)
+        .arg(rangeMode)
+        .arg(displayScalarMin, 0, 'g', 6)
+        .arg(displayScalarMax, 0, 'g', 6)
         .arg(unit);
     renderView->showResultGrid(
         gridResult.grid,
@@ -129,21 +135,33 @@ ResultDisplayResult ResultDisplayController::displayResult(
         gridResult.scalarName,
         unit,
         gridResult.scalarAssociation == CalculiXResultScalarAssociation::Cell,
-        gridResult.scalarMin,
-        gridResult.scalarMax,
+        displayScalarMin,
+        displayScalarMax,
         resultObject.showMeshEdges,
+        resultObject.extrema.selectedMinimumMarker,
+        resultObject.extrema.selectedMaximumMarker,
         resetCamera
     );
 
-    const ResultExtremeMarker &marker = resultObject.extrema.selectedMarker;
-    if (marker.valid) {
-        renderView->highlightResultPosition(marker.x, marker.y, marker.z);
-        const QString idLabel = marker.element ? "maxElement" : "maxNode";
-        displayResult.logMessages.append(QString("Result extrema: field=%1, %2=%3, value=%4.")
-            .arg(marker.fieldName)
-            .arg(idLabel)
-            .arg(marker.id)
-            .arg(marker.value, 0, 'g', 8));
+    const ResultExtremeMarker &minimumMarker = resultObject.extrema.selectedMinimumMarker;
+    const ResultExtremeMarker &maximumMarker = resultObject.extrema.selectedMaximumMarker;
+    if (minimumMarker.valid || maximumMarker.valid) {
+        if (minimumMarker.valid) {
+            const QString idLabel = minimumMarker.element ? "minElement" : "minNode";
+            displayResult.logMessages.append(QString("Result minimum: field=%1, %2=%3, value=%4.")
+                .arg(minimumMarker.fieldName)
+                .arg(idLabel)
+                .arg(minimumMarker.id)
+                .arg(minimumMarker.value, 0, 'g', 8));
+        }
+        if (maximumMarker.valid) {
+            const QString idLabel = maximumMarker.element ? "maxElement" : "maxNode";
+            displayResult.logMessages.append(QString("Result maximum: field=%1, %2=%3, value=%4.")
+                .arg(maximumMarker.fieldName)
+                .arg(idLabel)
+                .arg(maximumMarker.id)
+                .arg(maximumMarker.value, 0, 'g', 8));
+        }
     }
 
     displayResult.logMessages.append("Result displayed: " + resultObject.name);

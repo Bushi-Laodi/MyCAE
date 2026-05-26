@@ -45,7 +45,7 @@ public:
 
 private:
     void clearAll();
-    QWidget *resetDynamicArea();
+    QWidget *resetDynamicArea(bool visible = true);
 
     QVBoxLayout *m_mainLayout = nullptr;
     QLabel *m_selectionValue = nullptr;

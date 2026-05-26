@@ -30,9 +30,12 @@ struct ResultObject
     int meshElementCount = 0;
     double scalarMin = 0.0;
     double scalarMax = 0.0;
+    bool scalarRangeLocked = false;
+    double lockedScalarMin = 0.0;
+    double lockedScalarMax = 0.0;
     ResultExtrema extrema;
     QStringList checkMessages;
     QString createdAt;
-    bool success = false;
     QString summary;
+    bool success = false;
 };

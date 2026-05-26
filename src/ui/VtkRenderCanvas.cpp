@@ -13,11 +13,15 @@
 #include <vtkActor.h>
 #include <vtkCamera.h>
 #include <vtkCallbackCommand.h>
+#include <vtkCell.h>
 #include <vtkCellData.h>
+#include <vtkCellPicker.h>
 #include <vtkCommand.h>
 #include <vtkCubeSource.h>
+#include <vtkDataArray.h>
 #include <vtkDataSetMapper.h>
 #include <vtkGenericOpenGLRenderWindow.h>
+#include <vtkIdList.h>
 #include <vtkIntArray.h>
 #include <vtkLookupTable.h>
 #include <vtkNew.h>
@@ -31,6 +35,27 @@
 #include <vtkScalarBarActor.h>
 #include <vtkSphereSource.h>
 #include <vtkUnstructuredGrid.h>
+
+namespace
+{
+int intTupleValue(vtkDataArray *array, vtkIdType index)
+{
+    return array ? static_cast<int>(array->GetTuple1(index)) : 0;
+}
+
+double doubleTupleValue(vtkDataArray *array, vtkIdType index)
+{
+    return array ? array->GetTuple1(index) : 0.0;
+}
+
+double squaredDistance(const double *a, const double *b)
+{
+    const double dx = a[0] - b[0];
+    const double dy = a[1] - b[1];
+    const double dz = a[2] - b[2];
+    return dx * dx + dy * dy + dz * dz;
+}
+}
 
 VtkRenderCanvas::VtkRenderCanvas(QWidget *parent)
     : QWidget(parent)
@@ -172,6 +197,8 @@ void VtkRenderCanvas::showResultGrid(
     double scalarMin,
     double scalarMax,
     bool showMeshEdges,
+    const ResultExtremeMarker &minimumMarker,
+    const ResultExtremeMarker &maximumMarker,
     bool resetCameraView
 )
 {
@@ -218,6 +245,7 @@ void VtkRenderCanvas::showResultGrid(
     scalarBar->SetMaximumHeightInPixels(420);
 
     resetSceneState();
+    m_currentResultGrid = grid;
     m_primaryActor = actor;
     m_scalarBarActor = scalarBar;
     m_renderer->RemoveAllViewProps();
@@ -235,6 +263,12 @@ void VtkRenderCanvas::showResultGrid(
         m_renderer->AddActor(overlayActor);
     }
     m_renderer->AddActor(m_primaryActor);
+    if (minimumMarker.valid) {
+        addResultMarker(minimumMarker.x, minimumMarker.y, minimumMarker.z, 0.12, 0.46, 0.98, 0.022);
+    }
+    if (maximumMarker.valid) {
+        addResultMarker(maximumMarker.x, maximumMarker.y, maximumMarker.z, 1.0, 0.32, 0.18, 0.026);
+    }
     m_renderer->AddActor2D(m_scalarBarActor);
     if (resetCameraView) {
         resetCamera();
@@ -249,9 +283,13 @@ void VtkRenderCanvas::setPickMode(PickMode mode)
 
 void VtkRenderCanvas::clearHighlight()
 {
-    if (m_highlightActor) {
-        m_renderer->RemoveActor(m_highlightActor);
-        m_highlightActor = nullptr;
+    if (!m_highlightActors.empty()) {
+        for (vtkActor *actor : m_highlightActors) {
+            if (actor) {
+                m_renderer->RemoveActor(actor);
+            }
+        }
+        m_highlightActors.clear();
         m_renderWindow->Render();
     }
 }
@@ -259,20 +297,43 @@ void VtkRenderCanvas::clearHighlight()
 void VtkRenderCanvas::highlightFaceIndices(const std::vector<int> &faceIndices)
 {
     clearHighlight();
-    m_highlightActor = VtkHighlightActorFactory::createFaceHighlightActor(m_currentPolyData, faceIndices);
-    if (m_highlightActor) {
-        m_renderer->AddActor(m_highlightActor);
+    vtkSmartPointer<vtkActor> actor = VtkHighlightActorFactory::createFaceHighlightActor(m_currentPolyData, faceIndices);
+    if (actor) {
+        m_highlightActors.push_back(actor);
+        m_renderer->AddActor(actor);
     }
     m_renderWindow->Render();
 }
 
 void VtkRenderCanvas::highlightResultPosition(double x, double y, double z)
 {
-    if (m_highlightActor) {
-        m_renderer->RemoveActor(m_highlightActor);
-        m_highlightActor = nullptr;
-    }
+    clearHighlight();
+    addResultMarker(x, y, z, 1.0, 0.86, 0.18, 0.025);
+    m_renderWindow->Render();
+}
 
+void VtkRenderCanvas::highlightResultExtrema(const ResultExtremeMarker &minimum, const ResultExtremeMarker &maximum)
+{
+    clearHighlight();
+    if (minimum.valid) {
+        addResultMarker(minimum.x, minimum.y, minimum.z, 0.12, 0.46, 0.98, 0.022);
+    }
+    if (maximum.valid) {
+        addResultMarker(maximum.x, maximum.y, maximum.z, 1.0, 0.32, 0.18, 0.026);
+    }
+    m_renderWindow->Render();
+}
+
+void VtkRenderCanvas::addResultMarker(
+    double x,
+    double y,
+    double z,
+    double red,
+    double green,
+    double blue,
+    double radiusScale
+)
+{
     double bounds[6] = {0.0, 1.0, 0.0, 1.0, 0.0, 1.0};
     if (m_primaryActor) {
         m_primaryActor->GetBounds(bounds);
@@ -282,7 +343,7 @@ void VtkRenderCanvas::highlightResultPosition(double x, double y, double z)
         + (bounds[3] - bounds[2]) * (bounds[3] - bounds[2])
         + (bounds[5] - bounds[4]) * (bounds[5] - bounds[4])
     );
-    const double radius = std::max(0.001, diagonal * 0.025);
+    const double radius = std::max(0.001, diagonal * radiusScale);
 
     vtkNew<vtkSphereSource> sphere;
     sphere->SetCenter(x, y, z);
@@ -296,14 +357,13 @@ void VtkRenderCanvas::highlightResultPosition(double x, double y, double z)
 
     vtkNew<vtkActor> actor;
     actor->SetMapper(mapper);
-    actor->GetProperty()->SetColor(1.0, 0.86, 0.18);
+    actor->GetProperty()->SetColor(red, green, blue);
     actor->GetProperty()->SetAmbient(0.35);
     actor->GetProperty()->SetDiffuse(0.85);
     actor->GetProperty()->SetSpecular(0.25);
 
-    m_highlightActor = actor;
-    m_renderer->AddActor(m_highlightActor);
-    m_renderWindow->Render();
+    m_highlightActors.push_back(actor);
+    m_renderer->AddActor(actor);
 }
 
 void VtkRenderCanvas::handleVtkLeftButtonRelease(
@@ -338,8 +398,9 @@ void VtkRenderCanvas::resetCamera()
 void VtkRenderCanvas::resetSceneState()
 {
     m_currentPolyData = nullptr;
+    m_currentResultGrid = nullptr;
     m_primaryActor = nullptr;
-    m_highlightActor = nullptr;
+    m_highlightActors.clear();
     m_scalarBarActor = nullptr;
     m_activeGeometryName.clear();
 }
@@ -347,6 +408,11 @@ void VtkRenderCanvas::resetSceneState()
 void VtkRenderCanvas::handlePickAtRenderWindowPosition(int x, int y)
 {
     if (m_pickMode != PickMode::Face || !m_currentPolyData || !m_primaryActor || m_activeGeometryName.isEmpty()) {
+        ResultProbe probe;
+        if (pickResultAtRenderWindowPosition(x, y, probe)) {
+            highlightResultPosition(probe.x, probe.y, probe.z);
+            emit resultProbePicked(probe);
+        }
         return;
     }
 
@@ -354,4 +420,70 @@ void VtkRenderCanvas::handlePickAtRenderWindowPosition(int x, int y)
     if (VtkPickAdapter::pickFace(m_renderer, m_primaryActor, m_currentPolyData, m_activeGeometryName, x, y, selection)) {
         emit facePicked(selection);
     }
+}
+
+bool VtkRenderCanvas::pickResultAtRenderWindowPosition(int x, int y, ResultProbe &probe)
+{
+    if (!m_currentResultGrid || !m_primaryActor) {
+        return false;
+    }
+
+    vtkNew<vtkCellPicker> picker;
+    picker->SetTolerance(0.0025);
+    if (!picker->Pick(x, y, 0.0, m_renderer)) {
+        return false;
+    }
+    if (picker->GetActor() != m_primaryActor) {
+        return false;
+    }
+
+    const vtkIdType cellId = picker->GetCellId();
+    if (cellId < 0 || cellId >= m_currentResultGrid->GetNumberOfCells()) {
+        return false;
+    }
+
+    double pickedPosition[3] = {0.0, 0.0, 0.0};
+    picker->GetPickPosition(pickedPosition);
+
+    vtkCell *cell = m_currentResultGrid->GetCell(cellId);
+    if (!cell || !cell->GetPointIds() || cell->GetPointIds()->GetNumberOfIds() <= 0) {
+        return false;
+    }
+
+    vtkIdType nearestPointId = cell->GetPointId(0);
+    double nearestPoint[3] = {0.0, 0.0, 0.0};
+    m_currentResultGrid->GetPoint(nearestPointId, nearestPoint);
+    double nearestDistance = squaredDistance(nearestPoint, pickedPosition);
+    for (vtkIdType i = 1; i < cell->GetPointIds()->GetNumberOfIds(); ++i) {
+        const vtkIdType pointId = cell->GetPointId(i);
+        double point[3] = {0.0, 0.0, 0.0};
+        m_currentResultGrid->GetPoint(pointId, point);
+        const double distance = squaredDistance(point, pickedPosition);
+        if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestPointId = pointId;
+            nearestPoint[0] = point[0];
+            nearestPoint[1] = point[1];
+            nearestPoint[2] = point[2];
+        }
+    }
+
+    vtkPointData *pointData = m_currentResultGrid->GetPointData();
+    vtkCellData *cellData = m_currentResultGrid->GetCellData();
+
+    probe.valid = true;
+    probe.source = "Render pick";
+    probe.elementId = intTupleValue(cellData ? cellData->GetArray("MyCAE_ElementId") : nullptr, cellId);
+    probe.nodeId = intTupleValue(pointData ? pointData->GetArray("MyCAE_NodeId") : nullptr, nearestPointId);
+    probe.x = nearestPoint[0];
+    probe.y = nearestPoint[1];
+    probe.z = nearestPoint[2];
+    probe.ux = doubleTupleValue(pointData ? pointData->GetArray("Ux") : nullptr, nearestPointId);
+    probe.uy = doubleTupleValue(pointData ? pointData->GetArray("Uy") : nullptr, nearestPointId);
+    probe.uz = doubleTupleValue(pointData ? pointData->GetArray("Uz") : nullptr, nearestPointId);
+    probe.displacementMagnitude =
+        doubleTupleValue(pointData ? pointData->GetArray("Displacement Magnitude") : nullptr, nearestPointId);
+    probe.vonMisesStress =
+        doubleTupleValue(cellData ? cellData->GetArray("Von Mises Stress") : nullptr, cellId);
+    return true;
 }

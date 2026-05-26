@@ -20,4 +20,3 @@ public:
 private:
     QTableWidget *m_table = nullptr;
 };
-

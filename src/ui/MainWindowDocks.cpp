@@ -20,6 +20,11 @@ MainWindowDockWidgets MainWindowDockBuilder::build(QMainWindow *window, const Ma
             callbacks.facePicked(selection);
         }
     });
+    QObject::connect(widgets.renderView, &RenderView::resultProbePicked, window, [callbacks](const ResultProbe &probe) {
+        if (callbacks.resultProbePicked) {
+            callbacks.resultProbePicked(probe);
+        }
+    });
     window->setCentralWidget(widgets.renderView);
 
     auto *projectDock = new QDockWidget("Project / Model", window);
@@ -86,6 +91,26 @@ MainWindowDockWidgets MainWindowDockBuilder::build(QMainWindow *window, const Ma
         [callbacks](bool enabled) {
             if (callbacks.resultUndeformedOverlayChanged) {
                 callbacks.resultUndeformedOverlayChanged(enabled);
+            }
+        }
+    );
+    QObject::connect(
+        widgets.resultPostprocessPanel,
+        &ResultPostprocessPanel::scalarRangeLockChanged,
+        window,
+        [callbacks](bool locked) {
+            if (callbacks.resultScalarRangeLockChanged) {
+                callbacks.resultScalarRangeLockChanged(locked);
+            }
+        }
+    );
+    QObject::connect(
+        widgets.resultPostprocessPanel,
+        &ResultPostprocessPanel::scalarRangeChanged,
+        window,
+        [callbacks](double minimum, double maximum) {
+            if (callbacks.resultScalarRangeChanged) {
+                callbacks.resultScalarRangeChanged(minimum, maximum);
             }
         }
     );

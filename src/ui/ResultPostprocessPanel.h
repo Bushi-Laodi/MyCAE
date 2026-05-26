@@ -3,6 +3,7 @@
 #include <QString>
 #include <QWidget>
 
+struct ResultProbe;
 class QCheckBox;
 class QComboBox;
 class QLabel;
@@ -18,6 +19,7 @@ public:
     explicit ResultPostprocessPanel(QWidget *parent = nullptr);
 
     void setResult(const ResultObject *resultObject);
+    void setProbe(const ResultProbe &probe);
     void setEnabledForResult(bool enabled);
 
 signals:
@@ -25,6 +27,8 @@ signals:
     void deformationScaleChanged(double scale);
     void meshEdgesChanged(bool enabled);
     void undeformedOverlayChanged(bool enabled);
+    void scalarRangeLockChanged(bool locked);
+    void scalarRangeChanged(double minimum, double maximum);
     void animationPlayRequested(double speed);
     void animationStopRequested();
     void exportCsvRequested();
@@ -41,12 +45,17 @@ private:
     QDoubleSpinBox *m_scaleSpinBox = nullptr;
     QCheckBox *m_meshEdgesCheckBox = nullptr;
     QCheckBox *m_undeformedOverlayCheckBox = nullptr;
+    QCheckBox *m_lockScalarRangeCheckBox = nullptr;
+    QDoubleSpinBox *m_scalarMinSpinBox = nullptr;
+    QDoubleSpinBox *m_scalarMaxSpinBox = nullptr;
     QLabel *m_resultNameLabel = nullptr;
+    QLabel *m_fieldUnitLabel = nullptr;
     QLabel *m_scalarRangeLabel = nullptr;
     QLabel *m_coverageLabel = nullptr;
     QLabel *m_extremaLabel = nullptr;
     QLabel *m_fileStatusLabel = nullptr;
     QLabel *m_messagesLabel = nullptr;
+    QLabel *m_probeLabel = nullptr;
     QDoubleSpinBox *m_animationSpeedSpinBox = nullptr;
     QLabel *m_animationFrameLabel = nullptr;
     QPushButton *m_playAnimationButton = nullptr;

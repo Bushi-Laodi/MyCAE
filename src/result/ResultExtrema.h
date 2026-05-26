@@ -39,10 +39,17 @@ struct ResultExtremeMarker
 
 struct ResultExtrema
 {
+    ResultNodeExtreme minUx;
     ResultNodeExtreme maxUx;
+    ResultNodeExtreme minUy;
     ResultNodeExtreme maxUy;
+    ResultNodeExtreme minUz;
     ResultNodeExtreme maxUz;
+    ResultNodeExtreme minDisplacementMagnitude;
     ResultNodeExtreme maxDisplacementMagnitude;
+    ResultElementExtreme minVonMisesStress;
     ResultElementExtreme maxVonMisesStress;
+    ResultExtremeMarker selectedMinimumMarker;
+    ResultExtremeMarker selectedMaximumMarker;
     ResultExtremeMarker selectedMarker;
 };

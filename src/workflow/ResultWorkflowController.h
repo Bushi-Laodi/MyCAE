@@ -11,6 +11,7 @@ class RenderView;
 class ResultAnimationController;
 class ResultPostprocessPanel;
 class QWidget;
+struct ResultProbe;
 
 class ResultWorkflowController
 {
@@ -30,6 +31,9 @@ public:
     QStringList setSelectedDeformationScale(double scale);
     QStringList setSelectedMeshEdges(bool enabled);
     QStringList setSelectedUndeformedOverlay(bool enabled);
+    QStringList setSelectedScalarRangeLock(bool locked);
+    QStringList setSelectedScalarRange(double minimum, double maximum);
+    QStringList setSelectedProbe(const ResultProbe &probe);
     QStringList playSelectedAnimation(double speed);
     QStringList stopSelectedAnimation();
     QStringList applyAnimatedDeformationScale(double scale);

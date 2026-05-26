@@ -1,6 +1,7 @@
 #include "validation/UiSmokeValidator.h"
 
 #include "ui/MainWindow.h"
+#include "ui/PropertyPanel.h"
 #include "ui/ResultPostprocessPanel.h"
 
 #include <QAction>
@@ -11,12 +12,17 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFont>
+#include <QGroupBox>
+#include <QLabel>
 #include <QList>
 #include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
+#include <QPlainTextEdit>
+#include <QPushButton>
 #include <QSettings>
 #include <QStringList>
+#include <QTableWidget>
 #include <QToolBar>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
@@ -247,9 +253,46 @@ bool selectTreeItem(const QMainWindow &window, const QString &text)
 
 bool resultFieldControlEnabled(const QMainWindow &window)
 {
-    ResultPostprocessPanel *panel = window.findChild<ResultPostprocessPanel *>();
-    QComboBox *fieldComboBox = panel ? panel->findChild<QComboBox *>() : nullptr;
+    QComboBox *fieldComboBox = window.findChild<QComboBox *>("result.field.combo");
     return fieldComboBox && fieldComboBox->isEnabled();
+}
+
+bool hasNamedWidget(const QMainWindow &window, const QString &objectName)
+{
+    return window.findChild<QWidget *>(objectName) != nullptr;
+}
+
+QString namedLabelText(const QMainWindow &window, const QString &objectName)
+{
+    const QLabel *label = window.findChild<QLabel *>(objectName);
+    return label ? label->text() : QString();
+}
+
+bool namedButtonEnabled(const QMainWindow &window, const QString &objectName)
+{
+    const QPushButton *button = window.findChild<QPushButton *>(objectName);
+    return button && button->isEnabled();
+}
+
+bool namedComboBoxEnabled(const QMainWindow &window, const QString &objectName)
+{
+    const QComboBox *comboBox = window.findChild<QComboBox *>(objectName);
+    return comboBox && comboBox->isEnabled();
+}
+
+bool diagnosticEmptyStateVisible(const QMainWindow &window)
+{
+    const QTableWidget *table = window.findChild<QTableWidget *>("diagnostic.table");
+    return table
+        && table->rowCount() == 1
+        && table->item(0, 2)
+        && table->item(0, 2)->text() == "No diagnostics.";
+}
+
+bool logPlaceholderConfigured(const QMainWindow &window)
+{
+    const QPlainTextEdit *logView = window.findChild<QPlainTextEdit *>("log.view");
+    return logView && logView->placeholderText() == "No log messages yet.";
 }
 
 QString defaultDemoProjectFilePath()
@@ -279,11 +322,13 @@ public:
         , m_value(m_settings.value(RecentProjectsKey))
     {
         m_settings.remove(RecentProjectsKey);
+        m_settings.sync();
     }
 
     void setRecentProjects(const QStringList &projects)
     {
         m_settings.setValue(RecentProjectsKey, projects);
+        m_settings.sync();
     }
 
     ~RecentProjectsSettingsGuard()
@@ -293,6 +338,7 @@ public:
         } else {
             m_settings.remove(RecentProjectsKey);
         }
+        m_settings.sync();
     }
 
 private:
@@ -391,6 +437,21 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
     addStep(report, "Demo geometry selection works", geometrySelected);
     if (geometrySelected) {
         addActionEnabledStep(report, window, "mesh.generate");
+        addStep(
+            report,
+            "Property panel selection updated after geometry selection",
+            namedLabelText(window, "property.name.value") == "Box_1",
+            namedLabelText(window, "property.name.value")
+        );
+    }
+    const QStringList propertySections{
+        "property.section.selection",
+        "property.section.geometry",
+        "property.section.sourceMesh",
+        "property.section.details"
+    };
+    for (const QString &section : propertySections) {
+        addStep(report, "Property panel section exists: " + section, hasNamedWidget(window, section));
     }
 
     addStep(
@@ -412,6 +473,50 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
             report,
             "Result field control enabled after result selection",
             resultFieldControlEnabled(window)
+        );
+        const QStringList resultSections{
+            "result.section.identity",
+            "result.section.display",
+            "result.section.status",
+            "result.section.animation",
+            "result.section.export",
+            "result.section.history"
+        };
+        for (const QString &section : resultSections) {
+            addStep(report, "Result postprocess section exists: " + section, hasNamedWidget(window, section));
+        }
+        addStep(
+            report,
+            "Result postprocess field control enabled",
+            namedComboBoxEnabled(window, "result.field.combo")
+        );
+        addStep(
+            report,
+            "Result postprocess export enabled",
+            namedButtonEnabled(window, "result.export.csv")
+                && namedButtonEnabled(window, "result.export.report")
+                && namedButtonEnabled(window, "result.export.screenshot")
+        );
+        addStep(
+            report,
+            "Result postprocess status populated",
+            namedLabelText(window, "result.coverage.label").startsWith("Coverage: Nodes"),
+            namedLabelText(window, "result.coverage.label")
+        );
+        addStep(
+            report,
+            "Result postprocess field unit populated",
+            namedLabelText(window, "result.fieldUnit.label").contains("unit: model length"),
+            namedLabelText(window, "result.fieldUnit.label")
+        );
+        addStep(report, "Result scalar range lock exists", hasNamedWidget(window, "result.scalarRange.lock"));
+        addStep(report, "Result scalar range min exists", hasNamedWidget(window, "result.scalarRange.min"));
+        addStep(report, "Result scalar range max exists", hasNamedWidget(window, "result.scalarRange.max"));
+        addStep(
+            report,
+            "Result probe prompt visible",
+            namedLabelText(window, "result.probe.label").startsWith("Probe: click"),
+            namedLabelText(window, "result.probe.label")
         );
     }
 }
@@ -447,140 +552,146 @@ UiValidationReport UiSmokeValidator::validate() const
 {
     UiValidationReport report;
     RecentProjectsSettingsGuard recentProjectsSettingsGuard;
-    MainWindow window;
+    {
+        MainWindow window;
 
-    const QStringList menuTitles{
-        "File",
-        "Edit",
-        "Geometry",
-        "Case",
-        "Simulation",
-        "Results",
-        "Tools"
-    };
-    for (const QString &title : menuTitles) {
-        addStep(report, "Menu exists: " + title, findTopLevelMenu(window, title) != nullptr);
-    }
-    addStep(
-        report,
-        "Top-level menu count is compact",
-        topLevelMenuCount(window) == menuTitles.size(),
-        QString("count=%1").arg(topLevelMenuCount(window))
-    );
-    const QStringList removedTopLevelMenus{
-        "Picking",
-        "Solver Setup",
-        "Mesh",
-        "Postprocess"
-    };
-    for (const QString &title : removedTopLevelMenus) {
-        addStep(report, "Old top-level menu removed: " + title, findTopLevelMenu(window, title) == nullptr);
-    }
-    QMenu *fileMenu = findTopLevelMenu(window, "File");
-    QMenu *recentProjectsMenu = findSubMenu(fileMenu, "Recent Projects");
-    addStep(report, "Recent Projects submenu exists", recentProjectsMenu != nullptr);
-    addStep(
-        report,
-        "Recent Projects submenu has 8 slots",
-        countActionsBeforeFirstSeparator(recentProjectsMenu) == 8,
-        recentProjectsMenu ? QString("slots=%1").arg(countActionsBeforeFirstSeparator(recentProjectsMenu)) : "Menu not found"
-    );
-    QAction *clearRecentProjectsAction = findMenuActionByText(recentProjectsMenu, "Clear Recent Projects");
-    addStep(
-        report,
-        "Clear Recent Projects is disabled initially",
-        clearRecentProjectsAction && !clearRecentProjectsAction->isEnabled(),
-        clearRecentProjectsAction ? QString() : "Action not found"
-    );
-    QMenu *geometryMenu = findTopLevelMenu(window, "Geometry");
-    addStep(report, "Geometry Face Groups submenu exists", findSubMenu(geometryMenu, "Face Groups") != nullptr);
-    QMenu *resultsMenu = findTopLevelMenu(window, "Results");
-    addStep(report, "Results field submenu exists", findSubMenu(resultsMenu, "Result Field") != nullptr);
-    addStep(report, "Results deformation submenu exists", findSubMenu(resultsMenu, "Deformation Scale") != nullptr);
+        const QStringList menuTitles{
+            "File",
+            "Edit",
+            "Geometry",
+            "Case",
+            "Simulation",
+            "Results",
+            "Tools"
+        };
+        for (const QString &title : menuTitles) {
+            addStep(report, "Menu exists: " + title, findTopLevelMenu(window, title) != nullptr);
+        }
+        addStep(
+            report,
+            "Top-level menu count is compact",
+            topLevelMenuCount(window) == menuTitles.size(),
+            QString("count=%1").arg(topLevelMenuCount(window))
+        );
+        const QStringList removedTopLevelMenus{
+            "Picking",
+            "Solver Setup",
+            "Mesh",
+            "Postprocess"
+        };
+        for (const QString &title : removedTopLevelMenus) {
+            addStep(report, "Old top-level menu removed: " + title, findTopLevelMenu(window, title) == nullptr);
+        }
+        QMenu *fileMenu = findTopLevelMenu(window, "File");
+        QMenu *recentProjectsMenu = findSubMenu(fileMenu, "Recent Projects");
+        addStep(report, "Recent Projects submenu exists", recentProjectsMenu != nullptr);
+        addStep(
+            report,
+            "Recent Projects submenu has 8 slots",
+            countActionsBeforeFirstSeparator(recentProjectsMenu) == 8,
+            recentProjectsMenu ? QString("slots=%1").arg(countActionsBeforeFirstSeparator(recentProjectsMenu)) : "Menu not found"
+        );
+        QAction *clearRecentProjectsAction = findMenuActionByText(recentProjectsMenu, "Clear Recent Projects");
+        addStep(
+            report,
+            "Clear Recent Projects is disabled initially",
+            clearRecentProjectsAction && !clearRecentProjectsAction->isEnabled(),
+            clearRecentProjectsAction ? QString() : "Action not found"
+        );
+        QMenu *geometryMenu = findTopLevelMenu(window, "Geometry");
+        addStep(report, "Geometry Face Groups submenu exists", findSubMenu(geometryMenu, "Face Groups") != nullptr);
+        QMenu *resultsMenu = findTopLevelMenu(window, "Results");
+        addStep(report, "Results field submenu exists", findSubMenu(resultsMenu, "Result Field") != nullptr);
+        addStep(report, "Results deformation submenu exists", findSubMenu(resultsMenu, "Deformation Scale") != nullptr);
 
-    const QStringList dockTitles{
-        "Project / Model",
-        "Diagnostics",
-        "Properties",
-        "Result Postprocess",
-        "Log"
-    };
-    for (const QString &title : dockTitles) {
-        addStep(report, "Dock exists: " + title, hasDockWidgetTitle(window, title));
-    }
-    addStep(report, "Toolbar exists: Main Toolbar", hasToolBarTitle(window, "Main Toolbar"));
-    addStep(report, "Toolbar is icon-only", hasIconOnlyToolBar(window, "Main Toolbar"));
-    addStep(report, "Application white UI style applied", qApp && !qApp->styleSheet().isEmpty());
-    addStep(report, "Dock style applied", applicationStyleContains("QDockWidget"));
-    addStep(report, "Menu style applied", applicationStyleContains("QMenuBar"));
-    addStep(report, "Table style applied", applicationStyleContains("QTableWidget"));
-    addStep(report, "Input style applied", applicationStyleContains("QLineEdit"));
+        const QStringList dockTitles{
+            "Project / Model",
+            "Diagnostics",
+            "Properties",
+            "Result Postprocess",
+            "Log"
+        };
+        for (const QString &title : dockTitles) {
+            addStep(report, "Dock exists: " + title, hasDockWidgetTitle(window, title));
+        }
+    addStep(report, "Diagnostics table exists", hasNamedWidget(window, "diagnostic.table"));
+    addStep(report, "Diagnostics empty state visible", diagnosticEmptyStateVisible(window));
+    addStep(report, "Log view exists", hasNamedWidget(window, "log.view"));
+    addStep(report, "Log placeholder configured", logPlaceholderConfigured(window));
+        addStep(report, "Toolbar exists: Main Toolbar", hasToolBarTitle(window, "Main Toolbar"));
+        addStep(report, "Toolbar is icon-only", hasIconOnlyToolBar(window, "Main Toolbar"));
+        addStep(report, "Application white UI style applied", qApp && !qApp->styleSheet().isEmpty());
+        addStep(report, "Dock style applied", applicationStyleContains("QDockWidget"));
+        addStep(report, "Menu style applied", applicationStyleContains("QMenuBar"));
+        addStep(report, "Table style applied", applicationStyleContains("QTableWidget"));
+        addStep(report, "Input style applied", applicationStyleContains("QLineEdit"));
 
-    const QStringList requiredCommandIds{
-        "project.new",
-        "project.open",
-        "app.exit",
-        "geometry.create.box",
-        "geometry.create.cylinder",
-        "geometry.import.step",
-        "mesh.checkGmsh",
-        "mesh.generate",
-        "mesh.readInfo",
-        "mesh.show",
-        "picking.face",
-        "picking.clear",
-        "picking.faceGroup.createFromPick",
-        "picking.faceGroup.addPicked",
-        "picking.faceGroup.removePicked",
-        "picking.faceGroup.clearFaces",
-        "picking.faceGroup.rename",
-        "picking.faceGroup.delete",
-        "picking.faceGroup.localMeshSize",
-        "picking.faceGroup.togglePhysicalGroup",
-        "solverData.create.material",
-        "solverData.create.boundaryCondition",
-        "solverData.create.load",
-        "solverData.editSelected",
-        "solverData.deleteSelected",
-        "solver.run.calculix"
-    };
-    for (const QString &commandId : requiredCommandIds) {
-        addActionExistsStep(report, window, commandId);
-    }
+        const QStringList requiredCommandIds{
+            "project.new",
+            "project.open",
+            "app.exit",
+            "geometry.create.box",
+            "geometry.create.cylinder",
+            "geometry.import.step",
+            "mesh.checkGmsh",
+            "mesh.generate",
+            "mesh.readInfo",
+            "mesh.show",
+            "picking.face",
+            "picking.clear",
+            "picking.faceGroup.createFromPick",
+            "picking.faceGroup.addPicked",
+            "picking.faceGroup.removePicked",
+            "picking.faceGroup.clearFaces",
+            "picking.faceGroup.rename",
+            "picking.faceGroup.delete",
+            "picking.faceGroup.localMeshSize",
+            "picking.faceGroup.togglePhysicalGroup",
+            "solverData.create.material",
+            "solverData.create.boundaryCondition",
+            "solverData.create.load",
+            "solverData.editSelected",
+            "solverData.deleteSelected",
+            "solver.run.calculix"
+        };
+        for (const QString &commandId : requiredCommandIds) {
+            addActionExistsStep(report, window, commandId);
+        }
 
-    const QStringList disabledWithoutProject{
-        "geometry.create.box",
-        "geometry.create.cylinder",
-        "mesh.generate",
-        "mesh.readInfo",
-        "mesh.show",
-        "picking.face",
-        "picking.faceGroup.createFromPick",
-        "solverData.create.material",
-        "solverData.create.boundaryCondition",
-        "solverData.create.load",
-        "solverData.editSelected",
-        "solverData.deleteSelected",
-        "solver.run.calculix"
-    };
-    for (const QString &commandId : disabledWithoutProject) {
-        addActionDisabledStep(report, window, commandId);
-    }
+        const QStringList disabledWithoutProject{
+            "geometry.create.box",
+            "geometry.create.cylinder",
+            "mesh.generate",
+            "mesh.readInfo",
+            "mesh.show",
+            "picking.face",
+            "picking.faceGroup.createFromPick",
+            "solverData.create.material",
+            "solverData.create.boundaryCondition",
+            "solverData.create.load",
+            "solverData.editSelected",
+            "solverData.deleteSelected",
+            "solver.run.calculix"
+        };
+        for (const QString &commandId : disabledWithoutProject) {
+            addActionDisabledStep(report, window, commandId);
+        }
 
-    QAction *projectResourcesAction = findActionByText(window, "Project Resources");
-    addStep(
-        report,
-        "Action disabled without project: Project Resources",
-        projectResourcesAction && !projectResourcesAction->isEnabled(),
-        projectResourcesAction ? QString() : "Action not found"
-    );
-    QAction *resultFieldAction = findActionByText(window, "Ux");
-    addStep(
-        report,
-        "Result field actions are disabled without project",
-        resultFieldAction && !resultFieldAction->isEnabled(),
-        resultFieldAction ? QString() : "Action not found"
-    );
+        QAction *projectResourcesAction = findActionByText(window, "Project Resources");
+        addStep(
+            report,
+            "Action disabled without project: Project Resources",
+            projectResourcesAction && !projectResourcesAction->isEnabled(),
+            projectResourcesAction ? QString() : "Action not found"
+        );
+        QAction *resultFieldAction = findActionByText(window, "Ux");
+        addStep(
+            report,
+            "Result field actions are disabled without project",
+            resultFieldAction && !resultFieldAction->isEnabled(),
+            resultFieldAction ? QString() : "Action not found"
+        );
+    }
 
     validateDemoProjectUi(report, recentProjectsSettingsGuard);
 

@@ -40,6 +40,7 @@ RenderView::RenderView(QWidget *parent)
 
     m_canvas = new VtkRenderCanvas(this);
     connect(m_canvas, &VtkRenderCanvas::facePicked, this, &RenderView::facePicked);
+    connect(m_canvas, &VtkRenderCanvas::resultProbePicked, this, &RenderView::resultProbePicked);
 
     layout->addWidget(m_titleLabel);
     layout->addWidget(m_subtitleLabel);
@@ -105,6 +106,8 @@ void RenderView::showResultGrid(
     double scalarMin,
     double scalarMax,
     bool showMeshEdges,
+    const ResultExtremeMarker &minimumMarker,
+    const ResultExtremeMarker &maximumMarker,
     bool resetCamera
 )
 {
@@ -124,6 +127,8 @@ void RenderView::showResultGrid(
         scalarMin,
         scalarMax,
         showMeshEdges,
+        minimumMarker,
+        maximumMarker,
         resetCamera
     );
 }
@@ -154,4 +159,9 @@ void RenderView::highlightFaceIndices(const std::vector<int> &faceIndices)
 void RenderView::highlightResultPosition(double x, double y, double z)
 {
     m_canvas->highlightResultPosition(x, y, z);
+}
+
+void RenderView::highlightResultExtrema(const ResultExtremeMarker &minimum, const ResultExtremeMarker &maximum)
+{
+    m_canvas->highlightResultExtrema(minimum, maximum);
 }

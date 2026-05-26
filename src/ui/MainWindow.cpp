@@ -103,11 +103,16 @@ void MainWindow::createDockWidgets()
 {
     MainWindowDockCallbacks callbacks;
     callbacks.facePicked = [this](const PickSelection &selection) { handleFacePicked(selection); };
+    callbacks.resultProbePicked = [this](const ResultProbe &probe) { handleResultProbePicked(probe); };
     callbacks.selectionChanged = [this](const Selection &selection) { applySelection(selection); };
     callbacks.resultFieldChanged = [this](const QString &field) { setSelectedResultField(field); };
     callbacks.resultDeformationScaleChanged = [this](double scale) { setSelectedResultDeformationScale(scale); };
     callbacks.resultMeshEdgesChanged = [this](bool enabled) { setSelectedResultMeshEdges(enabled); };
     callbacks.resultUndeformedOverlayChanged = [this](bool enabled) { setSelectedResultUndeformedOverlay(enabled); };
+    callbacks.resultScalarRangeLockChanged = [this](bool locked) { setSelectedResultScalarRangeLock(locked); };
+    callbacks.resultScalarRangeChanged = [this](double minimum, double maximum) {
+        setSelectedResultScalarRange(minimum, maximum);
+    };
     callbacks.resultAnimationPlayRequested = [this](double speed) { playSelectedResultAnimation(speed); };
     callbacks.resultAnimationStopRequested = [this]() { stopSelectedResultAnimation(); };
     callbacks.resultExportCsvRequested = [this]() { exportSelectedResultCsv(); };
@@ -172,6 +177,16 @@ void MainWindow::setSelectedResultUndeformedOverlay(bool enabled)
     resultController().setSelectedUndeformedOverlay(enabled);
 }
 
+void MainWindow::setSelectedResultScalarRangeLock(bool locked)
+{
+    resultController().setSelectedScalarRangeLock(locked);
+}
+
+void MainWindow::setSelectedResultScalarRange(double minimum, double maximum)
+{
+    resultController().setSelectedScalarRange(minimum, maximum);
+}
+
 void MainWindow::playSelectedResultAnimation(double speed)
 {
     resultController().playSelectedAnimation(speed);
@@ -195,6 +210,12 @@ void MainWindow::showProjectResources()
 void MainWindow::openRecentProject(const QString &projectFilePath)
 {
     recentProjectController().openProject(projectFilePath);
+}
+
+bool MainWindow::openProjectFileForAutomation(const QString &projectFilePath)
+{
+    recentProjectController().openProject(projectFilePath);
+    return m_projectModel.hasProject();
 }
 
 void MainWindow::updateRecentProjectActions()
@@ -271,6 +292,11 @@ void MainWindow::deleteSelectedResultHistory()
 void MainWindow::handleFacePicked(const PickSelection &selection)
 {
     selectionInteractionController().handleFacePicked(selection);
+}
+
+void MainWindow::handleResultProbePicked(const ResultProbe &probe)
+{
+    resultController().setSelectedProbe(probe);
 }
 
 void MainWindow::updateActionStates()
