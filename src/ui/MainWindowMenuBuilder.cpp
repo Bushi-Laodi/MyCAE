@@ -17,7 +17,6 @@
 namespace
 {
 constexpr auto CommandImportStep = "geometry.import.step";
-constexpr auto CommandSimulationGenerateMesh = "simulation.generateMesh";
 
 QString solverRunCommandId(const QString &pluginId)
 {
@@ -60,45 +59,34 @@ void MainWindowMenuBuilder::build(
         window,
         makeLogMessageCommand(logPanel, "STEP import is reserved for a later stage.")
     );
+    geometryMenu->addSeparator();
+    geometryMenu->addAction(actions.pickFace);
+    geometryMenu->addAction(actions.clearPick);
+    auto *faceGroupMenu = geometryMenu->addMenu("Face Groups");
+    faceGroupMenu->addAction(actions.createFaceGroupFromPick);
+    faceGroupMenu->addAction(actions.addPickedFacesToFaceGroup);
+    faceGroupMenu->addAction(actions.removePickedFacesFromFaceGroup);
+    faceGroupMenu->addAction(actions.clearFaceGroupFaces);
+    faceGroupMenu->addSeparator();
+    faceGroupMenu->addAction(actions.renameFaceGroup);
+    faceGroupMenu->addAction(actions.deleteFaceGroup);
+    faceGroupMenu->addSeparator();
+    faceGroupMenu->addAction(actions.setFaceGroupLocalMeshSize);
+    faceGroupMenu->addAction(actions.toggleFaceGroupPhysicalGroup);
 
-    auto *pickingMenu = window->menuBar()->addMenu("Picking");
-    pickingMenu->addAction(actions.pickFace);
-    pickingMenu->addAction(actions.clearPick);
-    pickingMenu->addSeparator();
-    pickingMenu->addAction(actions.createFaceGroupFromPick);
-    pickingMenu->addAction(actions.addPickedFacesToFaceGroup);
-    pickingMenu->addAction(actions.removePickedFacesFromFaceGroup);
-    pickingMenu->addAction(actions.clearFaceGroupFaces);
-    pickingMenu->addSeparator();
-    pickingMenu->addAction(actions.renameFaceGroup);
-    pickingMenu->addAction(actions.deleteFaceGroup);
-    pickingMenu->addSeparator();
-    pickingMenu->addAction(actions.setFaceGroupLocalMeshSize);
-    pickingMenu->addAction(actions.toggleFaceGroupPhysicalGroup);
-
-    auto *solverMenu = window->menuBar()->addMenu("Solver Setup");
-    solverMenu->addAction(actions.createMaterial);
-    solverMenu->addAction(actions.createBoundaryCondition);
-    solverMenu->addAction(actions.createLoad);
-    solverMenu->addSeparator();
-    solverMenu->addAction(actions.editSolverData);
-    solverMenu->addAction(actions.deleteSolverData);
-
-    auto *meshMenu = window->menuBar()->addMenu("Mesh");
-    meshMenu->addAction(actions.checkGmsh);
-    meshMenu->addAction(actions.generateMesh);
-    meshMenu->addAction(actions.readMeshInfo);
-    meshMenu->addAction(actions.showMesh);
+    auto *caseMenu = window->menuBar()->addMenu("Case");
+    caseMenu->addAction(actions.createMaterial);
+    caseMenu->addAction(actions.createBoundaryCondition);
+    caseMenu->addAction(actions.createLoad);
+    caseMenu->addSeparator();
+    caseMenu->addAction(actions.editSolverData);
+    caseMenu->addAction(actions.deleteSolverData);
 
     auto *simulationMenu = window->menuBar()->addMenu("Simulation");
-    QAction *simulationGenerateMeshAction = simulationMenu->addAction("Generate Mesh");
-    actionRegistry.registerActionCommand(
-        CommandSimulationGenerateMesh,
-        simulationGenerateMeshAction,
-        window,
-        makeLogMessageCommand(logPanel, "Use Mesh -> Generate Mesh for the current external Gmsh flow.")
-    );
-
+    simulationMenu->addAction(actions.checkGmsh);
+    simulationMenu->addAction(actions.generateMesh);
+    simulationMenu->addAction(actions.readMeshInfo);
+    simulationMenu->addAction(actions.showMesh);
     simulationMenu->addSeparator();
     if (solverPluginManager.pluginDescriptors().empty()) {
         QAction *noSolverAction = simulationMenu->addAction("No solver plugins found");
@@ -120,17 +108,17 @@ void MainWindowMenuBuilder::build(
         }
     }
 
-    auto *postMenu = window->menuBar()->addMenu("Postprocess");
-    auto *fieldMenu = postMenu->addMenu("Result Field");
+    auto *resultsMenu = window->menuBar()->addMenu("Results");
+    auto *fieldMenu = resultsMenu->addMenu("Result Field");
     for (QAction *fieldAction : actions.resultFields) {
         fieldMenu->addAction(fieldAction);
     }
-    auto *scaleMenu = postMenu->addMenu("Deformation Scale");
+    auto *scaleMenu = resultsMenu->addMenu("Deformation Scale");
     for (QAction *scaleAction : actions.resultScales) {
         scaleMenu->addAction(scaleAction);
     }
-    postMenu->addSeparator();
-    postMenu->addAction(actions.exportScreenshot);
+    resultsMenu->addSeparator();
+    resultsMenu->addAction(actions.exportScreenshot);
 
     auto *toolsMenu = window->menuBar()->addMenu("Tools");
     toolsMenu->addAction(actions.projectResources);

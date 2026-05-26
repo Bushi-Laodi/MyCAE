@@ -1,9 +1,14 @@
 #include "validation/UiSmokeValidator.h"
 
 #include "ui/MainWindow.h"
+#include "ui/ResultPostprocessPanel.h"
 
 #include <QAction>
+#include <QComboBox>
+#include <QCoreApplication>
 #include <QDockWidget>
+#include <QDir>
+#include <QFileInfo>
 #include <QList>
 #include <QMainWindow>
 #include <QMenu>
@@ -11,6 +16,8 @@
 #include <QSettings>
 #include <QStringList>
 #include <QToolBar>
+#include <QTreeWidget>
+#include <QTreeWidgetItem>
 
 namespace
 {
@@ -102,6 +109,11 @@ int countActionsBeforeFirstSeparator(const QMenu *menu)
     return count;
 }
 
+int topLevelMenuCount(const QMainWindow &window)
+{
+    return window.menuBar() ? window.menuBar()->actions().size() : 0;
+}
+
 bool hasDockWidgetTitle(const QMainWindow &window, const QString &title)
 {
     const QList<QDockWidget *> docks = window.findChildren<QDockWidget *>();
@@ -119,6 +131,17 @@ bool hasToolBarTitle(const QMainWindow &window, const QString &title)
     for (const QToolBar *toolBar : toolBars) {
         if (toolBar && toolBar->windowTitle() == title && !toolBar->actions().isEmpty()) {
             return true;
+        }
+    }
+    return false;
+}
+
+bool hasIconOnlyToolBar(const QMainWindow &window, const QString &title)
+{
+    const QList<QToolBar *> toolBars = window.findChildren<QToolBar *>();
+    for (const QToolBar *toolBar : toolBars) {
+        if (toolBar && toolBar->windowTitle() == title) {
+            return toolBar->toolButtonStyle() == Qt::ToolButtonIconOnly;
         }
     }
     return false;
@@ -149,6 +172,92 @@ void addActionDisabledStep(UiValidationReport &report, const QMainWindow &window
     );
 }
 
+void addActionEnabledStep(UiValidationReport &report, const QMainWindow &window, const QString &commandId)
+{
+    QAction *action = findActionByCommandId(window, commandId);
+    addStep(
+        report,
+        "Action enabled after demo open: " + commandId,
+        action && action->isEnabled(),
+        action ? QString() : "Action not found"
+    );
+}
+
+QTreeWidgetItem *findTreeItemByText(QTreeWidgetItem *root, const QString &text)
+{
+    if (!root) {
+        return nullptr;
+    }
+    if (root->text(0) == text) {
+        return root;
+    }
+    for (int i = 0; i < root->childCount(); ++i) {
+        if (QTreeWidgetItem *match = findTreeItemByText(root->child(i), text)) {
+            return match;
+        }
+    }
+    return nullptr;
+}
+
+QTreeWidgetItem *findTreeItemByText(const QMainWindow &window, const QString &text)
+{
+    QTreeWidget *tree = window.findChild<QTreeWidget *>();
+    if (!tree) {
+        return nullptr;
+    }
+    for (int i = 0; i < tree->topLevelItemCount(); ++i) {
+        if (QTreeWidgetItem *match = findTreeItemByText(tree->topLevelItem(i), text)) {
+            return match;
+        }
+    }
+    return nullptr;
+}
+
+int treeItemChildCount(const QMainWindow &window, const QString &text)
+{
+    if (QTreeWidgetItem *item = findTreeItemByText(window, text)) {
+        return item->childCount();
+    }
+    return -1;
+}
+
+bool selectTreeItem(const QMainWindow &window, const QString &text)
+{
+    QTreeWidget *tree = window.findChild<QTreeWidget *>();
+    QTreeWidgetItem *item = findTreeItemByText(window, text);
+    if (!tree || !item) {
+        return false;
+    }
+    tree->setCurrentItem(item);
+    return true;
+}
+
+bool resultFieldControlEnabled(const QMainWindow &window)
+{
+    ResultPostprocessPanel *panel = window.findChild<ResultPostprocessPanel *>();
+    QComboBox *fieldComboBox = panel ? panel->findChild<QComboBox *>() : nullptr;
+    return fieldComboBox && fieldComboBox->isEnabled();
+}
+
+QString defaultDemoProjectFilePath()
+{
+    const QString appProject = QDir(QCoreApplication::applicationDirPath())
+        .filePath("samples/projects/box_pressure_demo/project.json");
+    if (QFileInfo::exists(appProject)) {
+        return appProject;
+    }
+
+#ifdef MYCAE_SOURCE_DIR
+    const QString sourceProject = QDir(QString::fromUtf8(MYCAE_SOURCE_DIR))
+        .filePath("samples/projects/box_pressure_demo/project.json");
+    if (QFileInfo::exists(sourceProject)) {
+        return sourceProject;
+    }
+#endif
+
+    return appProject;
+}
+
 class RecentProjectsSettingsGuard
 {
 public:
@@ -157,6 +266,11 @@ public:
         , m_value(m_settings.value(RecentProjectsKey))
     {
         m_settings.remove(RecentProjectsKey);
+    }
+
+    void setRecentProjects(const QStringList &projects)
+    {
+        m_settings.setValue(RecentProjectsKey, projects);
     }
 
     ~RecentProjectsSettingsGuard()
@@ -175,6 +289,106 @@ private:
     bool m_hadValue = false;
     QVariant m_value;
 };
+
+void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGuard &settingsGuard)
+{
+    const QString demoProjectFilePath = defaultDemoProjectFilePath();
+    addStep(
+        report,
+        "Demo project file exists",
+        QFileInfo::exists(demoProjectFilePath),
+        demoProjectFilePath
+    );
+    if (!QFileInfo::exists(demoProjectFilePath)) {
+        return;
+    }
+
+    settingsGuard.setRecentProjects(QStringList{demoProjectFilePath});
+    MainWindow window;
+    QMenu *recentProjectsMenu = findSubMenu(findTopLevelMenu(window, "File"), "Recent Projects");
+    QAction *openDemoAction = nullptr;
+    if (recentProjectsMenu) {
+        for (QAction *action : recentProjectsMenu->actions()) {
+            if (action && !action->isSeparator() && action->isVisible()) {
+                openDemoAction = action;
+                break;
+            }
+        }
+    }
+    addStep(report, "Demo project appears in Recent Projects", openDemoAction != nullptr);
+    if (!openDemoAction) {
+        return;
+    }
+
+    openDemoAction->trigger();
+
+    addStep(
+        report,
+        "Demo project opened in project tree",
+        findTreeItemByText(window, "Box Pressure Demo") != nullptr
+    );
+    const QStringList populatedTreeGroups{
+        "Geometry",
+        "Face Groups",
+        "Materials",
+        "Boundary Conditions",
+        "Loads",
+        "Mesh",
+        "Results"
+    };
+    for (const QString &group : populatedTreeGroups) {
+        const int childCount = treeItemChildCount(window, group);
+        addStep(
+            report,
+            "Demo project tree populated: " + group,
+            childCount > 0,
+            QString("children=%1").arg(childCount)
+        );
+    }
+
+    addActionEnabledStep(report, window, "geometry.create.box");
+    addActionEnabledStep(report, window, "geometry.create.cylinder");
+    addActionEnabledStep(report, window, "solverData.create.material");
+    addActionEnabledStep(report, window, "solverData.create.boundaryCondition");
+    addActionEnabledStep(report, window, "solverData.create.load");
+    addActionEnabledStep(report, window, "solver.run.calculix");
+
+    QAction *projectResourcesAction = findActionByText(window, "Project Resources");
+    addStep(
+        report,
+        "Project Resources enabled after demo open",
+        projectResourcesAction && projectResourcesAction->isEnabled(),
+        projectResourcesAction ? QString() : "Action not found"
+    );
+
+    const bool geometrySelected = selectTreeItem(window, "Box_1");
+    addStep(report, "Demo geometry selection works", geometrySelected);
+    if (geometrySelected) {
+        addActionEnabledStep(report, window, "mesh.generate");
+    }
+
+    addStep(
+        report,
+        "Result field control disabled before result selection",
+        !resultFieldControlEnabled(window)
+    );
+    const bool resultSelected = selectTreeItem(window, "CalculiX Result - Box Pressure Demo");
+    addStep(report, "Demo result selection works", resultSelected);
+    if (resultSelected) {
+        QAction *resultFieldAction = findActionByText(window, "Ux");
+        addStep(
+            report,
+            "Result field actions enabled after result selection",
+            resultFieldAction && resultFieldAction->isEnabled(),
+            resultFieldAction ? QString() : "Action not found"
+        );
+        addStep(
+            report,
+            "Result field control enabled after result selection",
+            resultFieldControlEnabled(window)
+        );
+    }
+}
 }
 
 bool UiValidationReport::success() const
@@ -213,15 +427,28 @@ UiValidationReport UiSmokeValidator::validate() const
         "File",
         "Edit",
         "Geometry",
-        "Picking",
-        "Solver Setup",
-        "Mesh",
+        "Case",
         "Simulation",
-        "Postprocess",
+        "Results",
         "Tools"
     };
     for (const QString &title : menuTitles) {
         addStep(report, "Menu exists: " + title, findTopLevelMenu(window, title) != nullptr);
+    }
+    addStep(
+        report,
+        "Top-level menu count is compact",
+        topLevelMenuCount(window) == menuTitles.size(),
+        QString("count=%1").arg(topLevelMenuCount(window))
+    );
+    const QStringList removedTopLevelMenus{
+        "Picking",
+        "Solver Setup",
+        "Mesh",
+        "Postprocess"
+    };
+    for (const QString &title : removedTopLevelMenus) {
+        addStep(report, "Old top-level menu removed: " + title, findTopLevelMenu(window, title) == nullptr);
     }
     QMenu *fileMenu = findTopLevelMenu(window, "File");
     QMenu *recentProjectsMenu = findSubMenu(fileMenu, "Recent Projects");
@@ -239,6 +466,11 @@ UiValidationReport UiSmokeValidator::validate() const
         clearRecentProjectsAction && !clearRecentProjectsAction->isEnabled(),
         clearRecentProjectsAction ? QString() : "Action not found"
     );
+    QMenu *geometryMenu = findTopLevelMenu(window, "Geometry");
+    addStep(report, "Geometry Face Groups submenu exists", findSubMenu(geometryMenu, "Face Groups") != nullptr);
+    QMenu *resultsMenu = findTopLevelMenu(window, "Results");
+    addStep(report, "Results field submenu exists", findSubMenu(resultsMenu, "Result Field") != nullptr);
+    addStep(report, "Results deformation submenu exists", findSubMenu(resultsMenu, "Deformation Scale") != nullptr);
 
     const QStringList dockTitles{
         "Project / Model",
@@ -251,6 +483,7 @@ UiValidationReport UiSmokeValidator::validate() const
         addStep(report, "Dock exists: " + title, hasDockWidgetTitle(window, title));
     }
     addStep(report, "Toolbar exists: Main Toolbar", hasToolBarTitle(window, "Main Toolbar"));
+    addStep(report, "Toolbar is icon-only", hasIconOnlyToolBar(window, "Main Toolbar"));
 
     const QStringList requiredCommandIds{
         "project.new",
@@ -278,7 +511,6 @@ UiValidationReport UiSmokeValidator::validate() const
         "solverData.create.load",
         "solverData.editSelected",
         "solverData.deleteSelected",
-        "simulation.generateMesh",
         "solver.run.calculix"
     };
     for (const QString &commandId : requiredCommandIds) {
@@ -318,6 +550,8 @@ UiValidationReport UiSmokeValidator::validate() const
         resultFieldAction && !resultFieldAction->isEnabled(),
         resultFieldAction ? QString() : "Action not found"
     );
+
+    validateDemoProjectUi(report, recentProjectsSettingsGuard);
 
     return report;
 }
