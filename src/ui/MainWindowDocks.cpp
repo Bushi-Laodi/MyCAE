@@ -9,6 +9,25 @@
 
 #include <QDockWidget>
 #include <QMainWindow>
+#include <QScrollArea>
+#include <QSizePolicy>
+
+namespace
+{
+QScrollArea *createDockScrollArea(QWidget *content, QWidget *parent, const QString &objectName, int minimumWidth)
+{
+    auto *scrollArea = new QScrollArea(parent);
+    scrollArea->setObjectName(objectName);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setMinimumWidth(minimumWidth);
+    content->setMinimumWidth(minimumWidth - 18);
+    content->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+    scrollArea->setWidget(content);
+    return scrollArea;
+}
+}
 
 MainWindowDockWidgets MainWindowDockBuilder::build(QMainWindow *window, const MainWindowDockCallbacks &callbacks)
 {
@@ -48,11 +67,13 @@ MainWindowDockWidgets MainWindowDockBuilder::build(QMainWindow *window, const Ma
     window->addDockWidget(Qt::BottomDockWidgetArea, diagnosticDock);
 
     auto *propertyDock = new QDockWidget("Properties", window);
+    propertyDock->setMinimumWidth(340);
     widgets.propertyPanel = new PropertyPanel(propertyDock);
-    propertyDock->setWidget(widgets.propertyPanel);
+    propertyDock->setWidget(createDockScrollArea(widgets.propertyPanel, propertyDock, "property.scrollArea", 340));
     window->addDockWidget(Qt::RightDockWidgetArea, propertyDock);
 
     auto *postprocessDock = new QDockWidget("Result Postprocess", window);
+    postprocessDock->setMinimumWidth(380);
     widgets.resultPostprocessPanel = new ResultPostprocessPanel(postprocessDock);
     QObject::connect(
         widgets.resultPostprocessPanel,
@@ -194,7 +215,9 @@ MainWindowDockWidgets MainWindowDockBuilder::build(QMainWindow *window, const Ma
             }
         }
     );
-    postprocessDock->setWidget(widgets.resultPostprocessPanel);
+    postprocessDock->setWidget(
+        createDockScrollArea(widgets.resultPostprocessPanel, postprocessDock, "resultPostprocess.scrollArea", 380)
+    );
     window->addDockWidget(Qt::RightDockWidgetArea, postprocessDock);
     window->tabifyDockWidget(propertyDock, postprocessDock);
 

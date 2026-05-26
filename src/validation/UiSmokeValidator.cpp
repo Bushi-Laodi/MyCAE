@@ -20,6 +20,7 @@
 #include <QMenuBar>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QSettings>
 #include <QStringList>
 #include <QTableWidget>
@@ -262,6 +263,12 @@ bool hasNamedWidget(const QMainWindow &window, const QString &objectName)
     return window.findChild<QWidget *>(objectName) != nullptr;
 }
 
+bool hasResizableScrollArea(const QMainWindow &window, const QString &objectName)
+{
+    const QScrollArea *scrollArea = window.findChild<QScrollArea *>(objectName);
+    return scrollArea && scrollArea->widgetResizable() && scrollArea->horizontalScrollBarPolicy() == Qt::ScrollBarAlwaysOff;
+}
+
 QString namedLabelText(const QMainWindow &window, const QString &objectName)
 {
     const QLabel *label = window.findChild<QLabel *>(objectName);
@@ -453,6 +460,11 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
     for (const QString &section : propertySections) {
         addStep(report, "Property panel section exists: " + section, hasNamedWidget(window, section));
     }
+    addStep(
+        report,
+        "Property panel is vertically scrollable",
+        hasResizableScrollArea(window, "property.scrollArea")
+    );
 
     addStep(
         report,
@@ -485,6 +497,11 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
         for (const QString &section : resultSections) {
             addStep(report, "Result postprocess section exists: " + section, hasNamedWidget(window, section));
         }
+        addStep(
+            report,
+            "Result postprocess panel is vertically scrollable",
+            hasResizableScrollArea(window, "resultPostprocess.scrollArea")
+        );
         addStep(
             report,
             "Result postprocess field control enabled",

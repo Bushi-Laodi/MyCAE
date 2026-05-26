@@ -167,6 +167,7 @@ ResultPostprocessPanel::ResultPostprocessPanel(QWidget *parent)
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(8, 8, 8, 8);
     layout->setSpacing(8);
+    layout->setSizeConstraint(QLayout::SetMinimumSize);
 
     QGroupBox *resultGroup = createSection(layout, "Result", this, "result.section.identity");
     auto *resultLayout = new QVBoxLayout(resultGroup);

@@ -60,6 +60,7 @@ PropertyPanel::PropertyPanel(QWidget *parent)
     m_mainLayout = new QVBoxLayout(this);
     m_mainLayout->setContentsMargins(8, 8, 8, 8);
     m_mainLayout->setSpacing(8);
+    m_mainLayout->setSizeConstraint(QLayout::SetMinimumSize);
 
     m_selectionValue = createValueLabel("None", this, "property.selection.value");
     m_typeValue = createValueLabel("-", this, "property.type.value");
