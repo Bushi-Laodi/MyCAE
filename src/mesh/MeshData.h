@@ -21,6 +21,21 @@ struct TetraElement
     int node4 = 0;
 };
 
+struct Tetra10Element
+{
+    int id = 0;
+    int node1 = 0;
+    int node2 = 0;
+    int node3 = 0;
+    int node4 = 0;
+    int node5 = 0;
+    int node6 = 0;
+    int node7 = 0;
+    int node8 = 0;
+    int node9 = 0;
+    int node10 = 0;
+};
+
 struct SurfaceTriangleElement
 {
     int id = 0;
@@ -29,6 +44,9 @@ struct SurfaceTriangleElement
     int node1 = 0;
     int node2 = 0;
     int node3 = 0;
+    int node4 = 0;
+    int node5 = 0;
+    int node6 = 0;
 };
 
 struct MeshPhysicalGroup
@@ -45,6 +63,7 @@ struct MeshData
     QString mshFilePath;
     std::vector<MeshNode> nodes;
     std::vector<TetraElement> tetraElements;
+    std::vector<Tetra10Element> tetra10Elements;
     std::vector<SurfaceTriangleElement> surfaceTriangles;
     std::vector<MeshPhysicalGroup> physicalGroups;
 
@@ -55,7 +74,17 @@ struct MeshData
 
     int tetraCount() const
     {
+        return static_cast<int>(tetraElements.size() + tetra10Elements.size());
+    }
+
+    int tetra4Count() const
+    {
         return static_cast<int>(tetraElements.size());
+    }
+
+    int tetra10Count() const
+    {
+        return static_cast<int>(tetra10Elements.size());
     }
 
     int surfaceTriangleCount() const
@@ -65,6 +94,6 @@ struct MeshData
 
     bool isEmpty() const
     {
-        return nodes.empty() && tetraElements.empty();
+        return nodes.empty() && tetraElements.empty() && tetra10Elements.empty();
     }
 };

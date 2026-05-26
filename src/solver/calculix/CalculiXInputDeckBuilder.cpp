@@ -11,8 +11,8 @@ bool validateRequiredData(const CalculiXCaseData &caseData, CalculiXInputDeckBui
     if (caseData.meshData.nodes.empty()) {
         result.errors.append("CalculiX export failed: mesh contains no nodes.");
     }
-    if (caseData.meshData.tetraElements.empty()) {
-        result.errors.append("CalculiX export failed: mesh contains no tetra4 elements.");
+    if (caseData.meshData.tetraElements.empty() && caseData.meshData.tetra10Elements.empty()) {
+        result.errors.append("CalculiX export failed: mesh contains no supported tetrahedral elements.");
     }
     if (caseData.meshData.surfaceTriangles.empty()) {
         result.errors.append("CalculiX export failed: mesh contains no surface triangle elements.");

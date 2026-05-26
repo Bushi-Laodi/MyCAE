@@ -2,6 +2,8 @@
 
 #include "solver/calculix/CalculiXDeckFormatting.h"
 
+#include <QStringList>
+
 #include <algorithm>
 
 namespace
@@ -32,14 +34,34 @@ void appendAllNodeSet(CalculiXInputDeck &deck, const MeshData &meshData)
 
 void appendElements(CalculiXInputDeck &deck, const MeshData &meshData)
 {
-    deck.appendLine("*ELEMENT, TYPE=C3D4, ELSET=EALL");
-    for (const TetraElement &tetra : meshData.tetraElements) {
-        deck.appendLine(QString("%1, %2, %3, %4, %5")
-            .arg(tetra.id)
-            .arg(tetra.node1)
-            .arg(tetra.node2)
-            .arg(tetra.node3)
-            .arg(tetra.node4));
+    if (!meshData.tetraElements.empty()) {
+        deck.appendLine("*ELEMENT, TYPE=C3D4, ELSET=EALL");
+        for (const TetraElement &tetra : meshData.tetraElements) {
+            deck.appendLine(QString("%1, %2, %3, %4, %5")
+                .arg(tetra.id)
+                .arg(tetra.node1)
+                .arg(tetra.node2)
+                .arg(tetra.node3)
+                .arg(tetra.node4));
+        }
+    }
+    if (!meshData.tetra10Elements.empty()) {
+        deck.appendLine("*ELEMENT, TYPE=C3D10, ELSET=EALL");
+        for (const Tetra10Element &tetra : meshData.tetra10Elements) {
+            deck.appendLine(QStringList{
+                QString::number(tetra.id),
+                QString::number(tetra.node1),
+                QString::number(tetra.node2),
+                QString::number(tetra.node3),
+                QString::number(tetra.node4),
+                QString::number(tetra.node5),
+                QString::number(tetra.node6),
+                QString::number(tetra.node7),
+                QString::number(tetra.node8),
+                QString::number(tetra.node10),
+                QString::number(tetra.node9)
+            }.join(", "));
+        }
     }
 }
 }
@@ -51,9 +73,10 @@ void CalculiXDeckSectionWriter::appendHeading(
 {
     deck.appendLine("*HEADING");
     deck.appendLine("MyCAE CalculiX input deck: " + calculixSafeName(caseData.caseName, "simulation_case"));
-    deck.appendComment(QString("Nodes: %1, tetra4 elements: %2, surface triangles: %3")
+    deck.appendComment(QString("Nodes: %1, tetra4 elements: %2, tetra10 elements: %3, surface triangles: %4")
         .arg(caseData.meshData.nodeCount())
-        .arg(caseData.meshData.tetraCount())
+        .arg(caseData.meshData.tetra4Count())
+        .arg(caseData.meshData.tetra10Count())
         .arg(caseData.meshData.surfaceTriangleCount()));
 }
 

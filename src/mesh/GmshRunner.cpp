@@ -115,6 +115,13 @@ GmshRunResult GmshRunner::generate3DMesh(
         QStringLiteral("-o"),
         outputMeshFile
     };
+    if (meshSetup.elementType == MeshElementType::Tetra10) {
+        arguments.append(QStringLiteral("-order"));
+        arguments.append(QStringLiteral("2"));
+        arguments.append(QStringLiteral("-setnumber"));
+        arguments.append(QStringLiteral("Mesh.SecondOrderLinear"));
+        arguments.append(QStringLiteral("1"));
+    }
     if (!meshSetup.autoSize) {
         if (meshSetup.minimumSize > 0.0) {
             arguments.append(QStringLiteral("-clmin"));

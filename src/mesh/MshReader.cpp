@@ -150,9 +150,17 @@ bool readNodesSection(QTextStream &stream, MeshData &meshData, QString *errorMes
     return expectSectionEnd(stream, "$EndNodes", errorMessage);
 }
 
-bool readTriangleElement(const QStringList &parts, int elementId, int tagCount, int nodeStart, MeshData &meshData, QString *errorMessage)
+bool readTriangleElement(
+    const QStringList &parts,
+    int elementId,
+    int tagCount,
+    int nodeStart,
+    int nodeCount,
+    MeshData &meshData,
+    QString *errorMessage
+)
 {
-    if (parts.size() < nodeStart + 3) {
+    if (parts.size() < nodeStart + nodeCount || nodeCount < 3) {
         return fail(errorMessage, "Invalid triangle element line: " + parts.join(' '));
     }
 
@@ -171,6 +179,13 @@ bool readTriangleElement(const QStringList &parts, int elementId, int tagCount, 
             || !parseInt(parts.at(nodeStart + 1), triangle.node2)
             || !parseInt(parts.at(nodeStart + 2), triangle.node3)) {
         return fail(errorMessage, "Invalid triangle node ids: " + parts.join(' '));
+    }
+    if (nodeCount >= 6) {
+        if (!parseInt(parts.at(nodeStart + 3), triangle.node4)
+                || !parseInt(parts.at(nodeStart + 4), triangle.node5)
+                || !parseInt(parts.at(nodeStart + 5), triangle.node6)) {
+            return fail(errorMessage, "Invalid quadratic triangle node ids: " + parts.join(' '));
+        }
     }
     meshData.surfaceTriangles.push_back(triangle);
     return true;
@@ -194,6 +209,30 @@ bool readTetraElement(const QStringList &parts, int elementId, int nodeStart, Me
     return true;
 }
 
+bool readTetra10Element(const QStringList &parts, int elementId, int nodeStart, MeshData &meshData, QString *errorMessage)
+{
+    if (parts.size() < nodeStart + 10) {
+        return fail(errorMessage, "Invalid quadratic tetrahedron element line: " + parts.join(' '));
+    }
+
+    Tetra10Element tetra;
+    tetra.id = elementId;
+    if (!parseInt(parts.at(nodeStart), tetra.node1)
+            || !parseInt(parts.at(nodeStart + 1), tetra.node2)
+            || !parseInt(parts.at(nodeStart + 2), tetra.node3)
+            || !parseInt(parts.at(nodeStart + 3), tetra.node4)
+            || !parseInt(parts.at(nodeStart + 4), tetra.node5)
+            || !parseInt(parts.at(nodeStart + 5), tetra.node6)
+            || !parseInt(parts.at(nodeStart + 6), tetra.node7)
+            || !parseInt(parts.at(nodeStart + 7), tetra.node8)
+            || !parseInt(parts.at(nodeStart + 8), tetra.node9)
+            || !parseInt(parts.at(nodeStart + 9), tetra.node10)) {
+        return fail(errorMessage, "Invalid quadratic tetrahedron node ids: " + parts.join(' '));
+    }
+    meshData.tetra10Elements.push_back(tetra);
+    return true;
+}
+
 bool readElementLine(const QString &elementLine, MeshData &meshData, QString *errorMessage)
 {
     const QStringList parts = elementLine.split(' ', Qt::SkipEmptyParts);
@@ -213,10 +252,16 @@ bool readElementLine(const QString &elementLine, MeshData &meshData, QString *er
 
     const int nodeStart = 3 + tagCount;
     if (elementType == 2) {
-        return readTriangleElement(parts, elementId, tagCount, nodeStart, meshData, errorMessage);
+        return readTriangleElement(parts, elementId, tagCount, nodeStart, 3, meshData, errorMessage);
+    }
+    if (elementType == 9) {
+        return readTriangleElement(parts, elementId, tagCount, nodeStart, 6, meshData, errorMessage);
     }
     if (elementType == 4) {
         return readTetraElement(parts, elementId, nodeStart, meshData, errorMessage);
+    }
+    if (elementType == 11) {
+        return readTetra10Element(parts, elementId, nodeStart, meshData, errorMessage);
     }
     return true;
 }
@@ -260,8 +305,8 @@ bool validateMesh(const MeshData &meshData, bool hasMeshFormat, bool hasNodes, b
     if (meshData.nodes.empty()) {
         return fail(errorMessage, "MSH file contains no nodes.");
     }
-    if (meshData.tetraElements.empty()) {
-        return fail(errorMessage, "MSH file contains no 4-node tetrahedron elements.");
+    if (meshData.tetraElements.empty() && meshData.tetra10Elements.empty()) {
+        return fail(errorMessage, "MSH file contains no supported tetrahedron elements.");
     }
     return true;
 }

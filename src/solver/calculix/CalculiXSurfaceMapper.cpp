@@ -13,6 +13,12 @@ CalculiXSurfaceMapper::CalculiXSurfaceMapper(const MeshData &meshData)
         addFace(tetra.id, "S3", tetra.node2, tetra.node3, tetra.node4);
         addFace(tetra.id, "S4", tetra.node1, tetra.node3, tetra.node4);
     }
+    for (const Tetra10Element &tetra : m_meshData.tetra10Elements) {
+        addFace(tetra.id, "S1", tetra.node1, tetra.node2, tetra.node3);
+        addFace(tetra.id, "S2", tetra.node1, tetra.node2, tetra.node4);
+        addFace(tetra.id, "S3", tetra.node2, tetra.node3, tetra.node4);
+        addFace(tetra.id, "S4", tetra.node1, tetra.node3, tetra.node4);
+    }
 }
 
 std::vector<int> CalculiXSurfaceMapper::nodeSetForPhysicalTag(int physicalTag) const
@@ -30,6 +36,15 @@ std::vector<int> CalculiXSurfaceMapper::nodeSetForPhysicalTags(const std::vector
         nodeIds.insert(triangle.node1);
         nodeIds.insert(triangle.node2);
         nodeIds.insert(triangle.node3);
+        if (triangle.node4 > 0) {
+            nodeIds.insert(triangle.node4);
+        }
+        if (triangle.node5 > 0) {
+            nodeIds.insert(triangle.node5);
+        }
+        if (triangle.node6 > 0) {
+            nodeIds.insert(triangle.node6);
+        }
     }
 
     std::vector<int> nodes;

@@ -157,6 +157,7 @@ bool ProjectModelLoader::loadSimulationCase(ProjectModel &projectModel, QString 
     SimulationCaseManager simulationCaseManager;
     if (!simulationCaseManager.exists(projectModel.project())) {
         projectModel.solverRepository().clearSolverData();
+        projectModel.meshRepository().meshSetup() = MeshSetup{};
         projectModel.ensureDefaultFaceGroups();
         return true;
     }

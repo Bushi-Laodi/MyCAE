@@ -2,10 +2,13 @@
 
 #include <vtkNew.h>
 #include <vtkPoints.h>
+#include <vtkQuadraticTetra.h>
 #include <vtkSmartPointer.h>
 #include <vtkTetra.h>
 #include <vtkUnstructuredGrid.h>
 
+#include <array>
+#include <cstddef>
 #include <unordered_map>
 
 vtkSmartPointer<vtkUnstructuredGrid> MeshToVtkConverter::toUnstructuredGrid(
@@ -25,7 +28,7 @@ vtkSmartPointer<vtkUnstructuredGrid> MeshToVtkConverter::toUnstructuredGrid(
         }
         return nullptr;
     }
-    if (meshData.tetraElements.empty()) {
+    if (meshData.tetraElements.empty() && meshData.tetra10Elements.empty()) {
         if (errorMessage) {
             *errorMessage = "MeshData contains no tetrahedron elements.";
         }
@@ -64,6 +67,34 @@ vtkSmartPointer<vtkUnstructuredGrid> MeshToVtkConverter::toUnstructuredGrid(
         tetra->GetPointIds()->SetId(1, node2->second);
         tetra->GetPointIds()->SetId(2, node3->second);
         tetra->GetPointIds()->SetId(3, node4->second);
+        grid->InsertNextCell(tetra->GetCellType(), tetra->GetPointIds());
+    }
+
+    for (const Tetra10Element &element : meshData.tetra10Elements) {
+        const std::array<int, 10> nodeIds = {
+            element.node1,
+            element.node2,
+            element.node3,
+            element.node4,
+            element.node5,
+            element.node6,
+            element.node7,
+            element.node8,
+            element.node9,
+            element.node10
+        };
+
+        vtkNew<vtkQuadraticTetra> tetra;
+        for (int index = 0; index < 10; ++index) {
+            const auto node = nodeIdToVtkId.find(nodeIds[static_cast<size_t>(index)]);
+            if (node == nodeIdToVtkId.end()) {
+                if (errorMessage) {
+                    *errorMessage = QString("Quadratic tetrahedron %1 references a missing node.").arg(element.id);
+                }
+                return nullptr;
+            }
+            tetra->GetPointIds()->SetId(index, node->second);
+        }
         grid->InsertNextCell(tetra->GetCellType(), tetra->GetPointIds());
     }
 

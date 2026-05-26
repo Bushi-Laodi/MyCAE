@@ -96,18 +96,20 @@ bool readMeshDataForGeometry(
     return true;
 }
 
-QString meshSizeLogSuffix(const MeshSetup &meshSetup)
+QString meshOptionLogSuffix(const MeshSetup &meshSetup)
 {
-    if (meshSetup.autoSize) {
-        return {};
+    QString suffix;
+    if (meshSetup.elementType == MeshElementType::Tetra10) {
+        suffix += " -order 2 -setnumber Mesh.SecondOrderLinear 1";
     }
 
-    QString suffix;
-    if (meshSetup.minimumSize > 0.0) {
-        suffix += QString(" -clmin %1").arg(meshSetup.minimumSize, 0, 'g', 12);
-    }
-    if (meshSetup.maximumSize > 0.0) {
-        suffix += QString(" -clmax %1").arg(meshSetup.maximumSize, 0, 'g', 12);
+    if (!meshSetup.autoSize) {
+        if (meshSetup.minimumSize > 0.0) {
+            suffix += QString(" -clmin %1").arg(meshSetup.minimumSize, 0, 'g', 12);
+        }
+        if (meshSetup.maximumSize > 0.0) {
+            suffix += QString(" -clmax %1").arg(meshSetup.maximumSize, 0, 'g', 12);
+        }
     }
     return suffix;
 }
@@ -191,7 +193,7 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     workflowResult.logMessages.append("Gmsh command: " + gmshRunner.gmshExecutablePath()
         + " " + gmshInputPath
         + " -3 -format msh2 -o " + meshAbsPath
-        + meshSizeLogSuffix(meshSetup));
+        + meshOptionLogSuffix(meshSetup));
     workflowResult.logMessages.append("Gmsh input: " + gmshInputPath);
     workflowResult.logMessages.append("Gmsh output: " + meshAbsPath);
     appendGmshRunLog(workflowResult, gmshRunner, gmshResult);

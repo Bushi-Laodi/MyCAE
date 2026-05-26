@@ -149,7 +149,7 @@ CalculiXCaseDataBuildResult CalculiXCaseDataBuilder::build(const SolverCaseConte
         result.errors.append("CalculiX case data build failed: cannot read MSH: " + meshReadError);
         return result;
     }
-    if (meshData.nodes.empty() || meshData.tetraElements.empty()) {
+    if (meshData.nodes.empty() || meshData.tetraCount() == 0) {
         result.errors.append("CalculiX case data build failed: mesh has no tetrahedral elements.");
         return result;
     }

@@ -161,7 +161,7 @@ std::optional<CalculiXBoundaryExport> mapBoundary(
     if (faces.empty()) {
         errors.append("CalculiX export failed: mesh boundary '"
             + physicalGroupNameForTag(caseData.meshData, physicalTags.front())
-            + "' cannot be mapped to C3D4 element faces.");
+            + "' cannot be mapped to tetrahedral element faces.");
         return std::nullopt;
     }
 

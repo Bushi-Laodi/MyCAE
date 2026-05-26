@@ -117,7 +117,9 @@ BooleanOperationType booleanOperationTypeFromString(const QString &value)
 
 MeshElementType meshElementTypeFromString(const QString &value)
 {
-    Q_UNUSED(value);
+    if (value.compare("tetra10", Qt::CaseInsensitive) == 0) {
+        return MeshElementType::Tetra10;
+    }
     return MeshElementType::Tetra4;
 }
 

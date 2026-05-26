@@ -7,10 +7,13 @@
 #include <vtkNew.h>
 #include <vtkPointData.h>
 #include <vtkPoints.h>
+#include <vtkQuadraticTetra.h>
 #include <vtkSmartPointer.h>
 #include <vtkTetra.h>
 #include <vtkUnstructuredGrid.h>
 
+#include <array>
+#include <cstddef>
 #include <limits>
 #include <vector>
 #include <unordered_map>
@@ -69,7 +72,7 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
     buildResult.meshNodeCount = meshData.nodeCount();
     buildResult.meshElementCount = meshData.tetraCount();
 
-    if (meshData.nodes.empty() || meshData.tetraElements.empty()) {
+    if (meshData.nodes.empty() || meshData.tetraCount() == 0) {
         buildResult.errors.append("Cannot build result grid: mesh has no nodes or tetrahedra.");
         return buildResult;
     }
@@ -185,6 +188,46 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
         tetra->GetPointIds()->SetId(1, node2->second);
         tetra->GetPointIds()->SetId(2, node3->second);
         tetra->GetPointIds()->SetId(3, node4->second);
+        grid->InsertNextCell(tetra->GetCellType(), tetra->GetPointIds());
+        elementIdArray->InsertNextValue(element.id);
+
+        double cellStress = 0.0;
+        const auto stressIt = stressByElementId.find(element.id);
+        if (stressIt != stressByElementId.end() && stressIt->second.count > 0) {
+            cellStress = stressIt->second.vonMisesSum / static_cast<double>(stressIt->second.count);
+            ++buildResult.matchedElementCount;
+        }
+        vonMisesArray->InsertNextValue(cellStress);
+        if (buildResult.scalarName == CalculiXResultFields::VonMisesStress) {
+            updateRange(cellStress, scalarMin, scalarMax);
+        }
+    }
+
+    for (const Tetra10Element &element : meshData.tetra10Elements) {
+        const std::array<int, 10> nodeIds = {
+            element.node1,
+            element.node2,
+            element.node3,
+            element.node4,
+            element.node5,
+            element.node6,
+            element.node7,
+            element.node8,
+            element.node9,
+            element.node10
+        };
+
+        vtkNew<vtkQuadraticTetra> tetra;
+        for (int index = 0; index < 10; ++index) {
+            const auto node = nodeIdToVtkId.find(nodeIds[static_cast<size_t>(index)]);
+            if (node == nodeIdToVtkId.end()) {
+                buildResult.errors.append(
+                    QString("Quadratic tetrahedron %1 references a missing node.").arg(element.id)
+                );
+                return buildResult;
+            }
+            tetra->GetPointIds()->SetId(index, node->second);
+        }
         grid->InsertNextCell(tetra->GetCellType(), tetra->GetPointIds());
         elementIdArray->InsertNextValue(element.id);
 

@@ -6,7 +6,6 @@
 #include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QMessageBox>
-#include <QStandardItemModel>
 #include <QVBoxLayout>
 
 namespace
@@ -34,13 +33,7 @@ void MeshSetupDialog::setupUi()
 
     m_elementTypeCombo = new QComboBox(this);
     m_elementTypeCombo->addItem(displayName(MeshElementType::Tetra4), toString(MeshElementType::Tetra4));
-    const int tet10Index = m_elementTypeCombo->count();
-    m_elementTypeCombo->addItem("Tet10 - Quadratic tetrahedron (not supported yet)", "tetra10");
-    if (auto *model = qobject_cast<QStandardItemModel *>(m_elementTypeCombo->model())) {
-        if (QStandardItem *item = model->item(tet10Index)) {
-            item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
-        }
-    }
+    m_elementTypeCombo->addItem(displayName(MeshElementType::Tetra10), toString(MeshElementType::Tetra10));
     form->addRow("Element type:", m_elementTypeCombo);
 
     m_autoSizeCheckBox = new QCheckBox(this);
@@ -118,7 +111,9 @@ void MeshSetupDialog::setElementType(MeshElementType elementType)
 MeshElementType MeshSetupDialog::selectedElementType() const
 {
     const QString value = m_elementTypeCombo->currentData().toString();
-    Q_UNUSED(value);
+    if (value == toString(MeshElementType::Tetra10)) {
+        return MeshElementType::Tetra10;
+    }
     return MeshElementType::Tetra4;
 }
 
