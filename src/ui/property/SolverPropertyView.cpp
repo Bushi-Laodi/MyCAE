@@ -7,6 +7,71 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
+QString yesNoText(bool value)
+{
+    return value ? zh(u8"是") : zh(u8"否");
+}
+
+QString materialDomainText(MaterialDomain domain)
+{
+    return domain == MaterialDomain::Solid ? zh(u8"固体") : zh(u8"流体");
+}
+
+QString viscosityModelText(ViscosityModel model)
+{
+    Q_UNUSED(model);
+    return zh(u8"牛顿流体");
+}
+
+QString boundaryTargetKindText(BoundaryTargetKind kind)
+{
+    return kind == BoundaryTargetKind::MeshBoundary ? zh(u8"网格边界") : zh(u8"几何面组");
+}
+
+QString boundaryConditionTypeText(BoundaryConditionType type)
+{
+    switch (type) {
+    case BoundaryConditionType::Wall:
+        return zh(u8"壁面");
+    case BoundaryConditionType::VelocityInlet:
+        return zh(u8"速度入口");
+    case BoundaryConditionType::PressureInlet:
+        return zh(u8"压力入口");
+    case BoundaryConditionType::PressureOutlet:
+        return zh(u8"压力出口");
+    case BoundaryConditionType::Symmetry:
+        return zh(u8"对称");
+    case BoundaryConditionType::Unknown:
+        return zh(u8"未知");
+    }
+    return zh(u8"未知");
+}
+
+QString loadTypeText(LoadType type)
+{
+    switch (type) {
+    case LoadType::Velocity:
+        return zh(u8"速度");
+    case LoadType::Pressure:
+        return zh(u8"压力");
+    case LoadType::BodyForce:
+        return zh(u8"体力");
+    case LoadType::Unknown:
+        return zh(u8"未知");
+    }
+    return zh(u8"未知");
+}
+
+QString loadValueKindText(LoadValueKind kind)
+{
+    return kind == LoadValueKind::Vector3 ? zh(u8"三维向量") : zh(u8"标量");
+}
+
 QString loadValueText(const Load &load)
 {
     QString valueText;

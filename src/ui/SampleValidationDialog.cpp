@@ -10,6 +10,24 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
+QString statusDisplayName(SampleValidationStatus status)
+{
+    switch (status) {
+    case SampleValidationStatus::Pass:
+        return zh(u8"通过");
+    case SampleValidationStatus::Fail:
+        return zh(u8"失败");
+    case SampleValidationStatus::Skip:
+        return zh(u8"跳过");
+    }
+    return zh(u8"未知");
+}
+
 QBrush statusBrush(SampleValidationStatus status)
 {
     switch (status) {
@@ -34,17 +52,17 @@ QTableWidgetItem *item(const QString &text)
 SampleValidationDialog::SampleValidationDialog(QWidget *parent)
     : QDialog(parent)
 {
-    setWindowTitle("Validate Samples");
+    setWindowTitle(zh(u8"验证样例"));
     resize(880, 420);
 
     auto *layout = new QVBoxLayout(this);
 
-    m_summaryLabel = new QLabel("Ready", this);
+    m_summaryLabel = new QLabel(zh(u8"就绪"), this);
     layout->addWidget(m_summaryLabel);
 
     m_table = new QTableWidget(this);
     m_table->setColumnCount(3);
-    m_table->setHorizontalHeaderLabels({"Status", "Check", "Detail"});
+    m_table->setHorizontalHeaderLabels({zh(u8"状态"), zh(u8"检查项"), zh(u8"详情")});
     m_table->horizontalHeader()->setStretchLastSection(true);
     m_table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     m_table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
@@ -54,8 +72,9 @@ SampleValidationDialog::SampleValidationDialog(QWidget *parent)
     layout->addWidget(m_table);
 
     auto *buttons = new QDialogButtonBox(this);
-    m_runButton = buttons->addButton("Run", QDialogButtonBox::ActionRole);
+    m_runButton = buttons->addButton(zh(u8"运行"), QDialogButtonBox::ActionRole);
     auto *closeButton = buttons->addButton(QDialogButtonBox::Close);
+    closeButton->setText(zh(u8"关闭"));
     connect(m_runButton, &QPushButton::clicked, this, &SampleValidationDialog::runValidation);
     connect(closeButton, &QPushButton::clicked, this, &SampleValidationDialog::accept);
     layout->addWidget(buttons);
@@ -64,7 +83,7 @@ SampleValidationDialog::SampleValidationDialog(QWidget *parent)
 void SampleValidationDialog::runValidation()
 {
     m_runButton->setEnabled(false);
-    m_summaryLabel->setText("Running...");
+    m_summaryLabel->setText(zh(u8"正在运行..."));
     m_table->setRowCount(0);
 
     const SampleValidationReport report = SampleProjectValidator().validate();
@@ -79,7 +98,7 @@ void SampleValidationDialog::setReport(const SampleValidationReport &report)
     m_table->setRowCount(report.steps.size());
     for (int row = 0; row < report.steps.size(); ++row) {
         const SampleValidationStep &step = report.steps.at(row);
-        QTableWidgetItem *statusItem = item(sampleValidationStatusName(step.status));
+        QTableWidgetItem *statusItem = item(statusDisplayName(step.status));
         statusItem->setForeground(statusBrush(step.status));
         m_table->setItem(row, 0, statusItem);
         m_table->setItem(row, 1, item(step.name));
@@ -87,8 +106,8 @@ void SampleValidationDialog::setReport(const SampleValidationReport &report)
     }
 
     m_summaryLabel->setText(report.success()
-        ? QString("All sample validation checks passed: %1 pass.").arg(report.passedCount())
-        : QString("Sample validation failed: %1 pass, %2 fail. Check Log and Diagnostics for details.")
+        ? zh(u8"全部样例检查通过：%1 项通过。").arg(report.passedCount())
+        : zh(u8"样例验证失败：%1 项通过，%2 项失败。请查看日志和诊断信息。")
             .arg(report.passedCount())
             .arg(report.failedCount()));
 }

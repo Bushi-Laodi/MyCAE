@@ -5,6 +5,14 @@
 #include <QStringList>
 #include <QVBoxLayout>
 
+namespace
+{
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+}
+
 void PickPropertyView::populate(
     QWidget *parent,
     PickMode mode,
@@ -20,9 +28,9 @@ void PickPropertyView::populate(
         faceIndexTexts.append(QString::number(faceIndex));
     }
 
-    form->addRow("Pick Mode:", new QLabel(pickModeName(mode), parent));
-    form->addRow("Geometry:", new QLabel(geometryName, parent));
-    form->addRow("Selected Faces:", new QLabel(QString::number(faceIndices.size()), parent));
-    form->addRow("Face Indices:", new QLabel(faceIndexTexts.join(", "), parent));
+    form->addRow(zh(u8"拾取模式:"), new QLabel(pickModeName(mode), parent));
+    form->addRow(zh(u8"几何:"), new QLabel(geometryName, parent));
+    form->addRow(zh(u8"已选面:"), new QLabel(QString::number(faceIndices.size()), parent));
+    form->addRow(zh(u8"面索引:"), new QLabel(faceIndexTexts.join(", "), parent));
     dynamicLayout->addLayout(form);
 }

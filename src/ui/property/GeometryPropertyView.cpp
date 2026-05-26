@@ -6,12 +6,20 @@
 #include <QLabel>
 #include <QVBoxLayout>
 
+namespace
+{
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+}
+
 void GeometryPropertyView::populate(QWidget *parent, const GeometryObject &geometry)
 {
     auto *dynamicLayout = new QVBoxLayout(parent);
     auto *form = new QFormLayout;
-    form->addRow("JSON File:", new QLabel(geometry.jsonFile, parent));
-    form->addRow("BREP File:", new QLabel(geometry.brepFile, parent));
-    form->addRow("STEP File:", new QLabel(geometry.stepFile, parent));
+    form->addRow(zh(u8"JSON 文件:"), new QLabel(geometry.jsonFile, parent));
+    form->addRow(zh(u8"BREP 文件:"), new QLabel(geometry.brepFile, parent));
+    form->addRow(zh(u8"STEP 文件:"), new QLabel(geometry.stepFile, parent));
     dynamicLayout->addLayout(form);
 }
