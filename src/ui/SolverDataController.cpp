@@ -44,6 +44,29 @@ BoundaryConditionDialogOptions boundaryConditionDialogOptions(const ProjectModel
     }
     return options;
 }
+
+LoadDialogOptions loadDialogOptions(const ProjectModel &projectModel)
+{
+    LoadDialogOptions options;
+    const SolverRepository &solverRepository = projectModel.solverRepository();
+    for (const BoundaryCondition &boundaryCondition : solverRepository.boundaryConditions()) {
+        LoadBoundaryConditionOption option;
+        option.id = boundaryCondition.id;
+        option.displayName = boundaryCondition.name.trimmed().isEmpty()
+            || boundaryCondition.name == boundaryCondition.id
+            ? boundaryCondition.id
+            : QString("%1 (%2)").arg(boundaryCondition.name, boundaryCondition.id);
+        options.boundaryConditions.push_back(option);
+    }
+
+    if (projectModel.selection().kind == SelectionKind::BoundaryCondition) {
+        options.defaultBoundaryConditionId = projectModel.selection().id;
+    } else if (options.boundaryConditions.size() == 1) {
+        options.defaultBoundaryConditionId = options.boundaryConditions.front().id;
+    }
+
+    return options;
+}
 }
 
 QStringList SolverDataController::showMaterialCategory(ProjectModel &projectModel, PropertyPanel *propertyPanel)
@@ -179,7 +202,7 @@ SolverDataControllerResult SolverDataController::createLoad(QWidget *parent, Pro
     }
 
     SolverDataControllerResult result;
-    const std::optional<Load> newLoad = LoadDialog::createLoad(parent);
+    const std::optional<Load> newLoad = LoadDialog::createLoad(parent, loadDialogOptions(projectModel));
     if (!newLoad) {
         result.logMessages.append("Create load canceled.");
         return result;
@@ -221,7 +244,8 @@ SolverDataControllerResult SolverDataController::editSelected(QWidget *parent, P
 
     if (Load *load = projectModel.loadForSelection()) {
         const QString originalId = load->id;
-        const std::optional<Load> editedLoad = LoadDialog::editLoad(parent, *load);
+        const std::optional<Load> editedLoad =
+            LoadDialog::editLoad(parent, *load, loadDialogOptions(projectModel));
         if (!editedLoad) {
             result.logMessages.append("Edit load canceled.");
             return result;

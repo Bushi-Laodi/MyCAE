@@ -1,5 +1,7 @@
 #pragma once
 
+#include "mesh/MeshSetup.h"
+
 #include <QString>
 
 struct GmshRunResult
@@ -20,7 +22,11 @@ public:
 
     QString gmshExecutablePath() const;
     GmshRunResult checkVersion() const;
-    GmshRunResult generate3DMesh(const QString &inputGeometryFile, const QString &outputMeshFile) const;
+    GmshRunResult generate3DMesh(
+        const QString &inputGeometryFile,
+        const QString &outputMeshFile,
+        const MeshSetup &meshSetup = {}
+    ) const;
 
 private:
     QString m_gmshExecutablePath;

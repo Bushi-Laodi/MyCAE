@@ -174,6 +174,7 @@ QJsonDocument SimulationCaseJsonWriter::toJson(const SimulationCase &simulationC
     geometrySetup.insert("faceGroups", faceGroups);
 
     QJsonObject meshSetup;
+    meshSetup.insert("elementType", toString(simulationCase.meshSetup.elementType));
     meshSetup.insert("minimumSize", simulationCase.meshSetup.minimumSize);
     meshSetup.insert("maximumSize", simulationCase.meshSetup.maximumSize);
     meshSetup.insert("autoSize", simulationCase.meshSetup.autoSize);

@@ -2,6 +2,7 @@
 
 #include "mesh/MeshBoundary.h"
 #include "mesh/MeshObject.h"
+#include "mesh/MeshSetup.h"
 
 #include <QVector>
 
@@ -14,6 +15,8 @@ public:
     const QVector<MeshObject> &meshObjects() const;
     QVector<MeshBoundary> &meshBoundaries();
     const QVector<MeshBoundary> &meshBoundaries() const;
+    MeshSetup &meshSetup();
+    const MeshSetup &meshSetup() const;
     const MeshObject *findMeshByName(const QString &name) const;
     MeshBoundary *findMeshBoundaryById(const QString &id);
     const MeshBoundary *findMeshBoundaryById(const QString &id) const;
@@ -22,4 +25,5 @@ public:
 private:
     QVector<MeshObject> m_meshObjects;
     QVector<MeshBoundary> m_meshBoundaries;
+    MeshSetup m_meshSetup;
 };

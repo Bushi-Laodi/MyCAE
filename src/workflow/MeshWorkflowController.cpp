@@ -95,6 +95,22 @@ bool readMeshDataForGeometry(
     }
     return true;
 }
+
+QString meshSizeLogSuffix(const MeshSetup &meshSetup)
+{
+    if (meshSetup.autoSize) {
+        return {};
+    }
+
+    QString suffix;
+    if (meshSetup.minimumSize > 0.0) {
+        suffix += QString(" -clmin %1").arg(meshSetup.minimumSize, 0, 'g', 12);
+    }
+    if (meshSetup.maximumSize > 0.0) {
+        suffix += QString(" -clmax %1").arg(meshSetup.maximumSize, 0, 'g', 12);
+    }
+    return suffix;
+}
 }
 
 MeshWorkflowResult MeshWorkflowController::checkGmsh() const
@@ -160,14 +176,22 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     const QString gmshInputPath = gmshCaseResult.meshInputFile.isEmpty()
         ? stepAbsPath
         : gmshCaseResult.meshInputFile;
-    const GmshRunResult gmshResult = gmshRunner.generate3DMesh(gmshInputPath, meshAbsPath);
+    const MeshSetup &meshSetup = projectModel.meshRepository().meshSetup();
+    const GmshRunResult gmshResult = gmshRunner.generate3DMesh(gmshInputPath, meshAbsPath, meshSetup);
 
     workflowResult.logMessages.append("Geometry name: " + geometry.name);
     workflowResult.logMessages.append("Geometry type: " + geometry.type);
+    workflowResult.logMessages.append("Mesh element type: " + displayName(meshSetup.elementType));
+    workflowResult.logMessages.append(meshSetup.autoSize
+        ? QString("Mesh size mode: auto")
+        : QString("Mesh size mode: manual, min=%1, max=%2")
+            .arg(meshSetup.minimumSize, 0, 'g', 12)
+            .arg(meshSetup.maximumSize, 0, 'g', 12));
     workflowResult.logMessages.append("Gmsh path: " + gmshRunner.gmshExecutablePath());
     workflowResult.logMessages.append("Gmsh command: " + gmshRunner.gmshExecutablePath()
         + " " + gmshInputPath
-        + " -3 -format msh2 -o " + meshAbsPath);
+        + " -3 -format msh2 -o " + meshAbsPath
+        + meshSizeLogSuffix(meshSetup));
     workflowResult.logMessages.append("Gmsh input: " + gmshInputPath);
     workflowResult.logMessages.append("Gmsh output: " + meshAbsPath);
     appendGmshRunLog(workflowResult, gmshRunner, gmshResult);
@@ -196,7 +220,7 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     meshObject.sourceGeometryType = geometry.type;
     meshObject.sourceStepFile = geometry.stepFile;
     meshObject.mshFile = meshRelativePath;
-    meshObject.type = "tetra4";
+    meshObject.type = toString(meshSetup.elementType);
     meshObject.nodeCount = meshData.nodeCount();
     meshObject.tetraCount = meshData.tetraCount();
     meshObject.createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);

@@ -4,6 +4,7 @@ void MeshRepository::clear()
 {
     m_meshObjects.clear();
     m_meshBoundaries.clear();
+    m_meshSetup = MeshSetup{};
 }
 
 QVector<MeshObject> &MeshRepository::meshObjects()
@@ -24,6 +25,16 @@ QVector<MeshBoundary> &MeshRepository::meshBoundaries()
 const QVector<MeshBoundary> &MeshRepository::meshBoundaries() const
 {
     return m_meshBoundaries;
+}
+
+MeshSetup &MeshRepository::meshSetup()
+{
+    return m_meshSetup;
+}
+
+const MeshSetup &MeshRepository::meshSetup() const
+{
+    return m_meshSetup;
 }
 
 const MeshObject *MeshRepository::findMeshByName(const QString &name) const

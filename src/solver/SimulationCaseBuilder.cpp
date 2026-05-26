@@ -57,6 +57,7 @@ SimulationCase SimulationCaseBuilder::fromProjectModel(const ProjectModel &proje
         : projectModel.project().name + " Simulation Case";
     simulationCase.sourceGeometryName = selectedOrFirstGeometryName(projectModel);
     simulationCase.meshName = selectedOrFirstMeshName(projectModel);
+    simulationCase.meshSetup = projectModel.meshRepository().meshSetup();
     simulationCase.postProcessingTool = "ParaView";
     const SolverRepository &solverRepository = projectModel.solverRepository();
     simulationCase.materials = solverRepository.materials();

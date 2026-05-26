@@ -72,7 +72,11 @@ GmshRunResult GmshRunner::checkVersion() const
     return result;
 }
 
-GmshRunResult GmshRunner::generate3DMesh(const QString &inputGeometryFile, const QString &outputMeshFile) const
+GmshRunResult GmshRunner::generate3DMesh(
+    const QString &inputGeometryFile,
+    const QString &outputMeshFile,
+    const MeshSetup &meshSetup
+) const
 {
     GmshRunResult result;
 
@@ -103,14 +107,25 @@ GmshRunResult GmshRunner::generate3DMesh(const QString &inputGeometryFile, const
 
     QProcess process;
     process.setProgram(m_gmshExecutablePath);
-    process.setArguments(QStringList{
+    QStringList arguments{
         inputGeometryFile,
         QStringLiteral("-3"),
         QStringLiteral("-format"),
         QStringLiteral("msh2"),
         QStringLiteral("-o"),
         outputMeshFile
-    });
+    };
+    if (!meshSetup.autoSize) {
+        if (meshSetup.minimumSize > 0.0) {
+            arguments.append(QStringLiteral("-clmin"));
+            arguments.append(QString::number(meshSetup.minimumSize, 'g', 12));
+        }
+        if (meshSetup.maximumSize > 0.0) {
+            arguments.append(QStringLiteral("-clmax"));
+            arguments.append(QString::number(meshSetup.maximumSize, 'g', 12));
+        }
+    }
+    process.setArguments(arguments);
     process.start();
 
     if (!process.waitForStarted()) {

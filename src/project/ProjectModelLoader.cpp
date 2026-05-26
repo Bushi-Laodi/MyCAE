@@ -171,6 +171,7 @@ bool ProjectModelLoader::loadSimulationCase(ProjectModel &projectModel, QString 
     solverRepository.boundaryConditions() = simulationCase.boundaryConditions;
     solverRepository.loads() = simulationCase.loads;
     solverRepository.faceGroups() = simulationCase.geometrySetup.faceGroups;
+    projectModel.meshRepository().meshSetup() = simulationCase.meshSetup;
     projectModel.ensureDefaultFaceGroups();
     return true;
 }

@@ -1,8 +1,14 @@
 #include "commands/MeshCommands.h"
 
 #include "commands/CommandUtilities.h"
+#include "project/ProjectModel.h"
+#include "ui/MeshSetupDialog.h"
 #include "workflow/MeshWorkflowController.h"
 #include "workflow/ProjectWorkflowController.h"
+
+#include <QMainWindow>
+
+#include <optional>
 
 namespace
 {
@@ -19,12 +25,26 @@ public:
     {
         const MeshWorkflowController meshWorkflow;
         MeshWorkflowResult result;
+        bool meshSetupChanged = false;
 
         switch (m_type) {
         case MeshCommandType::CheckGmsh:
             result = meshWorkflow.checkGmsh();
             break;
         case MeshCommandType::Generate:
+            if (m_context.projectModel.hasProject()) {
+                const std::optional<MeshSetup> meshSetup =
+                    MeshSetupDialog::editMeshSetup(
+                        m_context.window,
+                        m_context.projectModel.meshRepository().meshSetup()
+                    );
+                if (!meshSetup) {
+                    result.logMessages.append("Generate mesh canceled.");
+                    break;
+                }
+                m_context.projectModel.meshRepository().meshSetup() = *meshSetup;
+                meshSetupChanged = true;
+            }
             result = meshWorkflow.generateMesh(m_context.projectModel);
             break;
         case MeshCommandType::ReadInfo:
@@ -40,6 +60,9 @@ public:
         ProjectWorkflowController projectWorkflow = makeProjectWorkflow(m_context);
         if (result.meshTreeChanged) {
             projectWorkflow.refreshMeshTree();
+        }
+        if (meshSetupChanged) {
+            result.simulationCaseChanged = true;
         }
         if (result.simulationCaseChanged) {
             writeLogMessages(m_context.logPanel, projectWorkflow.saveSimulationCase().logMessages);

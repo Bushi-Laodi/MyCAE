@@ -58,9 +58,10 @@ set(MYCAE_GMSH_EXECUTABLE
     CACHE FILEPATH "Path to the local Gmsh executable"
 )
 set(MYCAE_CALCULIX_EXECUTABLE
-    "E:/tools/Anaconda/envs/calculix/Library/bin/ccx.exe"
+    "D:/cpp_lib/calculix/CalculiX-2.23.0-win-x64/bin/ccx.exe"
     CACHE FILEPATH "Path to the local CalculiX ccx executable"
 )
+
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(VTK REQUIRED COMPONENTS
@@ -174,6 +175,7 @@ qt_add_executable(MyCAE
     src/mesh/MeshManager.cpp
     src/mesh/MeshManager.h
     src/mesh/MeshObject.h
+    src/mesh/MeshSetup.h
     src/mesh/MeshToVtkConverter.cpp
     src/mesh/MeshToVtkConverter.h
     src/mesh/MshReader.cpp
@@ -360,6 +362,8 @@ qt_add_executable(MyCAE
     src/ui/MainWindowViewController.h
     src/ui/MaterialDialog.cpp
     src/ui/MaterialDialog.h
+    src/ui/MeshSetupDialog.cpp
+    src/ui/MeshSetupDialog.h
     src/ui/ProjectResourceDialog.cpp
     src/ui/ProjectResourceDialog.h
     src/ui/ProjectTreePanel.cpp

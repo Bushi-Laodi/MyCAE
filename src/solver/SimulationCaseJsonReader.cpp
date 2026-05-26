@@ -115,6 +115,12 @@ BooleanOperationType booleanOperationTypeFromString(const QString &value)
     return BooleanOperationType::Union;
 }
 
+MeshElementType meshElementTypeFromString(const QString &value)
+{
+    Q_UNUSED(value);
+    return MeshElementType::Tetra4;
+}
+
 Point3D pointFromJson(const QJsonObject &object)
 {
     Point3D point;
@@ -292,6 +298,7 @@ bool SimulationCaseJsonReader::fromJson(
     }
 
     const QJsonObject meshSetup = root.value("meshSetup").toObject();
+    loadedCase.meshSetup.elementType = meshElementTypeFromString(stringValue(meshSetup, "elementType", "tetra4"));
     loadedCase.meshSetup.minimumSize = numberValue(meshSetup, "minimumSize");
     loadedCase.meshSetup.maximumSize = numberValue(meshSetup, "maximumSize", 1.0);
     loadedCase.meshSetup.autoSize = boolValue(meshSetup, "autoSize", true);

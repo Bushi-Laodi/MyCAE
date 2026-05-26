@@ -1,6 +1,7 @@
 #pragma once
 
 #include "geometry/FaceGroup.h"
+#include "mesh/MeshSetup.h"
 #include "solver/BoundaryCondition.h"
 #include "solver/Load.h"
 #include "solver/Material.h"
@@ -61,16 +62,6 @@ struct GeometrySetup
     std::vector<CylinderDefinition> cylinders;
     BooleanOperationDefinition booleanOperation;
     std::vector<FaceGroup> faceGroups;
-};
-
-struct MeshSetup
-{
-    double minimumSize = 0.0;
-    double maximumSize = 1.0;
-    bool autoSize = true;
-    QString localFaceGroupName;
-    bool autoImportAfterGeneration = true;
-    bool showBoundaryAfterImport = true;
 };
 
 struct RunControl
