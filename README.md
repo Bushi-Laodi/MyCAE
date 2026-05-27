@@ -1,48 +1,49 @@
 # MyCAE
 
-MyCAE is a lightweight CAE integration practice project built with Qt 6.
+MyCAE 是一个基于 Qt 6 的轻量级 CAE 集成项目，当前主线已经覆盖：
 
-## Stage 1 Goal
+- Open CASCADE 几何
+- Gmsh 网格
+- CalculiX 结构求解
+- VTK 结果显示
+- 结果后处理、极值、点选查询和导出
+- 样例工程与自动化验收
 
-The first stage only builds a runnable desktop shell:
+## 文档
 
-- main window
-- menu bar and tool bar
-- project/model tree
-- central placeholder render area
-- property panel
-- log output panel
+统一文档入口：
 
-Open CASCADE, VTK, Gmsh, and CalculiX are intentionally left for later stages.
+[docs/README.md](docs/README.md)
 
-## Build
+主要文档：
 
-```powershell
-cmake -S . -B build-qt6 -G "Visual Studio 16 2019" -A x64 -DCMAKE_PREFIX_PATH=D:/dev/Qt/6.6.3/msvc2019_64
-cmake --build build-qt6 --config Debug
-```
+- [用户使用说明](docs/user-guide.md)
+- [样例工程说明](docs/sample-projects.md)
+- [求解流程说明](docs/solver-workflow.md)
+- [开发架构说明](docs/development-architecture.md)
 
-The installed Qt package is `msvc2019_64`, so use a 64-bit MSVC compiler from Visual Studio 2019 16.7 or newer. Visual Studio 2017 is too old for Qt 6.6.3.
-
-## Acceptance Check
-
-The repository includes a formal demo project at:
-
-`samples/projects/box_pressure_demo/project.json`
-
-Run the automated acceptance check from a built application directory:
+## 快速构建
 
 ```powershell
-.\MyCAE.exe --validate-samples
+cmake --build .\build-codex-qt663-ninja --target MyCAE
 ```
 
-The check opens the demo project, verifies its geometry, mesh, simulation case, result files, and result data, then runs the CalculiX sample decks when `ccx` is configured.
+## 快速验收
 
-## Current Development Order
+```powershell
+.\build-codex-qt663-ninja\MyCAE.exe --validate-samples
+.\build-codex-qt663-ninja\MyCAE.exe --validate-ui
+.\build-codex-qt663-ninja\MyCAE.exe --capture-ui-sample --ui-screenshot-dir .\build-codex-qt663-ninja\ui_screenshots
+```
 
-1. Qt 6 application skeleton
-2. project data structure and project creation
-3. minimal geometry model
-4. render view integration
-5. mesh and solver adapters
-6. post-processing view
+或使用 CTest：
+
+```powershell
+ctest --test-dir .\build-codex-qt663-ninja --output-on-failure
+```
+
+预期结果：
+
+```text
+100% tests passed
+```
