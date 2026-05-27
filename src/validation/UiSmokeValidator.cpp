@@ -3,13 +3,12 @@
 #include "ui/MainWindow.h"
 #include "ui/PropertyPanel.h"
 #include "ui/ResultPostprocessPanel.h"
+#include "validation/UiAutomationSupport.h"
 
 #include <QAction>
 #include <QApplication>
 #include <QComboBox>
-#include <QCoreApplication>
 #include <QDockWidget>
-#include <QDir>
 #include <QFileInfo>
 #include <QFont>
 #include <QGroupBox>
@@ -21,11 +20,9 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
-#include <QSettings>
 #include <QStringList>
 #include <QTableWidget>
 #include <QToolBar>
-#include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QWidget>
 
@@ -203,39 +200,9 @@ void addActionEnabledStep(UiValidationReport &report, const QMainWindow &window,
     );
 }
 
-QTreeWidgetItem *findTreeItemByText(QTreeWidgetItem *root, const QString &text)
-{
-    if (!root) {
-        return nullptr;
-    }
-    if (root->text(0) == text) {
-        return root;
-    }
-    for (int i = 0; i < root->childCount(); ++i) {
-        if (QTreeWidgetItem *match = findTreeItemByText(root->child(i), text)) {
-            return match;
-        }
-    }
-    return nullptr;
-}
-
-QTreeWidgetItem *findTreeItemByText(const QMainWindow &window, const QString &text)
-{
-    QTreeWidget *tree = window.findChild<QTreeWidget *>();
-    if (!tree) {
-        return nullptr;
-    }
-    for (int i = 0; i < tree->topLevelItemCount(); ++i) {
-        if (QTreeWidgetItem *match = findTreeItemByText(tree->topLevelItem(i), text)) {
-            return match;
-        }
-    }
-    return nullptr;
-}
-
 int treeItemChildCount(const QMainWindow &window, const QString &text)
 {
-    if (QTreeWidgetItem *item = findTreeItemByText(window, text)) {
+    if (QTreeWidgetItem *item = UiAutomationSupport::findTreeItemByText(window, text)) {
         return item->childCount();
     }
     return -1;
@@ -243,19 +210,8 @@ int treeItemChildCount(const QMainWindow &window, const QString &text)
 
 bool treeItemHasCategoryStyle(const QMainWindow &window, const QString &text)
 {
-    QTreeWidgetItem *item = findTreeItemByText(window, text);
+    QTreeWidgetItem *item = UiAutomationSupport::findTreeItemByText(window, text);
     return item && item->font(0).bold() && !item->icon(0).isNull();
-}
-
-bool selectTreeItem(const QMainWindow &window, const QString &text)
-{
-    QTreeWidget *tree = window.findChild<QTreeWidget *>();
-    QTreeWidgetItem *item = findTreeItemByText(window, text);
-    if (!tree || !item) {
-        return false;
-    }
-    tree->setCurrentItem(item);
-    return true;
 }
 
 bool resultFieldControlEnabled(const QMainWindow &window)
@@ -308,63 +264,13 @@ bool logPlaceholderConfigured(const QMainWindow &window)
     return logView && logView->placeholderText() == zh(u8"暂无日志消息。");
 }
 
-QString defaultDemoProjectFilePath()
+void validateDemoProjectUi(
+    UiValidationReport &report,
+    UiAutomationSupport::RecentProjectsSettingsGuard &settingsGuard,
+    MainWindow &window
+)
 {
-    const QString appProject = QDir(QCoreApplication::applicationDirPath())
-        .filePath("samples/projects/box_pressure_demo/project.json");
-    if (QFileInfo::exists(appProject)) {
-        return appProject;
-    }
-
-#ifdef MYCAE_SOURCE_DIR
-    const QString sourceProject = QDir(QString::fromUtf8(MYCAE_SOURCE_DIR))
-        .filePath("samples/projects/box_pressure_demo/project.json");
-    if (QFileInfo::exists(sourceProject)) {
-        return sourceProject;
-    }
-#endif
-
-    return appProject;
-}
-
-class RecentProjectsSettingsGuard
-{
-public:
-    RecentProjectsSettingsGuard()
-        : m_hadValue(m_settings.contains(RecentProjectsKey))
-        , m_value(m_settings.value(RecentProjectsKey))
-    {
-        m_settings.remove(RecentProjectsKey);
-        m_settings.sync();
-    }
-
-    void setRecentProjects(const QStringList &projects)
-    {
-        m_settings.setValue(RecentProjectsKey, projects);
-        m_settings.sync();
-    }
-
-    ~RecentProjectsSettingsGuard()
-    {
-        if (m_hadValue) {
-            m_settings.setValue(RecentProjectsKey, m_value);
-        } else {
-            m_settings.remove(RecentProjectsKey);
-        }
-        m_settings.sync();
-    }
-
-private:
-    static constexpr const char *RecentProjectsKey = "projects/recent";
-
-    QSettings m_settings{"MyCAE", "MyCAE"};
-    bool m_hadValue = false;
-    QVariant m_value;
-};
-
-void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGuard &settingsGuard, MainWindow &window)
-{
-    const QString demoProjectFilePath = defaultDemoProjectFilePath();
+    const QString demoProjectFilePath = UiAutomationSupport::demoProjectFilePath();
     addStep(
         report,
         "Demo project file exists",
@@ -397,7 +303,7 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
     addStep(
         report,
         "Demo project opened in project tree",
-        findTreeItemByText(window, "Box Pressure Demo") != nullptr
+        UiAutomationSupport::findTreeItemByText(window, "Box Pressure Demo") != nullptr
     );
     const QStringList populatedTreeGroups{
         zh(u8"几何"),
@@ -444,7 +350,7 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
         projectResourcesAction && projectResourcesAction->isEnabled(),
         projectResourcesAction ? QString() : "Action not found"
     );
-    const bool geometrySelected = selectTreeItem(window, "Box_1");
+    const bool geometrySelected = UiAutomationSupport::selectTreeItem(window, "Box_1");
     addStep(report, "Demo geometry selection works", geometrySelected);
     if (geometrySelected) {
         addActionEnabledStep(report, window, "mesh.generate");
@@ -475,7 +381,8 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
         "Result field control disabled before result selection",
         !resultFieldControlEnabled(window)
     );
-    const bool resultSelected = selectTreeItem(window, "CalculiX Result - Box Pressure Demo");
+    const bool resultSelected =
+        UiAutomationSupport::selectTreeItem(window, "CalculiX Result - Box Pressure Demo");
     addStep(report, "Demo result selection works", resultSelected);
     if (resultSelected) {
         QAction *resultFieldAction = findActionByText(window, "Ux");
@@ -574,13 +481,11 @@ int UiValidationReport::failedCount() const
 UiValidationReport UiSmokeValidator::validate() const
 {
     UiValidationReport report;
-    RecentProjectsSettingsGuard recentProjectsSettingsGuard;
+    UiAutomationSupport::RecentProjectsSettingsGuard recentProjectsSettingsGuard;
     {
-        qApp->setProperty("mycae.skipVtkCanvas", true);
+        UiAutomationSupport::setSkipVtkCanvas(true);
         MainWindow *window = new MainWindow;
-        for (QWidget *widget : window->findChildren<QWidget *>()) {
-            widget->setProperty("mycae.skipResultRender", true);
-        }
+        UiAutomationSupport::enableStableResultSummaryMode(*window);
         const QStringList menuTitles{
             zh(u8"文件"),
             zh(u8"编辑"),
@@ -720,7 +625,7 @@ UiValidationReport UiSmokeValidator::validate() const
 
         window->prepareForAutomationShutdown();
     }
-    qApp->setProperty("mycae.skipVtkCanvas", false);
+    UiAutomationSupport::setSkipVtkCanvas(false);
 
     return report;
 }

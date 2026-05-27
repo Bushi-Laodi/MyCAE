@@ -1,6 +1,7 @@
 #include "validation/UiSampleScreenshotter.h"
 
 #include "ui/MainWindow.h"
+#include "validation/UiAutomationSupport.h"
 
 #include <QApplication>
 #include <QDateTime>
@@ -8,83 +9,16 @@
 #include <QDockWidget>
 #include <QFileInfo>
 #include <QPixmap>
-#include <QSettings>
 #include <QStandardPaths>
-#include <QTreeWidget>
-#include <QTreeWidgetItem>
-#include <QVariant>
-#include <QWidget>
 
 #include <utility>
 
 namespace
 {
-constexpr const char *RecentProjectsKey = "projects/recent";
-
-QString defaultDemoProjectFilePath()
-{
-    const QString appProject = QDir(QApplication::applicationDirPath())
-        .filePath("samples/projects/box_pressure_demo/project.json");
-    if (QFileInfo::exists(appProject)) {
-        return appProject;
-    }
-
-#ifdef MYCAE_SOURCE_DIR
-    const QString sourceProject = QDir(QString::fromUtf8(MYCAE_SOURCE_DIR))
-        .filePath("samples/projects/box_pressure_demo/project.json");
-    if (QFileInfo::exists(sourceProject)) {
-        return sourceProject;
-    }
-#endif
-
-    return appProject;
-}
-
 QString defaultOutputDirectory()
 {
     const QString base = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
     return QDir(base).filePath("MyCAE/ui_screenshots/" + QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss_zzz"));
-}
-
-QTreeWidgetItem *findTreeItemByText(QTreeWidgetItem *root, const QString &text)
-{
-    if (!root) {
-        return nullptr;
-    }
-    if (root->text(0) == text) {
-        return root;
-    }
-    for (int i = 0; i < root->childCount(); ++i) {
-        if (QTreeWidgetItem *match = findTreeItemByText(root->child(i), text)) {
-            return match;
-        }
-    }
-    return nullptr;
-}
-
-QTreeWidgetItem *findTreeItemByText(const QMainWindow &window, const QString &text)
-{
-    QTreeWidget *tree = window.findChild<QTreeWidget *>();
-    if (!tree) {
-        return nullptr;
-    }
-    for (int i = 0; i < tree->topLevelItemCount(); ++i) {
-        if (QTreeWidgetItem *match = findTreeItemByText(tree->topLevelItem(i), text)) {
-            return match;
-        }
-    }
-    return nullptr;
-}
-
-bool selectTreeItem(const QMainWindow &window, const QString &text)
-{
-    QTreeWidget *tree = window.findChild<QTreeWidget *>();
-    QTreeWidgetItem *item = findTreeItemByText(window, text);
-    if (!tree || !item) {
-        return false;
-    }
-    tree->setCurrentItem(item);
-    return true;
 }
 
 bool raiseDock(QMainWindow &window, const QString &title)
@@ -106,31 +40,6 @@ bool saveWindowScreenshot(QMainWindow &window, const QString &filePath)
     const QPixmap pixmap = window.grab();
     return !pixmap.isNull() && pixmap.save(filePath);
 }
-
-class RecentProjectsSettingsGuard
-{
-public:
-    RecentProjectsSettingsGuard()
-        : m_hadValue(m_settings.contains(RecentProjectsKey))
-        , m_value(m_settings.value(RecentProjectsKey))
-    {
-    }
-
-    ~RecentProjectsSettingsGuard()
-    {
-        if (m_hadValue) {
-            m_settings.setValue(RecentProjectsKey, m_value);
-        } else {
-            m_settings.remove(RecentProjectsKey);
-        }
-        m_settings.sync();
-    }
-
-private:
-    QSettings m_settings{"MyCAE", "MyCAE"};
-    bool m_hadValue = false;
-    QVariant m_value;
-};
 }
 
 UiSampleScreenshotter::UiSampleScreenshotter(QString outputDirectory)
@@ -143,7 +52,7 @@ UiSampleScreenshotResult UiSampleScreenshotter::capture()
     UiSampleScreenshotResult result;
     result.outputDirectory = m_outputDirectory.isEmpty() ? defaultOutputDirectory() : m_outputDirectory;
 
-    const QString projectFilePath = defaultDemoProjectFilePath();
+    const QString projectFilePath = UiAutomationSupport::demoProjectFilePath();
     if (!QFileInfo::exists(projectFilePath)) {
         result.messages.append("Demo project file not found: " + projectFilePath);
         return result;
@@ -156,11 +65,9 @@ UiSampleScreenshotResult UiSampleScreenshotter::capture()
     }
 
     {
-        RecentProjectsSettingsGuard settingsGuard;
+        UiAutomationSupport::RecentProjectsSettingsGuard settingsGuard;
         MainWindow window;
-        for (QWidget *widget : window.findChildren<QWidget *>()) {
-            widget->setProperty("mycae.skipResultRender", true);
-        }
+        UiAutomationSupport::enableStableResultSummaryMode(window);
         window.resize(1360, 860);
         window.show();
         QApplication::processEvents();
@@ -172,7 +79,7 @@ UiSampleScreenshotResult UiSampleScreenshotter::capture()
         QApplication::processEvents();
 
         const QString propertyScreenshot = outputDir.filePath("box_pressure_demo_properties.png");
-        if (!selectTreeItem(window, "Box_1")) {
+        if (!UiAutomationSupport::selectTreeItem(window, "Box_1")) {
             result.messages.append("Failed to select demo geometry Box_1.");
             return result;
         }
@@ -185,7 +92,7 @@ UiSampleScreenshotResult UiSampleScreenshotter::capture()
         result.screenshotFiles.append(propertyScreenshot);
 
         const QString resultScreenshot = outputDir.filePath("box_pressure_demo_result_postprocess.png");
-        if (!selectTreeItem(window, "CalculiX Result - Box Pressure Demo")) {
+        if (!UiAutomationSupport::selectTreeItem(window, "CalculiX Result - Box Pressure Demo")) {
             result.messages.append("Failed to select demo result.");
             return result;
         }

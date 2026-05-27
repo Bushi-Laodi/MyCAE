@@ -4,6 +4,7 @@
 #include "result/ResultObject.h"
 #include "result/ResultProbe.h"
 #include "solver/calculix/CalculiXResultGridBuilder.h"
+#include "ui/ResultPostprocessText.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -22,75 +23,6 @@ namespace
 QString zh(const char *text)
 {
     return QString::fromUtf8(text);
-}
-
-QString coverageText(const ResultObject &resultObject)
-{
-    const QString nodeText = resultObject.meshNodeCount > 0
-        ? zh(u8"节点 %1/%2").arg(resultObject.matchedNodeCount).arg(resultObject.meshNodeCount)
-        : zh(u8"节点 -");
-    const QString elementText = resultObject.meshElementCount > 0
-        ? zh(u8"单元 %1/%2").arg(resultObject.matchedElementCount).arg(resultObject.meshElementCount)
-        : zh(u8"单元 -");
-    return nodeText + zh(u8"，") + elementText;
-}
-
-QString fileStatusText(const ResultObject &resultObject)
-{
-    return resultObject.resultFilesComplete ? zh(u8"结果文件完整") : zh(u8"结果文件不完整");
-}
-
-QString nodeExtremeSummary(const ResultNodeExtreme &extreme)
-{
-    if (!extreme.valid) {
-        return "-";
-    }
-    return zh(u8"%1：节点 %2，值 %3，坐标 (%4, %5, %6)")
-        .arg(extreme.fieldName)
-        .arg(extreme.nodeId)
-        .arg(extreme.value, 0, 'g', 6)
-        .arg(extreme.x, 0, 'g', 6)
-        .arg(extreme.y, 0, 'g', 6)
-        .arg(extreme.z, 0, 'g', 6);
-}
-
-QString elementExtremeSummary(const ResultElementExtreme &extreme)
-{
-    if (!extreme.valid) {
-        return "-";
-    }
-    return zh(u8"%1：单元 %2，值 %3，中心 (%4, %5, %6)")
-        .arg(extreme.fieldName)
-        .arg(extreme.elementId)
-        .arg(extreme.value, 0, 'g', 6)
-        .arg(extreme.x, 0, 'g', 6)
-        .arg(extreme.y, 0, 'g', 6)
-        .arg(extreme.z, 0, 'g', 6);
-}
-
-QString markerSummary(const ResultExtremeMarker &marker)
-{
-    if (!marker.valid) {
-        return "-";
-    }
-    return zh(u8"%1 %2，值 %3")
-        .arg(marker.element ? zh(u8"单元") : zh(u8"节点"))
-        .arg(marker.id)
-        .arg(marker.value, 0, 'g', 6);
-}
-
-QString fieldUnitText(const ResultObject &resultObject)
-{
-    const QString fieldName = resultObject.displayFieldName.isEmpty()
-        ? resultObject.primaryFieldName
-        : resultObject.displayFieldName;
-    const QString unit = ResultFieldMetadata::unitForField(fieldName);
-    return zh(u8"当前场：") + fieldName + zh(u8"，单位：") + unit;
-}
-
-QString coordinateText(double x, double y, double z)
-{
-    return QString("(%1, %2, %3)").arg(x, 0, 'g', 6).arg(y, 0, 'g', 6).arg(z, 0, 'g', 6);
 }
 
 void configureRangeSpinBox(QDoubleSpinBox *spinBox)
@@ -443,16 +375,16 @@ void ResultPostprocessPanel::setStatusText(const ResultObject *resultObject)
         .arg(rangeMinimum, 0, 'g', 6)
         .arg(rangeMaximum, 0, 'g', 6)
         .arg(unit));
-    m_fieldUnitLabel->setText(fieldUnitText(*resultObject));
-    m_coverageLabel->setText(zh(u8"覆盖率：") + coverageText(*resultObject));
-    m_currentMinValue->setText(markerSummary(resultObject->extrema.selectedMinimumMarker));
-    m_currentMaxValue->setText(markerSummary(resultObject->extrema.selectedMaximumMarker));
-    m_maxDisplacementValue->setText(nodeExtremeSummary(resultObject->extrema.maxDisplacementMagnitude));
-    m_maxUxValue->setText(nodeExtremeSummary(resultObject->extrema.maxUx));
-    m_maxUyValue->setText(nodeExtremeSummary(resultObject->extrema.maxUy));
-    m_maxUzValue->setText(nodeExtremeSummary(resultObject->extrema.maxUz));
-    m_maxVonMisesValue->setText(elementExtremeSummary(resultObject->extrema.maxVonMisesStress));
-    m_fileStatusLabel->setText(zh(u8"文件：") + fileStatusText(*resultObject));
+    m_fieldUnitLabel->setText(ResultPostprocessText::fieldUnit(*resultObject));
+    m_coverageLabel->setText(zh(u8"覆盖率：") + ResultPostprocessText::coverage(*resultObject));
+    m_currentMinValue->setText(ResultPostprocessText::marker(resultObject->extrema.selectedMinimumMarker));
+    m_currentMaxValue->setText(ResultPostprocessText::marker(resultObject->extrema.selectedMaximumMarker));
+    m_maxDisplacementValue->setText(ResultPostprocessText::nodeExtreme(resultObject->extrema.maxDisplacementMagnitude));
+    m_maxUxValue->setText(ResultPostprocessText::nodeExtreme(resultObject->extrema.maxUx));
+    m_maxUyValue->setText(ResultPostprocessText::nodeExtreme(resultObject->extrema.maxUy));
+    m_maxUzValue->setText(ResultPostprocessText::nodeExtreme(resultObject->extrema.maxUz));
+    m_maxVonMisesValue->setText(ResultPostprocessText::elementExtreme(resultObject->extrema.maxVonMisesStress));
+    m_fileStatusLabel->setText(zh(u8"文件：") + ResultPostprocessText::fileStatus(*resultObject));
     m_messagesLabel->setText(resultObject->checkMessages.isEmpty()
         ? zh(u8"检查：通过")
         : zh(u8"检查：") + resultObject->checkMessages.join("; "));
@@ -477,7 +409,7 @@ void ResultPostprocessPanel::setProbe(const ResultProbe &probe)
     m_probeHintLabel->setText(zh(u8"已选中结果模型上的查询点。"));
     m_probeNodeIdValue->setText(QString::number(probe.nodeId));
     m_probeElementIdValue->setText(QString::number(probe.elementId));
-    m_probeCoordinateValue->setText(coordinateText(probe.x, probe.y, probe.z));
+    m_probeCoordinateValue->setText(ResultPostprocessText::coordinate(probe.x, probe.y, probe.z));
     m_probeUxValue->setText(QString::number(probe.ux, 'g', 6));
     m_probeUyValue->setText(QString::number(probe.uy, 'g', 6));
     m_probeUzValue->setText(QString::number(probe.uz, 'g', 6));
