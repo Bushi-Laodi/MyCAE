@@ -139,7 +139,6 @@ ProjectWorkflowResult ProjectWorkflowController::setCurrentProject(const Project
     if (m_renderView) {
         m_renderView->showEmpty();
     }
-
     result.success = true;
     return result;
 }
@@ -150,8 +149,8 @@ ProjectWorkflowResult ProjectWorkflowController::loadGeometries() const
     QString errorMessage;
     ProjectModelLoader loader(m_geometryManager);
     if (!loader.loadGeometries(m_projectModel, &errorMessage)) {
-        QMessageBox::warning(m_window, "Load geometry failed", errorMessage);
-        result.logMessages.append("Load geometry failed: " + errorMessage);
+        QMessageBox::warning(m_window, zh(u8"加载几何失败"), errorMessage);
+        result.logMessages.append(zh(u8"加载几何失败：") + errorMessage);
         return result;
     }
 
@@ -162,7 +161,7 @@ ProjectWorkflowResult ProjectWorkflowController::loadGeometries() const
         m_renderView->showEmpty();
     }
     result.logMessages.append(
-        QString("Loaded %1 geometry objects.").arg(m_projectModel.geometryRepository().geometryObjects().size())
+        zh(u8"已加载 %1 个几何对象。").arg(m_projectModel.geometryRepository().geometryObjects().size())
     );
     result.success = true;
     return result;
@@ -174,13 +173,13 @@ ProjectWorkflowResult ProjectWorkflowController::loadMeshes() const
     QString errorMessage;
     ProjectModelLoader loader(m_geometryManager);
     if (!loader.loadMeshes(m_projectModel, &errorMessage)) {
-        QMessageBox::warning(m_window, "Load mesh failed", errorMessage);
-        result.logMessages.append("Load mesh failed: " + errorMessage);
+        QMessageBox::warning(m_window, zh(u8"加载网格失败"), errorMessage);
+        result.logMessages.append(zh(u8"加载网格失败：") + errorMessage);
         return result;
     }
 
     result.logMessages.append(
-        QString("Loaded %1 mesh objects.").arg(m_projectModel.meshRepository().meshObjects().size())
+        zh(u8"已加载 %1 个网格对象。").arg(m_projectModel.meshRepository().meshObjects().size())
     );
     result.success = true;
     return result;
@@ -192,13 +191,13 @@ ProjectWorkflowResult ProjectWorkflowController::loadSimulationCase() const
     QString errorMessage;
     ProjectModelLoader loader(m_geometryManager);
     if (!loader.loadSimulationCase(m_projectModel, &errorMessage)) {
-        QMessageBox::warning(m_window, "Load simulation case failed", errorMessage);
-        result.logMessages.append("Load simulation case failed: " + errorMessage);
+        QMessageBox::warning(m_window, zh(u8"加载仿真工况失败"), errorMessage);
+        result.logMessages.append(zh(u8"加载仿真工况失败：") + errorMessage);
         return result;
     }
 
     const SolverRepository &solverRepository = m_projectModel.solverRepository();
-    result.logMessages.append(QString("Loaded simulation case data: %1 materials, %2 boundary conditions, %3 loads.")
+    result.logMessages.append(zh(u8"已加载仿真工况数据：%1 个材料，%2 个边界条件，%3 个载荷。")
         .arg(solverRepository.materials().size())
         .arg(solverRepository.boundaryConditions().size())
         .arg(solverRepository.loads().size()));
@@ -212,13 +211,13 @@ ProjectWorkflowResult ProjectWorkflowController::loadResults() const
     QString errorMessage;
     ProjectModelLoader loader(m_geometryManager);
     if (!loader.loadResults(m_projectModel, &errorMessage)) {
-        QMessageBox::warning(m_window, "Load results failed", errorMessage);
-        result.logMessages.append("Load results failed: " + errorMessage);
+        QMessageBox::warning(m_window, zh(u8"加载结果失败"), errorMessage);
+        result.logMessages.append(zh(u8"加载结果失败：") + errorMessage);
         return result;
     }
 
     result.logMessages.append(
-        QString("Loaded %1 solver result(s).").arg(m_projectModel.resultRepository().results().size())
+        zh(u8"已加载 %1 条求解结果。").arg(m_projectModel.resultRepository().results().size())
     );
     result.success = true;
     return result;
@@ -230,11 +229,11 @@ ProjectWorkflowResult ProjectWorkflowController::saveSimulationCase() const
     QString errorMessage;
     const SimulationCaseManager simulationCaseManager;
     if (!simulationCaseManager.save(m_projectModel, &errorMessage)) {
-        result.logMessages.append("Save simulation case failed: " + errorMessage);
+        result.logMessages.append(zh(u8"保存仿真工况失败：") + errorMessage);
         return result;
     }
 
-    result.logMessages.append("Simulation case saved: " + SimulationCaseManager::relativeCaseFilePath());
+    result.logMessages.append(zh(u8"仿真工况已保存：") + SimulationCaseManager::relativeCaseFilePath());
     result.success = true;
     return result;
 }

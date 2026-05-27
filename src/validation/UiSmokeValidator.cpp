@@ -27,6 +27,7 @@
 #include <QToolBar>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
+#include <QWidget>
 
 namespace
 {
@@ -361,7 +362,7 @@ private:
     QVariant m_value;
 };
 
-void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGuard &settingsGuard)
+void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGuard &settingsGuard, MainWindow &window)
 {
     const QString demoProjectFilePath = defaultDemoProjectFilePath();
     addStep(
@@ -375,7 +376,6 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
     }
 
     settingsGuard.setRecentProjects(QStringList{demoProjectFilePath});
-    MainWindow window;
     QMenu *recentProjectsMenu = findSubMenu(findTopLevelMenu(window, zh(u8"文件")), zh(u8"最近工程"));
     QAction *openDemoAction = nullptr;
     if (recentProjectsMenu) {
@@ -388,10 +388,11 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
     }
     addStep(report, "Demo project appears in Recent Projects", openDemoAction != nullptr);
     if (!openDemoAction) {
+        window.prepareForAutomationShutdown();
         return;
     }
 
-    openDemoAction->trigger();
+    window.openProjectFileForAutomation(demoProjectFilePath);
 
     addStep(
         report,
@@ -429,7 +430,6 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
     for (const QString &group : styledTreeGroups) {
         addStep(report, "Project tree category styled: " + group, treeItemHasCategoryStyle(window, group));
     }
-
     addActionEnabledStep(report, window, "geometry.create.box");
     addActionEnabledStep(report, window, "geometry.create.cylinder");
     addActionEnabledStep(report, window, "solverData.create.material");
@@ -444,7 +444,6 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
         projectResourcesAction && projectResourcesAction->isEnabled(),
         projectResourcesAction ? QString() : "Action not found"
     );
-
     const bool geometrySelected = selectTreeItem(window, "Box_1");
     addStep(report, "Demo geometry selection works", geometrySelected);
     if (geometrySelected) {
@@ -542,6 +541,7 @@ void validateDemoProjectUi(UiValidationReport &report, RecentProjectsSettingsGua
             namedLabelText(window, "result.probe.label")
         );
     }
+    window.prepareForAutomationShutdown();
 }
 }
 
@@ -576,8 +576,11 @@ UiValidationReport UiSmokeValidator::validate() const
     UiValidationReport report;
     RecentProjectsSettingsGuard recentProjectsSettingsGuard;
     {
-        MainWindow window;
-
+        qApp->setProperty("mycae.skipVtkCanvas", true);
+        MainWindow *window = new MainWindow;
+        for (QWidget *widget : window->findChildren<QWidget *>()) {
+            widget->setProperty("mycae.skipResultRender", true);
+        }
         const QStringList menuTitles{
             zh(u8"文件"),
             zh(u8"编辑"),
@@ -588,13 +591,13 @@ UiValidationReport UiSmokeValidator::validate() const
             zh(u8"工具")
         };
         for (const QString &title : menuTitles) {
-            addStep(report, "Menu exists: " + title, findTopLevelMenu(window, title) != nullptr);
+            addStep(report, "Menu exists: " + title, findTopLevelMenu(*window, title) != nullptr);
         }
         addStep(
             report,
             "Top-level menu count is compact",
-            topLevelMenuCount(window) == menuTitles.size(),
-            QString("count=%1").arg(topLevelMenuCount(window))
+            topLevelMenuCount(*window) == menuTitles.size(),
+            QString("count=%1").arg(topLevelMenuCount(*window))
         );
         const QStringList removedTopLevelMenus{
             "Picking",
@@ -603,9 +606,9 @@ UiValidationReport UiSmokeValidator::validate() const
             "Postprocess"
         };
         for (const QString &title : removedTopLevelMenus) {
-            addStep(report, "Old top-level menu removed: " + title, findTopLevelMenu(window, title) == nullptr);
+            addStep(report, "Old top-level menu removed: " + title, findTopLevelMenu(*window, title) == nullptr);
         }
-        QMenu *fileMenu = findTopLevelMenu(window, zh(u8"文件"));
+        QMenu *fileMenu = findTopLevelMenu(*window, zh(u8"文件"));
         QMenu *recentProjectsMenu = findSubMenu(fileMenu, zh(u8"最近工程"));
         addStep(report, "Recent Projects submenu exists", recentProjectsMenu != nullptr);
         addStep(
@@ -621,9 +624,9 @@ UiValidationReport UiSmokeValidator::validate() const
             clearRecentProjectsAction && !clearRecentProjectsAction->isEnabled(),
             clearRecentProjectsAction ? QString() : "Action not found"
         );
-        QMenu *geometryMenu = findTopLevelMenu(window, zh(u8"几何"));
+        QMenu *geometryMenu = findTopLevelMenu(*window, zh(u8"几何"));
         addStep(report, "Geometry Face Groups submenu exists", findSubMenu(geometryMenu, zh(u8"面组")) != nullptr);
-        QMenu *resultsMenu = findTopLevelMenu(window, zh(u8"结果"));
+        QMenu *resultsMenu = findTopLevelMenu(*window, zh(u8"结果"));
         addStep(report, "Results field submenu exists", findSubMenu(resultsMenu, zh(u8"结果场")) != nullptr);
         addStep(report, "Results deformation submenu exists", findSubMenu(resultsMenu, zh(u8"变形比例")) != nullptr);
 
@@ -635,14 +638,14 @@ UiValidationReport UiSmokeValidator::validate() const
             zh(u8"日志")
         };
         for (const QString &title : dockTitles) {
-            addStep(report, "Dock exists: " + title, hasDockWidgetTitle(window, title));
+            addStep(report, "Dock exists: " + title, hasDockWidgetTitle(*window, title));
         }
-    addStep(report, "Diagnostics table exists", hasNamedWidget(window, "diagnostic.table"));
-    addStep(report, "Diagnostics empty state visible", diagnosticEmptyStateVisible(window));
-    addStep(report, "Log view exists", hasNamedWidget(window, "log.view"));
-    addStep(report, "Log placeholder configured", logPlaceholderConfigured(window));
-        addStep(report, "Toolbar exists: Main Toolbar", hasToolBarTitle(window, zh(u8"主工具栏")));
-        addStep(report, "Toolbar is icon-only", hasIconOnlyToolBar(window, zh(u8"主工具栏")));
+    addStep(report, "Diagnostics table exists", hasNamedWidget(*window, "diagnostic.table"));
+    addStep(report, "Diagnostics empty state visible", diagnosticEmptyStateVisible(*window));
+    addStep(report, "Log view exists", hasNamedWidget(*window, "log.view"));
+    addStep(report, "Log placeholder configured", logPlaceholderConfigured(*window));
+        addStep(report, "Toolbar exists: Main Toolbar", hasToolBarTitle(*window, zh(u8"主工具栏")));
+        addStep(report, "Toolbar is icon-only", hasIconOnlyToolBar(*window, zh(u8"主工具栏")));
         addStep(report, "Application white UI style applied", qApp && !qApp->styleSheet().isEmpty());
         addStep(report, "Dock style applied", applicationStyleContains("QDockWidget"));
         addStep(report, "Menu style applied", applicationStyleContains("QMenuBar"));
@@ -678,9 +681,8 @@ UiValidationReport UiSmokeValidator::validate() const
             "solver.run.calculix"
         };
         for (const QString &commandId : requiredCommandIds) {
-            addActionExistsStep(report, window, commandId);
+            addActionExistsStep(report, *window, commandId);
         }
-
         const QStringList disabledWithoutProject{
             "geometry.create.box",
             "geometry.create.cylinder",
@@ -697,26 +699,28 @@ UiValidationReport UiSmokeValidator::validate() const
             "solver.run.calculix"
         };
         for (const QString &commandId : disabledWithoutProject) {
-            addActionDisabledStep(report, window, commandId);
+            addActionDisabledStep(report, *window, commandId);
         }
 
-        QAction *projectResourcesAction = findActionByText(window, zh(u8"工程资源"));
+        QAction *projectResourcesAction = findActionByText(*window, zh(u8"工程资源"));
         addStep(
             report,
             "Action disabled without project: Project Resources",
             projectResourcesAction && !projectResourcesAction->isEnabled(),
             projectResourcesAction ? QString() : "Action not found"
         );
-        QAction *resultFieldAction = findActionByText(window, "Ux");
+        QAction *resultFieldAction = findActionByText(*window, "Ux");
         addStep(
             report,
             "Result field actions are disabled without project",
             resultFieldAction && !resultFieldAction->isEnabled(),
             resultFieldAction ? QString() : "Action not found"
         );
-    }
+        validateDemoProjectUi(report, recentProjectsSettingsGuard, *window);
 
-    validateDemoProjectUi(report, recentProjectsSettingsGuard);
+        window->prepareForAutomationShutdown();
+    }
+    qApp->setProperty("mycae.skipVtkCanvas", false);
 
     return report;
 }

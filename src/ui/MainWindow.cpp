@@ -12,6 +12,7 @@
 #include "ui/MainWindowToolBarBuilder.h"
 #include "ui/MainWindowViewController.h"
 #include "ui/RecentProjectController.h"
+#include "ui/ResultPostprocessPanel.h"
 #include "ui/SelectionInteractionController.h"
 
 #include <QCloseEvent>
@@ -47,6 +48,19 @@ MainWindow::MainWindow(QWidget *parent)
     statusBar()->showMessage(zh(u8"就绪"));
     writeLog(zh(u8"MyCAE 已启动。"));
     writeLogMessages(m_solverPluginManager.diagnostics());
+}
+
+void MainWindow::prepareForAutomationShutdown()
+{
+    m_resultAnimationController.stop();
+    m_actionRegistry.setAfterExecuteCallback({});
+    m_undoStackController.setFaceGroupRestoreCallback({});
+    if (m_docks.renderView) {
+        m_docks.renderView->disconnect();
+    }
+    if (m_docks.resultPostprocessPanel) {
+        m_docks.resultPostprocessPanel->disconnect();
+    }
 }
 
 void MainWindow::showEvent(QShowEvent *event)

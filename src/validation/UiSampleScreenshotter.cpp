@@ -13,6 +13,7 @@
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 #include <QVariant>
+#include <QWidget>
 
 #include <utility>
 
@@ -157,6 +158,9 @@ UiSampleScreenshotResult UiSampleScreenshotter::capture()
     {
         RecentProjectsSettingsGuard settingsGuard;
         MainWindow window;
+        for (QWidget *widget : window.findChildren<QWidget *>()) {
+            widget->setProperty("mycae.skipResultRender", true);
+        }
         window.resize(1360, 860);
         window.show();
         QApplication::processEvents();

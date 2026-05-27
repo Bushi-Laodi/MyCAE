@@ -7,12 +7,35 @@
 #include <QApplication>
 #include <QCommandLineOption>
 #include <QCommandLineParser>
+#include <QCoreApplication>
 #include <QSurfaceFormat>
 #include <QTextStream>
 #include <QVTKOpenGLNativeWidget.h>
 
 namespace
 {
+bool hasArgument(int argc, char *argv[], const char *argument)
+{
+    for (int index = 1; index < argc; ++index) {
+        if (QString::fromLocal8Bit(argv[index]) == QLatin1String(argument)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void configureCommandLineParser(QCommandLineParser &parser)
+{
+    parser.setApplicationDescription("MyCAE desktop CAE integration tool.");
+    parser.addHelpOption();
+    parser.addOption(QCommandLineOption("validate-samples", "Run demo and CalculiX sample validation, then exit."));
+    parser.addOption(QCommandLineOption("validate-ui", "Run UI smoke validation, then exit."));
+    parser.addOption(QCommandLineOption("capture-ui-sample", "Open box_pressure_demo, capture UI screenshots, then exit."));
+    parser.addOption(QCommandLineOption("ui-screenshot-dir", "Directory for --capture-ui-sample screenshots.", "path"));
+    parser.addOption(QCommandLineOption("samples-root", "Samples root directory.", "path"));
+    parser.addOption(QCommandLineOption("validation-work-root", "Validation work directory.", "path"));
+}
+
 int runSampleValidation(const QCommandLineParser &parser)
 {
     const QString samplesRoot = parser.value("samples-root");
@@ -77,6 +100,17 @@ int runUiSampleCapture(const QCommandLineParser &parser)
 
 int main(int argc, char *argv[])
 {
+    if (hasArgument(argc, argv, "--validate-samples")) {
+        QCoreApplication app(argc, argv);
+        QCoreApplication::setApplicationName("MyCAE");
+        QCoreApplication::setOrganizationName("MyCAE");
+
+        QCommandLineParser parser;
+        configureCommandLineParser(parser);
+        parser.process(app);
+        return runSampleValidation(parser);
+    }
+
     QSurfaceFormat::setDefaultFormat(QVTKOpenGLNativeWidget::defaultFormat());
 
     QApplication app(argc, argv);
@@ -85,14 +119,7 @@ int main(int argc, char *argv[])
     AppStyle::apply(app);
 
     QCommandLineParser parser;
-    parser.setApplicationDescription("MyCAE desktop CAE integration tool.");
-    parser.addHelpOption();
-    parser.addOption(QCommandLineOption("validate-samples", "Run demo and CalculiX sample validation, then exit."));
-    parser.addOption(QCommandLineOption("validate-ui", "Run UI smoke validation, then exit."));
-    parser.addOption(QCommandLineOption("capture-ui-sample", "Open box_pressure_demo, capture UI screenshots, then exit."));
-    parser.addOption(QCommandLineOption("ui-screenshot-dir", "Directory for --capture-ui-sample screenshots.", "path"));
-    parser.addOption(QCommandLineOption("samples-root", "Samples root directory.", "path"));
-    parser.addOption(QCommandLineOption("validation-work-root", "Validation work directory.", "path"));
+    configureCommandLineParser(parser);
     parser.process(app);
 
     if (parser.isSet("validate-samples")) {

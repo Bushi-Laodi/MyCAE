@@ -3,10 +3,19 @@
 #include "geometry/BoxGeometry.h"
 #include "VtkRenderCanvas.h"
 
+#include <QCoreApplication>
 #include <QLabel>
 #include <QPixmap>
 #include <QString>
 #include <QVBoxLayout>
+
+namespace
+{
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+}
 
 RenderView::RenderView(QWidget *parent)
     : QFrame(parent)
@@ -38,14 +47,20 @@ RenderView::RenderView(QWidget *parent)
     m_detailLabel->setAlignment(Qt::AlignCenter);
     m_detailLabel->setStyleSheet("font-size: 13px; color: #9ba7b4;");
 
-    m_canvas = new VtkRenderCanvas(this);
-    connect(m_canvas, &VtkRenderCanvas::facePicked, this, &RenderView::facePicked);
-    connect(m_canvas, &VtkRenderCanvas::resultProbePicked, this, &RenderView::resultProbePicked);
+    if (!qApp->property("mycae.skipVtkCanvas").toBool()) {
+        m_canvas = new VtkRenderCanvas(this);
+        connect(m_canvas, &VtkRenderCanvas::facePicked, this, &RenderView::facePicked);
+        connect(m_canvas, &VtkRenderCanvas::resultProbePicked, this, &RenderView::resultProbePicked);
+    }
 
     layout->addWidget(m_titleLabel);
     layout->addWidget(m_subtitleLabel);
     layout->addWidget(m_detailLabel);
-    layout->addWidget(m_canvas, 1);
+    if (m_canvas) {
+        layout->addWidget(m_canvas, 1);
+    } else {
+        layout->addStretch(1);
+    }
 
     // NOTE: Do NOT call showEmpty() here!
     // showEmpty() triggers VtkRenderCanvas::showEmpty() which calls
@@ -59,10 +74,12 @@ RenderView::RenderView(QWidget *parent)
 
 void RenderView::showEmpty()
 {
-    m_titleLabel->setText("三维显示窗口");
-    m_subtitleLabel->setText("请选择一个几何对象进行预览。");
-    m_detailLabel->setText("VTK 渲染窗口已就绪。");
-    m_canvas->showEmpty();
+    m_titleLabel->setText(zh(u8"三维显示窗口"));
+    m_subtitleLabel->setText(zh(u8"请选择一个几何对象进行预览。"));
+    m_detailLabel->setText(zh(u8"VTK 渲染窗口已就绪。"));
+    if (m_canvas) {
+        m_canvas->showEmpty();
+    }
 }
 
 void RenderView::showBoxGeometry(const BoxGeometry &box)
@@ -75,24 +92,30 @@ void RenderView::showBoxGeometry(const BoxGeometry &box)
 
     m_titleLabel->setText(box.name);
     m_subtitleLabel->setText(sizeText);
-    m_detailLabel->setText("根据长方体参数生成的 VTK 立方体预览。");
-    m_canvas->showBoxGeometry(box);
+    m_detailLabel->setText(zh(u8"根据长方体参数生成的 VTK 立方体预览。"));
+    if (m_canvas) {
+        m_canvas->showBoxGeometry(box);
+    }
 }
 
 void RenderView::showOccShape(const TopoDS_Shape &shape, const QString &title, const QString &subtitle)
 {
     m_titleLabel->setText(title);
     m_subtitleLabel->setText(subtitle);
-    m_detailLabel->setText("Open CASCADE TopoDS_Shape converted to VTK PolyData.");
-    m_canvas->showOccShape(shape, title);
+    m_detailLabel->setText(zh(u8"Open CASCADE 形状已转换为 VTK 多边形数据。"));
+    if (m_canvas) {
+        m_canvas->showOccShape(shape, title);
+    }
 }
 
 void RenderView::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const QString &title, const QString &subtitle)
 {
     m_titleLabel->setText(title);
     m_subtitleLabel->setText(subtitle);
-    m_detailLabel->setText("Gmsh tetrahedral mesh converted to VTK UnstructuredGrid.");
-    m_canvas->showMeshGrid(grid);
+    m_detailLabel->setText(zh(u8"Gmsh 四面体网格已转换为 VTK 非结构网格。"));
+    if (m_canvas) {
+        m_canvas->showMeshGrid(grid);
+    }
 }
 
 void RenderView::showResultGrid(
@@ -113,11 +136,14 @@ void RenderView::showResultGrid(
 {
     m_titleLabel->setText(title);
     m_subtitleLabel->setText(subtitle);
-    m_detailLabel->setText(QString("CalculiX scalar field: %1 [%2, %3] %4")
+    m_detailLabel->setText(zh(u8"CalculiX 标量场：%1 [%2, %3] %4")
         .arg(scalarName)
         .arg(scalarMin, 0, 'g', 6)
         .arg(scalarMax, 0, 'g', 6)
         .arg(scalarUnit));
+    if (!m_canvas) {
+        return;
+    }
     m_canvas->showResultGrid(
         grid,
         overlayGrid,
@@ -143,25 +169,35 @@ bool RenderView::saveScreenshot(const QString &filePath)
 
 void RenderView::setPickMode(PickMode mode)
 {
-    m_canvas->setPickMode(mode);
+    if (m_canvas) {
+        m_canvas->setPickMode(mode);
+    }
 }
 
 void RenderView::clearHighlight()
 {
-    m_canvas->clearHighlight();
+    if (m_canvas) {
+        m_canvas->clearHighlight();
+    }
 }
 
 void RenderView::highlightFaceIndices(const std::vector<int> &faceIndices)
 {
-    m_canvas->highlightFaceIndices(faceIndices);
+    if (m_canvas) {
+        m_canvas->highlightFaceIndices(faceIndices);
+    }
 }
 
 void RenderView::highlightResultPosition(double x, double y, double z)
 {
-    m_canvas->highlightResultPosition(x, y, z);
+    if (m_canvas) {
+        m_canvas->highlightResultPosition(x, y, z);
+    }
 }
 
 void RenderView::highlightResultExtrema(const ResultExtremeMarker &minimum, const ResultExtremeMarker &maximum)
 {
-    m_canvas->highlightResultExtrema(minimum, maximum);
+    if (m_canvas) {
+        m_canvas->highlightResultExtrema(minimum, maximum);
+    }
 }

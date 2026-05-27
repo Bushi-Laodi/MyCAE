@@ -6,23 +6,29 @@
 #include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QVBoxLayout>
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 void configureSizeSpinBox(QDoubleSpinBox *spinBox)
 {
     spinBox->setRange(0.0, 1.0e9);
     spinBox->setDecimals(6);
     spinBox->setSingleStep(1.0);
-    spinBox->setSpecialValueText("Disabled");
+    spinBox->setSpecialValueText(zh(u8"禁用"));
 }
 }
 
 MeshSetupDialog::MeshSetupDialog(QWidget *parent)
     : QDialog(parent)
 {
-    setWindowTitle("Mesh Setup");
+    setWindowTitle(zh(u8"网格设置"));
     setupUi();
 }
 
@@ -32,20 +38,20 @@ void MeshSetupDialog::setupUi()
     auto *form = new QFormLayout;
 
     m_elementTypeCombo = new QComboBox(this);
-    m_elementTypeCombo->addItem(displayName(MeshElementType::Tetra4), toString(MeshElementType::Tetra4));
-    m_elementTypeCombo->addItem(displayName(MeshElementType::Tetra10), toString(MeshElementType::Tetra10));
-    form->addRow("Element type:", m_elementTypeCombo);
+    m_elementTypeCombo->addItem(zh(u8"Tet4 - 线性四面体"), toString(MeshElementType::Tetra4));
+    m_elementTypeCombo->addItem(zh(u8"Tet10 - 二次四面体"), toString(MeshElementType::Tetra10));
+    form->addRow(zh(u8"单元类型:"), m_elementTypeCombo);
 
     m_autoSizeCheckBox = new QCheckBox(this);
-    form->addRow("Auto size:", m_autoSizeCheckBox);
+    form->addRow(zh(u8"自动尺寸:"), m_autoSizeCheckBox);
 
     m_minimumSizeSpin = new QDoubleSpinBox(this);
     configureSizeSpinBox(m_minimumSizeSpin);
-    form->addRow("Minimum size:", m_minimumSizeSpin);
+    form->addRow(zh(u8"最小尺寸:"), m_minimumSizeSpin);
 
     m_maximumSizeSpin = new QDoubleSpinBox(this);
     configureSizeSpinBox(m_maximumSizeSpin);
-    form->addRow("Maximum size:", m_maximumSizeSpin);
+    form->addRow(zh(u8"最大尺寸:"), m_maximumSizeSpin);
 
     connect(m_autoSizeCheckBox, &QCheckBox::toggled, this, [this]() {
         updateSizeControlState();
@@ -57,6 +63,8 @@ void MeshSetupDialog::setupUi()
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
         this
     );
+    buttonBox->button(QDialogButtonBox::Ok)->setText(zh(u8"确定"));
+    buttonBox->button(QDialogButtonBox::Cancel)->setText(zh(u8"取消"));
     connect(buttonBox, &QDialogButtonBox::accepted, this, [this]() {
         if (!m_autoSizeCheckBox->isChecked()
             && m_minimumSizeSpin->value() > 0.0
@@ -64,8 +72,8 @@ void MeshSetupDialog::setupUi()
             && m_minimumSizeSpin->value() > m_maximumSizeSpin->value()) {
             QMessageBox::warning(
                 this,
-                "Validation",
-                "Minimum mesh size cannot be greater than maximum mesh size."
+                zh(u8"校验"),
+                zh(u8"最小网格尺寸不能大于最大网格尺寸。")
             );
             return;
         }

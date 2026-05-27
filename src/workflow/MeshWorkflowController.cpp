@@ -19,6 +19,11 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 QString makeSafeFileBaseName(const QString &name)
 {
     QString result = name.toLower();
@@ -45,12 +50,12 @@ void appendGmshRunLog(
     const GmshRunResult &gmshResult
 )
 {
-    workflowResult.logMessages.append(QString("Gmsh exitCode: %1").arg(gmshResult.exitCode));
+    workflowResult.logMessages.append(zh(u8"Gmsh 退出码：%1").arg(gmshResult.exitCode));
     workflowResult.logMessages.append(
-        "Gmsh stdout: " + (gmshResult.standardOutput.isEmpty() ? QString("<empty>") : gmshResult.standardOutput)
+        zh(u8"Gmsh 标准输出：") + (gmshResult.standardOutput.isEmpty() ? zh(u8"<空>") : gmshResult.standardOutput)
     );
     workflowResult.logMessages.append(
-        "Gmsh stderr: " + (gmshResult.standardError.isEmpty() ? QString("<empty>") : gmshResult.standardError)
+        zh(u8"Gmsh 错误输出：") + (gmshResult.standardError.isEmpty() ? zh(u8"<空>") : gmshResult.standardError)
     );
     Q_UNUSED(gmshRunner);
 }
@@ -58,13 +63,13 @@ void appendGmshRunLog(
 const GeometryObject *selectedGeometryOrLog(const ProjectModel &projectModel, MeshWorkflowResult &result)
 {
     if (!projectModel.hasProject()) {
-        result.logMessages.append("Mesh operation failed: create or open a project first.");
+        result.logMessages.append(zh(u8"网格操作失败：请先创建或打开工程。"));
         return nullptr;
     }
 
     const GeometryObject *selectedGeometry = projectModel.geometryForSelection();
     if (!selectedGeometry) {
-        result.logMessages.append("Please select a geometry object in the project tree first.");
+        result.logMessages.append(zh(u8"请先在工程树中选择一个几何对象。"));
         return nullptr;
     }
     return selectedGeometry;
@@ -81,16 +86,16 @@ bool readMeshDataForGeometry(
     const QString meshRelativePath = QDir("mesh").filePath(makeSafeFileBaseName(geometry.name) + ".msh");
     meshAbsPath = QDir(projectModel.project().rootPath).filePath(meshRelativePath);
 
-    result.logMessages.append("MSH file: " + meshAbsPath);
+    result.logMessages.append(zh(u8"MSH 文件：") + meshAbsPath);
     if (!QFileInfo::exists(meshAbsPath)) {
-        result.logMessages.append("MSH file does not exist.");
+        result.logMessages.append(zh(u8"MSH 文件不存在。"));
         return false;
     }
 
     meshData.sourceGeometryName = geometry.name;
     QString errorMessage;
     if (!MshReader::readMsh2(meshAbsPath, meshData, &errorMessage)) {
-        result.logMessages.append("Cannot read MSH: " + errorMessage);
+        result.logMessages.append(zh(u8"无法读取 MSH：") + errorMessage);
         return false;
     }
     return true;
@@ -121,16 +126,16 @@ MeshWorkflowResult MeshWorkflowController::checkGmsh() const
     const GmshRunner gmshRunner;
     const GmshRunResult gmshResult = gmshRunner.checkVersion();
 
-    workflowResult.logMessages.append("Gmsh path: " + gmshRunner.gmshExecutablePath());
-    workflowResult.logMessages.append("Gmsh command: " + gmshRunner.gmshExecutablePath() + " --version");
+    workflowResult.logMessages.append(zh(u8"Gmsh 路径：") + gmshRunner.gmshExecutablePath());
+    workflowResult.logMessages.append(zh(u8"Gmsh 命令：") + gmshRunner.gmshExecutablePath() + " --version");
     appendGmshRunLog(workflowResult, gmshRunner, gmshResult);
 
     if (gmshResult.success) {
-        workflowResult.logMessages.append("Gmsh environment check succeeded.");
+        workflowResult.logMessages.append(zh(u8"Gmsh 环境检查通过。"));
     } else {
         workflowResult.logMessages.append(
             gmshResult.errorMessage.isEmpty()
-                ? QString("Gmsh environment check failed: unknown error.")
+                ? zh(u8"Gmsh 环境检查失败：未知错误。")
                 : gmshResult.errorMessage
         );
     }
@@ -147,13 +152,13 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
 
     const GeometryObject &geometry = *selectedGeometry;
     if (geometry.stepFile.isEmpty()) {
-        workflowResult.logMessages.append("Current geometry has no STEP file.");
+        workflowResult.logMessages.append(zh(u8"当前几何没有 STEP 文件。"));
         return workflowResult;
     }
 
     const QString stepAbsPath = absoluteProjectPath(projectModel, geometry.stepFile);
     if (!QFileInfo::exists(stepAbsPath)) {
-        workflowResult.logMessages.append("Generate mesh failed: STEP file does not exist: " + stepAbsPath);
+        workflowResult.logMessages.append(zh(u8"生成网格失败：STEP 文件不存在：") + stepAbsPath);
         return workflowResult;
     }
 
@@ -165,10 +170,10 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     const GmshCaseWriterResult gmshCaseResult = gmshCaseWriter.prepareFaceGroupExport(projectModel, geometry);
     workflowResult.logMessages.append(gmshCaseResult.logMessages);
     for (const QString &warning : gmshCaseResult.warnings) {
-        workflowResult.logMessages.append("Gmsh case warning: " + warning);
+        workflowResult.logMessages.append(zh(u8"Gmsh 算例警告：") + warning);
     }
     for (const QString &error : gmshCaseResult.errors) {
-        workflowResult.logMessages.append("Gmsh case failed: " + error);
+        workflowResult.logMessages.append(zh(u8"Gmsh 算例失败：") + error);
     }
     if (!gmshCaseResult.errors.isEmpty()) {
         return workflowResult;
@@ -181,38 +186,38 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     const MeshSetup &meshSetup = projectModel.meshRepository().meshSetup();
     const GmshRunResult gmshResult = gmshRunner.generate3DMesh(gmshInputPath, meshAbsPath, meshSetup);
 
-    workflowResult.logMessages.append("Geometry name: " + geometry.name);
-    workflowResult.logMessages.append("Geometry type: " + geometry.type);
-    workflowResult.logMessages.append("Mesh element type: " + displayName(meshSetup.elementType));
+    workflowResult.logMessages.append(zh(u8"几何名称：") + geometry.name);
+    workflowResult.logMessages.append(zh(u8"几何类型：") + geometry.type);
+    workflowResult.logMessages.append(zh(u8"网格单元类型：") + displayName(meshSetup.elementType));
     workflowResult.logMessages.append(meshSetup.autoSize
-        ? QString("Mesh size mode: auto")
-        : QString("Mesh size mode: manual, min=%1, max=%2")
+        ? zh(u8"网格尺寸模式：自动")
+        : zh(u8"网格尺寸模式：手动，min=%1，max=%2")
             .arg(meshSetup.minimumSize, 0, 'g', 12)
             .arg(meshSetup.maximumSize, 0, 'g', 12));
-    workflowResult.logMessages.append("Gmsh path: " + gmshRunner.gmshExecutablePath());
-    workflowResult.logMessages.append("Gmsh command: " + gmshRunner.gmshExecutablePath()
+    workflowResult.logMessages.append(zh(u8"Gmsh 路径：") + gmshRunner.gmshExecutablePath());
+    workflowResult.logMessages.append(zh(u8"Gmsh 命令：") + gmshRunner.gmshExecutablePath()
         + " " + gmshInputPath
         + " -3 -format msh2 -o " + meshAbsPath
         + meshOptionLogSuffix(meshSetup));
-    workflowResult.logMessages.append("Gmsh input: " + gmshInputPath);
-    workflowResult.logMessages.append("Gmsh output: " + meshAbsPath);
+    workflowResult.logMessages.append(zh(u8"Gmsh 输入：") + gmshInputPath);
+    workflowResult.logMessages.append(zh(u8"Gmsh 输出：") + meshAbsPath);
     appendGmshRunLog(workflowResult, gmshRunner, gmshResult);
 
     if (!gmshResult.success) {
         workflowResult.logMessages.append(
             gmshResult.errorMessage.isEmpty()
-                ? QString("Generate mesh failed: unknown error.")
+                ? zh(u8"生成网格失败：未知错误。")
                 : gmshResult.errorMessage
         );
         return workflowResult;
     }
 
-    workflowResult.logMessages.append("Mesh generated: " + meshRelativePath);
+    workflowResult.logMessages.append(zh(u8"网格已生成：") + meshRelativePath);
 
     MeshData meshData;
     QString errorMessage;
     if (!MshReader::readMsh2(meshAbsPath, meshData, &errorMessage)) {
-        workflowResult.logMessages.append("MeshObject save failed: cannot read generated MSH: " + errorMessage);
+        workflowResult.logMessages.append(zh(u8"保存网格对象失败：无法读取生成的 MSH：") + errorMessage);
         return workflowResult;
     }
 
@@ -231,7 +236,7 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
 
     MeshManager meshManager(projectModel.project().rootPath);
     if (!meshManager.saveMeshObject(meshObject, &errorMessage)) {
-        workflowResult.logMessages.append("MeshObject save failed: " + errorMessage);
+        workflowResult.logMessages.append(zh(u8"保存网格对象失败：") + errorMessage);
         return workflowResult;
     }
 
@@ -252,11 +257,11 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
 
     workflowResult.meshTreeChanged = true;
     workflowResult.simulationCaseChanged = true;
-    workflowResult.logMessages.append("MeshObject saved: mesh/" + safeGeometryName + "_mesh.json");
-    workflowResult.logMessages.append(QString("Mesh boundaries detected: %1").arg(meshBoundaries.size()));
+    workflowResult.logMessages.append(zh(u8"网格对象已保存：mesh/") + safeGeometryName + "_mesh.json");
+    workflowResult.logMessages.append(zh(u8"检测到网格边界：%1").arg(meshBoundaries.size()));
     for (const MeshBoundary &meshBoundary : meshBoundaries) {
         workflowResult.logMessages.append(
-            QString("MeshBoundary: %1, physicalTag=%2, faces=%3")
+            zh(u8"网格边界：%1，physicalTag=%2，面数=%3")
                 .arg(meshBoundary.sourceFaceGroupId)
                 .arg(meshBoundary.physicalGroupTag)
                 .arg(meshBoundary.faceCount)
@@ -277,14 +282,14 @@ MeshWorkflowResult MeshWorkflowController::readMeshInfo(const ProjectModel &proj
     QString meshAbsPath;
     if (!readMeshDataForGeometry(projectModel, *selectedGeometry, meshData, meshAbsPath, workflowResult)) {
         if (!workflowResult.logMessages.isEmpty()) {
-            workflowResult.logMessages.last().prepend("Read mesh failed: ");
+            workflowResult.logMessages.last().prepend(zh(u8"读取网格失败："));
         }
         return workflowResult;
     }
 
-    workflowResult.logMessages.append("Read mesh succeeded.");
-    workflowResult.logMessages.append(QString("Node count: %1").arg(meshData.nodeCount()));
-    workflowResult.logMessages.append(QString("Tetra count: %1").arg(meshData.tetraCount()));
+    workflowResult.logMessages.append(zh(u8"读取网格成功。"));
+    workflowResult.logMessages.append(zh(u8"节点数：%1").arg(meshData.nodeCount()));
+    workflowResult.logMessages.append(zh(u8"四面体数：%1").arg(meshData.tetraCount()));
     return workflowResult;
 }
 
@@ -303,7 +308,7 @@ MeshWorkflowResult MeshWorkflowController::showSelectedGeometryMesh(
     QString meshAbsPath;
     if (!readMeshDataForGeometry(projectModel, *selectedGeometry, meshData, meshAbsPath, workflowResult)) {
         if (!workflowResult.logMessages.isEmpty()) {
-            workflowResult.logMessages.last().prepend("Show mesh failed: ");
+            workflowResult.logMessages.last().prepend(zh(u8"显示网格失败："));
         }
         return workflowResult;
     }
@@ -311,17 +316,17 @@ MeshWorkflowResult MeshWorkflowController::showSelectedGeometryMesh(
     QString errorMessage;
     vtkSmartPointer<vtkUnstructuredGrid> grid = MeshToVtkConverter::toUnstructuredGrid(meshData, &errorMessage);
     if (!grid) {
-        workflowResult.logMessages.append("VTK mesh conversion failed: " + errorMessage);
+        workflowResult.logMessages.append(zh(u8"VTK 网格转换失败：") + errorMessage);
         return workflowResult;
     }
 
     if (renderView) {
-        const QString subtitle = QString("%1 nodes, %2 tetrahedra")
+        const QString subtitle = zh(u8"%1 个节点，%2 个四面体")
             .arg(meshData.nodeCount())
             .arg(meshData.tetraCount());
         renderView->showMeshGrid(grid, selectedGeometry->name + " Mesh", subtitle);
     }
-    workflowResult.logMessages.append("Mesh displayed.");
+    workflowResult.logMessages.append(zh(u8"网格已显示。"));
     return workflowResult;
 }
 
@@ -334,7 +339,7 @@ MeshWorkflowResult MeshWorkflowController::displayMeshObject(
     MeshWorkflowResult workflowResult;
     const QString meshAbsPath = absoluteProjectPath(projectModel, meshObject.mshFile);
     if (!QFileInfo::exists(meshAbsPath)) {
-        workflowResult.logMessages.append("Show mesh failed: MSH file does not exist: " + meshObject.mshFile);
+        workflowResult.logMessages.append(zh(u8"显示网格失败：MSH 文件不存在：") + meshObject.mshFile);
         return workflowResult;
     }
 
@@ -342,22 +347,22 @@ MeshWorkflowResult MeshWorkflowController::displayMeshObject(
     meshData.sourceGeometryName = meshObject.sourceGeometryName;
     QString errorMessage;
     if (!MshReader::readMsh2(meshAbsPath, meshData, &errorMessage)) {
-        workflowResult.logMessages.append("Show mesh failed: cannot read MSH: " + errorMessage);
+        workflowResult.logMessages.append(zh(u8"显示网格失败：无法读取 MSH：") + errorMessage);
         return workflowResult;
     }
 
     vtkSmartPointer<vtkUnstructuredGrid> grid = MeshToVtkConverter::toUnstructuredGrid(meshData, &errorMessage);
     if (!grid) {
-        workflowResult.logMessages.append("VTK mesh conversion failed: " + errorMessage);
+        workflowResult.logMessages.append(zh(u8"VTK 网格转换失败：") + errorMessage);
         return workflowResult;
     }
 
     if (renderView) {
-        const QString subtitle = QString("%1 nodes, %2 tetrahedra")
+        const QString subtitle = zh(u8"%1 个节点，%2 个四面体")
             .arg(meshData.nodeCount())
             .arg(meshData.tetraCount());
         renderView->showMeshGrid(grid, meshObject.name, subtitle);
     }
-    workflowResult.logMessages.append("Mesh displayed: " + meshObject.name);
+    workflowResult.logMessages.append(zh(u8"网格已显示：") + meshObject.name);
     return workflowResult;
 }

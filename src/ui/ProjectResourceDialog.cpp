@@ -90,6 +90,7 @@ ProjectResourceDialog::ProjectResourceDialog(ProjectModel &projectModel, QWidget
     m_removeInvalidResultsButton = buttons->addButton(zh(u8"移除无效结果记录"), QDialogButtonBox::ActionRole);
     m_deleteSelectedFilesButton = buttons->addButton(zh(u8"删除所选结果文件"), QDialogButtonBox::ActionRole);
     auto *closeButton = buttons->addButton(QDialogButtonBox::Close);
+    closeButton->setText(zh(u8"关闭"));
     connect(refreshButton, &QPushButton::clicked, this, &ProjectResourceDialog::refresh);
     connect(openProjectButton, &QPushButton::clicked, this, &ProjectResourceDialog::openProjectDirectory);
     connect(m_removeInvalidResultsButton, &QPushButton::clicked, this, &ProjectResourceDialog::removeInvalidResultRecords);

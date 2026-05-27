@@ -106,7 +106,7 @@ void SolverPropertyView::populateMaterialCategory(QWidget *parent, const std::ve
     auto *dynamicLayout = new QVBoxLayout(parent);
 
     if (materials.empty()) {
-        dynamicLayout->addWidget(new QLabel("No materials defined.", parent));
+        dynamicLayout->addWidget(new QLabel(zh(u8"尚未定义材料。"), parent));
         return;
     }
 
@@ -116,20 +116,20 @@ void SolverPropertyView::populateMaterialCategory(QWidget *parent, const std::ve
 
         auto *form = new QFormLayout;
         form->addRow("ID:", new QLabel(mat.id, parent));
-        form->addRow("Domain:", new QLabel(toString(mat.domain), parent));
-        form->addRow("Viscosity Model:", new QLabel(toString(mat.viscosityModel), parent));
+        form->addRow(zh(u8"物理域:"), new QLabel(materialDomainText(mat.domain), parent));
+        form->addRow(zh(u8"黏度模型:"), new QLabel(viscosityModelText(mat.viscosityModel), parent));
         if (mat.hasDensity) {
-            form->addRow("Density:", new QLabel(QString::number(mat.density) + " " + mat.densityUnit, parent));
+            form->addRow(zh(u8"密度:"), new QLabel(QString::number(mat.density) + " " + mat.densityUnit, parent));
         }
         if (mat.hasDynamicViscosity) {
             form->addRow(
-                "Dynamic Viscosity:",
+                zh(u8"动力黏度:"),
                 new QLabel(QString::number(mat.dynamicViscosity) + " " + mat.dynamicViscosityUnit, parent)
             );
         }
         if (mat.hasKinematicViscosity) {
             form->addRow(
-                "Kinematic Viscosity:",
+                zh(u8"运动黏度:"),
                 new QLabel(QString::number(mat.kinematicViscosity) + " " + mat.kinematicViscosityUnit, parent)
             );
         }
@@ -146,7 +146,7 @@ void SolverPropertyView::populateBoundaryConditionCategory(
     auto *dynamicLayout = new QVBoxLayout(parent);
 
     if (boundaryConditions.empty()) {
-        dynamicLayout->addWidget(new QLabel("No boundary conditions defined.", parent));
+        dynamicLayout->addWidget(new QLabel(zh(u8"尚未定义边界条件。"), parent));
         return;
     }
 
@@ -156,11 +156,11 @@ void SolverPropertyView::populateBoundaryConditionCategory(
 
         auto *form = new QFormLayout;
         form->addRow("ID:", new QLabel(bc.id, parent));
-        form->addRow("Type:", new QLabel(toString(bc.type), parent));
-        form->addRow("Geometry:", new QLabel(bc.target.geometryName, parent));
-        form->addRow("Face Group:", new QLabel(bc.target.faceGroupName, parent));
-        form->addRow("Material ID:", new QLabel(bc.materialId, parent));
-        form->addRow("Enabled:", new QLabel(bc.enabled ? "Yes" : "No", parent));
+        form->addRow(zh(u8"类型:"), new QLabel(boundaryConditionTypeText(bc.type), parent));
+        form->addRow(zh(u8"几何:"), new QLabel(bc.target.geometryName, parent));
+        form->addRow(zh(u8"面组:"), new QLabel(bc.target.faceGroupName, parent));
+        form->addRow(zh(u8"材料 ID:"), new QLabel(bc.materialId, parent));
+        form->addRow(zh(u8"启用:"), new QLabel(yesNoText(bc.enabled), parent));
         dynamicLayout->addLayout(form);
     }
 }
@@ -170,7 +170,7 @@ void SolverPropertyView::populateLoadCategory(QWidget *parent, const std::vector
     auto *dynamicLayout = new QVBoxLayout(parent);
 
     if (loads.empty()) {
-        dynamicLayout->addWidget(new QLabel("No loads defined.", parent));
+        dynamicLayout->addWidget(new QLabel(zh(u8"尚未定义载荷。"), parent));
         return;
     }
 
@@ -180,11 +180,11 @@ void SolverPropertyView::populateLoadCategory(QWidget *parent, const std::vector
 
         auto *form = new QFormLayout;
         form->addRow("ID:", new QLabel(ld.id, parent));
-        form->addRow("Type:", new QLabel(toString(ld.type), parent));
-        form->addRow("Boundary Condition ID:", new QLabel(ld.boundaryConditionId, parent));
-        form->addRow("Field Name:", new QLabel(ld.fieldName, parent));
-        form->addRow("Value:", new QLabel(loadValueText(ld), parent));
-        form->addRow("Enabled:", new QLabel(ld.enabled ? "Yes" : "No", parent));
+        form->addRow(zh(u8"类型:"), new QLabel(loadTypeText(ld.type), parent));
+        form->addRow(zh(u8"边界条件 ID:"), new QLabel(ld.boundaryConditionId, parent));
+        form->addRow(zh(u8"场名称:"), new QLabel(ld.fieldName, parent));
+        form->addRow(zh(u8"数值:"), new QLabel(loadValueText(ld), parent));
+        form->addRow(zh(u8"启用:"), new QLabel(yesNoText(ld.enabled), parent));
         dynamicLayout->addLayout(form);
     }
 }
@@ -194,18 +194,18 @@ void SolverPropertyView::populateMaterial(QWidget *parent, const Material &mater
     auto *dynamicLayout = new QVBoxLayout(parent);
     auto *form = new QFormLayout;
     form->addRow("ID:", new QLabel(material.id, parent));
-    form->addRow("Domain:", new QLabel(toString(material.domain), parent));
-    form->addRow("Viscosity Model:", new QLabel(toString(material.viscosityModel), parent));
-    form->addRow("Density Enabled:", new QLabel(material.hasDensity ? "Yes" : "No", parent));
-    form->addRow("Density:", new QLabel(QString::number(material.density) + " " + material.densityUnit, parent));
-    form->addRow("Dynamic Viscosity Enabled:", new QLabel(material.hasDynamicViscosity ? "Yes" : "No", parent));
+    form->addRow(zh(u8"物理域:"), new QLabel(materialDomainText(material.domain), parent));
+    form->addRow(zh(u8"黏度模型:"), new QLabel(viscosityModelText(material.viscosityModel), parent));
+    form->addRow(zh(u8"启用密度:"), new QLabel(yesNoText(material.hasDensity), parent));
+    form->addRow(zh(u8"密度:"), new QLabel(QString::number(material.density) + " " + material.densityUnit, parent));
+    form->addRow(zh(u8"启用动力黏度:"), new QLabel(yesNoText(material.hasDynamicViscosity), parent));
     form->addRow(
-        "Dynamic Viscosity:",
+        zh(u8"动力黏度:"),
         new QLabel(QString::number(material.dynamicViscosity) + " " + material.dynamicViscosityUnit, parent)
     );
-    form->addRow("Kinematic Viscosity Enabled:", new QLabel(material.hasKinematicViscosity ? "Yes" : "No", parent));
+    form->addRow(zh(u8"启用运动黏度:"), new QLabel(yesNoText(material.hasKinematicViscosity), parent));
     form->addRow(
-        "Kinematic Viscosity:",
+        zh(u8"运动黏度:"),
         new QLabel(QString::number(material.kinematicViscosity) + " " + material.kinematicViscosityUnit, parent)
     );
     appendMaterialExtraProperties(form, parent, material);
@@ -217,14 +217,14 @@ void SolverPropertyView::populateBoundaryCondition(QWidget *parent, const Bounda
     auto *dynamicLayout = new QVBoxLayout(parent);
     auto *form = new QFormLayout;
     form->addRow("ID:", new QLabel(boundaryCondition.id, parent));
-    form->addRow("Type:", new QLabel(toString(boundaryCondition.type), parent));
-    form->addRow("Target Kind:", new QLabel(toString(boundaryCondition.target.kind), parent));
-    form->addRow("Geometry:", new QLabel(boundaryCondition.target.geometryName, parent));
-    form->addRow("Face Group ID:", new QLabel(boundaryCondition.target.faceGroupId, parent));
-    form->addRow("Face Group:", new QLabel(boundaryCondition.target.faceGroupName, parent));
-    form->addRow("Mesh Boundary:", new QLabel(boundaryCondition.target.meshBoundaryName, parent));
-    form->addRow("Material ID:", new QLabel(boundaryCondition.materialId, parent));
-    form->addRow("Enabled:", new QLabel(boundaryCondition.enabled ? "Yes" : "No", parent));
+    form->addRow(zh(u8"类型:"), new QLabel(boundaryConditionTypeText(boundaryCondition.type), parent));
+    form->addRow(zh(u8"目标类型:"), new QLabel(boundaryTargetKindText(boundaryCondition.target.kind), parent));
+    form->addRow(zh(u8"几何:"), new QLabel(boundaryCondition.target.geometryName, parent));
+    form->addRow(zh(u8"面组 ID:"), new QLabel(boundaryCondition.target.faceGroupId, parent));
+    form->addRow(zh(u8"面组:"), new QLabel(boundaryCondition.target.faceGroupName, parent));
+    form->addRow(zh(u8"网格边界:"), new QLabel(boundaryCondition.target.meshBoundaryName, parent));
+    form->addRow(zh(u8"材料 ID:"), new QLabel(boundaryCondition.materialId, parent));
+    form->addRow(zh(u8"启用:"), new QLabel(yesNoText(boundaryCondition.enabled), parent));
     dynamicLayout->addLayout(form);
 }
 
@@ -233,12 +233,12 @@ void SolverPropertyView::populateLoad(QWidget *parent, const Load &load)
     auto *dynamicLayout = new QVBoxLayout(parent);
     auto *form = new QFormLayout;
     form->addRow("ID:", new QLabel(load.id, parent));
-    form->addRow("Type:", new QLabel(toString(load.type), parent));
-    form->addRow("Boundary Condition ID:", new QLabel(load.boundaryConditionId, parent));
-    form->addRow("Field Name:", new QLabel(load.fieldName, parent));
-    form->addRow("Value Kind:", new QLabel(toString(load.value.kind), parent));
-    form->addRow("Value:", new QLabel(loadValueText(load), parent));
-    form->addRow("Enabled:", new QLabel(load.enabled ? "Yes" : "No", parent));
+    form->addRow(zh(u8"类型:"), new QLabel(loadTypeText(load.type), parent));
+    form->addRow(zh(u8"边界条件 ID:"), new QLabel(load.boundaryConditionId, parent));
+    form->addRow(zh(u8"场名称:"), new QLabel(load.fieldName, parent));
+    form->addRow(zh(u8"数值类型:"), new QLabel(loadValueKindText(load.value.kind), parent));
+    form->addRow(zh(u8"数值:"), new QLabel(loadValueText(load), parent));
+    form->addRow(zh(u8"启用:"), new QLabel(yesNoText(load.enabled), parent));
     dynamicLayout->addLayout(form);
 }
 
@@ -247,22 +247,22 @@ void SolverPropertyView::populateSolverCategory(QWidget *parent, const Simulatio
     auto *dynamicLayout = new QVBoxLayout(parent);
 
     auto *form = new QFormLayout;
-    form->addRow("Case ID:", new QLabel(simulationCase.id, parent));
-    form->addRow("Source Geometry:", new QLabel(simulationCase.sourceGeometryName, parent));
-    form->addRow("Mesh:", new QLabel(simulationCase.meshName, parent));
-    form->addRow("Solver Type:", new QLabel(toString(simulationCase.solverType), parent));
-    form->addRow("Turbulence Model:", new QLabel(toString(simulationCase.turbulenceModel), parent));
-    form->addRow("End Time:", new QLabel(QString::number(simulationCase.runControl.endTime), parent));
-    form->addRow("Time Step:", new QLabel(QString::number(simulationCase.runControl.timeStep), parent));
-    form->addRow("Write Interval:", new QLabel(QString::number(simulationCase.runControl.writeInterval), parent));
-    form->addRow("Post Processing:", new QLabel(simulationCase.postProcessingTool, parent));
-    form->addRow("Materials:", new QLabel(QString::number(simulationCase.materials.size()), parent));
+    form->addRow(zh(u8"工况 ID:"), new QLabel(simulationCase.id, parent));
+    form->addRow(zh(u8"源几何:"), new QLabel(simulationCase.sourceGeometryName, parent));
+    form->addRow(zh(u8"网格:"), new QLabel(simulationCase.meshName, parent));
+    form->addRow(zh(u8"求解器类型:"), new QLabel(toString(simulationCase.solverType), parent));
+    form->addRow(zh(u8"湍流模型:"), new QLabel(toString(simulationCase.turbulenceModel), parent));
+    form->addRow(zh(u8"结束时间:"), new QLabel(QString::number(simulationCase.runControl.endTime), parent));
+    form->addRow(zh(u8"时间步长:"), new QLabel(QString::number(simulationCase.runControl.timeStep), parent));
+    form->addRow(zh(u8"写出间隔:"), new QLabel(QString::number(simulationCase.runControl.writeInterval), parent));
+    form->addRow(zh(u8"后处理工具:"), new QLabel(simulationCase.postProcessingTool, parent));
+    form->addRow(zh(u8"材料数:"), new QLabel(QString::number(simulationCase.materials.size()), parent));
     form->addRow(
-        "Boundary Conditions:",
+        zh(u8"边界条件数:"),
         new QLabel(QString::number(simulationCase.boundaryConditions.size()), parent)
     );
-    form->addRow("Loads:", new QLabel(QString::number(simulationCase.loads.size()), parent));
+    form->addRow(zh(u8"载荷数:"), new QLabel(QString::number(simulationCase.loads.size()), parent));
     dynamicLayout->addLayout(form);
 
-    dynamicLayout->addWidget(new QLabel("<i>Simulation export uses the current project model.</i>", parent));
+    dynamicLayout->addWidget(new QLabel(zh(u8"<i>仿真导出会使用当前工程模型。</i>"), parent));
 }

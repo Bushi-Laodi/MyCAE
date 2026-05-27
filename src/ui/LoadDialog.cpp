@@ -6,6 +6,7 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QStringList>
 #include <QVBoxLayout>
 
@@ -13,6 +14,11 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 QString defaultFieldName(LoadType type)
 {
     switch (type) {
@@ -65,7 +71,7 @@ LoadDialog::LoadDialog(
     : QDialog(parent)
     , m_options(std::move(options))
 {
-    setWindowTitle("Create Load");
+    setWindowTitle(zh(u8"创建载荷"));
     setupUi();
 }
 
@@ -75,14 +81,14 @@ void LoadDialog::setupUi()
     auto *form = new QFormLayout;
 
     m_nameEdit = new QLineEdit(this);
-    m_nameEdit->setPlaceholderText("e.g. Inlet1 velocity, Inlet2 pressure");
-    form->addRow("Name:", m_nameEdit);
+    m_nameEdit->setPlaceholderText(zh(u8"例如：入口速度、端面压力"));
+    form->addRow(zh(u8"名称:"), m_nameEdit);
 
     m_typeCombo = new QComboBox(this);
-    m_typeCombo->addItem("Velocity", static_cast<int>(LoadType::Velocity));
-    m_typeCombo->addItem("Pressure", static_cast<int>(LoadType::Pressure));
-    m_typeCombo->addItem("Body Force", static_cast<int>(LoadType::BodyForce));
-    form->addRow("Type:", m_typeCombo);
+    m_typeCombo->addItem(zh(u8"速度"), static_cast<int>(LoadType::Velocity));
+    m_typeCombo->addItem(zh(u8"压力"), static_cast<int>(LoadType::Pressure));
+    m_typeCombo->addItem(zh(u8"体力"), static_cast<int>(LoadType::BodyForce));
+    form->addRow(zh(u8"类型:"), m_typeCombo);
 
     m_boundaryConditionIdCombo = new QComboBox(this);
     for (const LoadBoundaryConditionOption &option : m_options.boundaryConditions) {
@@ -99,20 +105,20 @@ void LoadDialog::setupUi()
     if (!m_options.defaultBoundaryConditionId.trimmed().isEmpty()) {
         setComboCurrentData(m_boundaryConditionIdCombo, m_options.defaultBoundaryConditionId);
     }
-    form->addRow("Boundary Condition:", m_boundaryConditionIdCombo);
+    form->addRow(zh(u8"边界条件:"), m_boundaryConditionIdCombo);
 
     m_fieldNameEdit = new QLineEdit(this);
-    m_fieldNameEdit->setPlaceholderText("e.g. U (velocity), p (pressure)");
-    form->addRow("Field Name:", m_fieldNameEdit);
+    m_fieldNameEdit->setPlaceholderText(zh(u8"例如：U（速度），p（压力）"));
+    form->addRow(zh(u8"场名称:"), m_fieldNameEdit);
 
     m_valueSpin = new QDoubleSpinBox(this);
     m_valueSpin->setRange(-1e9, 1e9);
     m_valueSpin->setDecimals(4);
-    form->addRow("Value:", m_valueSpin);
+    form->addRow(zh(u8"数值:"), m_valueSpin);
 
     m_unitCombo = new QComboBox(this);
     m_unitCombo->setEditable(false);
-    form->addRow("Unit:", m_unitCombo);
+    form->addRow(zh(u8"单位:"), m_unitCombo);
 
     connect(m_typeCombo, &QComboBox::currentTextChanged, this, [this]() {
         const QString currentDefault = defaultFieldName(selectedLoadType(m_typeCombo));
@@ -128,21 +134,23 @@ void LoadDialog::setupUi()
 
     auto *buttonBox = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    buttonBox->button(QDialogButtonBox::Ok)->setText(zh(u8"确定"));
+    buttonBox->button(QDialogButtonBox::Cancel)->setText(zh(u8"取消"));
     connect(buttonBox, &QDialogButtonBox::accepted, this, [this]() {
         if (m_nameEdit->text().trimmed().isEmpty()) {
-            QMessageBox::warning(this, "Validation", "Load name cannot be empty.");
+            QMessageBox::warning(this, zh(u8"校验"), zh(u8"载荷名称不能为空。"));
             return;
         }
         if (selectedBoundaryConditionId().isEmpty()) {
             QMessageBox::warning(
                 this,
-                "Validation",
-                "Please create and select a boundary condition before creating a load."
+                zh(u8"校验"),
+                zh(u8"创建载荷前，请先创建并选择一个边界条件。")
             );
             return;
         }
         if (m_unitCombo->currentText().trimmed().isEmpty()) {
-            QMessageBox::warning(this, "Validation", "Please choose a load unit.");
+            QMessageBox::warning(this, zh(u8"校验"), zh(u8"请选择载荷单位。"));
             return;
         }
         accept();
@@ -246,7 +254,7 @@ std::optional<Load> LoadDialog::createLoad(
 )
 {
     LoadDialog dlg(std::move(options), parent);
-    dlg.setWindowTitle("Create Load");
+    dlg.setWindowTitle(zh(u8"创建载荷"));
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.load();
     }
@@ -260,7 +268,7 @@ std::optional<Load> LoadDialog::editLoad(
 )
 {
     LoadDialog dlg(std::move(options), parent);
-    dlg.setWindowTitle("Edit Load");
+    dlg.setWindowTitle(zh(u8"编辑载荷"));
     dlg.setLoad(existing);
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.load();

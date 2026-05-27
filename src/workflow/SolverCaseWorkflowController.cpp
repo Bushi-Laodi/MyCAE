@@ -18,6 +18,11 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 void appendMessages(SolverCaseWorkflowResult &result, const QStringList &messages)
 {
     result.logMessages.append(messages);
@@ -149,7 +154,7 @@ SolverCaseWorkflowResult SolverCaseWorkflowController::runPlugin(const QString &
 {
     SolverCaseWorkflowResult result;
     if (!m_projectModel.hasProject()) {
-        result.logMessages.append("Run solver failed: create or open a project first.");
+        result.logMessages.append(zh(u8"运行求解器失败：请先创建或打开工程。"));
         return result;
     }
 
@@ -161,33 +166,33 @@ SolverCaseWorkflowResult SolverCaseWorkflowController::runPlugin(const QString &
 
     const SolverPlugin *plugin = m_solverPluginManager.pluginById(pluginId);
     if (!plugin) {
-        result.logMessages.append("Run solver failed: plugin is not registered: " + pluginId);
+        result.logMessages.append(zh(u8"运行求解器失败：插件未注册：") + pluginId);
         return result;
     }
 
     const SolverPluginDescriptor *descriptor = m_solverPluginManager.descriptorById(pluginId);
     if (!descriptor) {
-        result.logMessages.append("Run solver failed: plugin descriptor is not registered: " + pluginId);
+        result.logMessages.append(zh(u8"运行求解器失败：插件描述未注册：") + pluginId);
         return result;
     }
 
     const SimulationCase simulationCase = SimulationCaseBuilder::fromProjectModel(m_projectModel);
     const QString caseDirectory = solverCaseDirectory(m_projectModel, pluginId, simulationCase);
     if (!QDir().mkpath(caseDirectory)) {
-        result.logMessages.append("Run solver failed: cannot create case directory: " + caseDirectory);
+        result.logMessages.append(zh(u8"运行求解器失败：无法创建算例目录：") + caseDirectory);
         return result;
     }
 
-    result.logMessages.append("Solver plugin: " + descriptor->name + " (" + descriptor->id + ")");
-    result.logMessages.append("Solver family: " + descriptor->solverFamily);
-    result.logMessages.append("Solver case directory: " + caseDirectory);
-    result.logMessages.append(QString("Solver case data: %1 materials, %2 boundary conditions, %3 loads.")
+    result.logMessages.append(zh(u8"求解器插件：") + descriptor->name + " (" + descriptor->id + ")");
+    result.logMessages.append(zh(u8"求解器类型：") + descriptor->solverFamily);
+    result.logMessages.append(zh(u8"求解算例目录：") + caseDirectory);
+    result.logMessages.append(zh(u8"求解算例数据：%1 个材料，%2 个边界条件，%3 个载荷。")
         .arg(simulationCase.materials.size())
         .arg(simulationCase.boundaryConditions.size())
         .arg(simulationCase.loads.size()));
 
     if (!descriptor->isUsable()) {
-        result.logMessages.append("Run solver failed: plugin is reserved or unavailable.");
+        result.logMessages.append(zh(u8"运行求解器失败：插件为预留状态或不可用。"));
         return result;
     }
 
@@ -196,24 +201,24 @@ SolverCaseWorkflowResult SolverCaseWorkflowController::runPlugin(const QString &
     const SolverCaseWriter solverCaseWriter;
     const SolverCaseWriterResult exportResult = solverCaseWriter.writeCase(*plugin, context);
     appendMessages(result, exportResult.logMessages);
-    appendWarnings(result, "Solver export warning: ", exportResult.warnings);
-    appendErrors(result, "Solver export failed: ", exportResult.errors);
+    appendWarnings(result, zh(u8"求解器导出警告："), exportResult.warnings);
+    appendErrors(result, zh(u8"求解器导出失败："), exportResult.errors);
     if (!exportResult.success) {
         return result;
     }
-    result.logMessages.append("Solver input exported.");
+    result.logMessages.append(zh(u8"求解器输入已导出。"));
 
     const SolverRunResult runResult = plugin->runCase(context);
     appendMessages(result, runResult.logMessages);
-    appendErrors(result, "Solver run failed: ", runResult.errors);
+    appendErrors(result, zh(u8"求解器运行失败："), runResult.errors);
     if (!runResult.success) {
         return result;
     }
 
     const SolverResultReadResult readResult = plugin->readResult(context);
     appendMessages(result, readResult.logMessages);
-    appendWarnings(result, "Solver result warning: ", readResult.warnings);
-    appendErrors(result, "Solver result read failed: ", readResult.errors);
+    appendWarnings(result, zh(u8"求解结果警告："), readResult.warnings);
+    appendErrors(result, zh(u8"求解结果读取失败："), readResult.errors);
     if (!readResult.success) {
         return result;
     }
@@ -223,12 +228,12 @@ SolverCaseWorkflowResult SolverCaseWorkflowController::runPlugin(const QString &
     );
     QString saveError;
     if (!ResultManager().save(m_projectModel.project(), m_projectModel.resultRepository().results(), &saveError)) {
-        result.logMessages.append("Save result index failed: " + saveError);
+        result.logMessages.append(zh(u8"保存结果索引失败：") + saveError);
     } else {
-        result.logMessages.append("Result index saved: " + ResultManager::relativeResultsFilePath());
+        result.logMessages.append(zh(u8"结果索引已保存：") + ResultManager::relativeResultsFilePath());
     }
 
-    result.logMessages.append("Solver result: " + readResult.summary);
+    result.logMessages.append(zh(u8"求解结果：") + readResult.summary);
     result.success = true;
     return result;
 }

@@ -13,6 +13,7 @@
 #include <QDir>
 #include <QFileInfo>
 
+#include <memory>
 #include <utility>
 
 namespace
@@ -90,12 +91,14 @@ void validateResultData(const ProjectModel &projectModel, SampleValidationReport
     }
 
     const ResultObject &resultObject = projectModel.resultRepository().results().front();
-    const ResultDataLoadResult loadedResult = ResultDataLoader().loadCalculiXResult(projectModel, resultObject);
-    if (!loadedResult.success) {
+    auto loadedResult = std::make_unique<ResultDataLoadResult>(
+        ResultDataLoader().loadCalculiXResult(projectModel, resultObject)
+    );
+    if (!loadedResult->success) {
         report.addStep(
             SampleValidationStatus::Fail,
             DemoStepPrefix + QString("result data readable"),
-            loadedResult.errors.join("; ")
+            loadedResult->errors.join("; ")
         );
         return;
     }
@@ -104,9 +107,10 @@ void validateResultData(const ProjectModel &projectModel, SampleValidationReport
         SampleValidationStatus::Pass,
         DemoStepPrefix + QString("result data readable"),
         QString("nodes=%1; stresses=%2")
-            .arg(loadedResult.datResult.displacements.size())
-            .arg(loadedResult.datResult.stresses.size())
+            .arg(loadedResult->datResult.displacements.size())
+            .arg(loadedResult->datResult.stresses.size())
     );
+    loadedResult.release();
 }
 }
 

@@ -8,10 +8,16 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QVBoxLayout>
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 double materialPropertyValue(const Material &material, const QString &propertyName, double fallback = 0.0)
 {
     for (const MaterialProperty &property : material.extraProperties) {
@@ -26,7 +32,7 @@ double materialPropertyValue(const Material &material, const QString &propertyNa
 MaterialDialog::MaterialDialog(QWidget *parent)
     : QDialog(parent)
 {
-    setWindowTitle("Create Material");
+    setWindowTitle(zh(u8"创建材料"));
     setupUi();
 }
 
@@ -37,52 +43,52 @@ void MaterialDialog::setupUi()
     auto *form = new QFormLayout;
 
     m_nameEdit = new QLineEdit(this);
-    m_nameEdit->setPlaceholderText("e.g. Water, Air, Steel");
-    form->addRow("Name:", m_nameEdit);
+    m_nameEdit->setPlaceholderText(zh(u8"例如：水、空气、钢"));
+    form->addRow(zh(u8"名称:"), m_nameEdit);
 
     m_domainCombo = new QComboBox(this);
-    m_domainCombo->addItem("Fluid", static_cast<int>(MaterialDomain::Fluid));
-    m_domainCombo->addItem("Solid", static_cast<int>(MaterialDomain::Solid));
-    form->addRow("Domain:", m_domainCombo);
+    m_domainCombo->addItem(zh(u8"流体"), static_cast<int>(MaterialDomain::Fluid));
+    m_domainCombo->addItem(zh(u8"固体"), static_cast<int>(MaterialDomain::Solid));
+    form->addRow(zh(u8"物理域:"), m_domainCombo);
     connect(m_domainCombo, &QComboBox::currentIndexChanged, this, &MaterialDialog::onDomainChanged);
 
     m_viscosityCombo = new QComboBox(this);
-    m_viscosityCombo->addItem("Newtonian", static_cast<int>(ViscosityModel::Newtonian));
-    form->addRow("Viscosity Model:", m_viscosityCombo);
+    m_viscosityCombo->addItem(zh(u8"牛顿流体"), static_cast<int>(ViscosityModel::Newtonian));
+    form->addRow(zh(u8"黏度模型:"), m_viscosityCombo);
 
     // --- Density ---
-    m_hasDensityCheck = new QCheckBox("Enable Density", this);
+    m_hasDensityCheck = new QCheckBox(zh(u8"启用密度"), this);
     form->addRow(m_hasDensityCheck);
     m_densitySpin = new QDoubleSpinBox(this);
     m_densitySpin->setRange(0.0, 1e9);
     m_densitySpin->setDecimals(4);
     m_densitySpin->setSuffix(" kg/m^3");
     m_densitySpin->setEnabled(false);
-    form->addRow("Density:", m_densitySpin);
+    form->addRow(zh(u8"密度:"), m_densitySpin);
 
     connect(m_hasDensityCheck, &QCheckBox::toggled, m_densitySpin, &QDoubleSpinBox::setEnabled);
 
     // --- Dynamic Viscosity ---
-    m_hasDynamicViscosityCheck = new QCheckBox("Enable Dynamic Viscosity", this);
+    m_hasDynamicViscosityCheck = new QCheckBox(zh(u8"启用动力黏度"), this);
     form->addRow(m_hasDynamicViscosityCheck);
     m_dynamicViscositySpin = new QDoubleSpinBox(this);
     m_dynamicViscositySpin->setRange(0.0, 1e9);
     m_dynamicViscositySpin->setDecimals(6);
     m_dynamicViscositySpin->setSuffix(" Pa*s");
     m_dynamicViscositySpin->setEnabled(false);
-    form->addRow("Dynamic Viscosity:", m_dynamicViscositySpin);
+    form->addRow(zh(u8"动力黏度:"), m_dynamicViscositySpin);
 
     connect(m_hasDynamicViscosityCheck, &QCheckBox::toggled, m_dynamicViscositySpin, &QDoubleSpinBox::setEnabled);
 
     // --- Kinematic Viscosity ---
-    m_hasKinematicViscosityCheck = new QCheckBox("Enable Kinematic Viscosity", this);
+    m_hasKinematicViscosityCheck = new QCheckBox(zh(u8"启用运动黏度"), this);
     form->addRow(m_hasKinematicViscosityCheck);
     m_kinematicViscositySpin = new QDoubleSpinBox(this);
     m_kinematicViscositySpin->setRange(0.0, 1e9);
     m_kinematicViscositySpin->setDecimals(6);
     m_kinematicViscositySpin->setSuffix(" m^2/s");
     m_kinematicViscositySpin->setEnabled(false);
-    form->addRow("Kinematic Viscosity:", m_kinematicViscositySpin);
+    form->addRow(zh(u8"运动黏度:"), m_kinematicViscositySpin);
 
     connect(m_hasKinematicViscosityCheck, &QCheckBox::toggled, m_kinematicViscositySpin, &QDoubleSpinBox::setEnabled);
 
@@ -92,22 +98,24 @@ void MaterialDialog::setupUi()
     m_youngModulusSpin->setSingleStep(1e9);
     m_youngModulusSpin->setValue(2.1e11);
     m_youngModulusSpin->setSuffix(" Pa");
-    form->addRow("Young Modulus:", m_youngModulusSpin);
+    form->addRow(zh(u8"杨氏模量:"), m_youngModulusSpin);
 
     m_poissonRatioSpin = new QDoubleSpinBox(this);
     m_poissonRatioSpin->setRange(0.0, 0.499999);
     m_poissonRatioSpin->setDecimals(6);
     m_poissonRatioSpin->setSingleStep(0.01);
     m_poissonRatioSpin->setValue(0.3);
-    form->addRow("Poisson Ratio:", m_poissonRatioSpin);
+    form->addRow(zh(u8"泊松比:"), m_poissonRatioSpin);
 
     mainLayout->addLayout(form);
 
     auto *buttonBox = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    buttonBox->button(QDialogButtonBox::Ok)->setText(zh(u8"确定"));
+    buttonBox->button(QDialogButtonBox::Cancel)->setText(zh(u8"取消"));
     connect(buttonBox, &QDialogButtonBox::accepted, this, [this]() {
         if (m_nameEdit->text().trimmed().isEmpty()) {
-            QMessageBox::warning(this, "Validation", "Material name cannot be empty.");
+            QMessageBox::warning(this, zh(u8"校验"), zh(u8"材料名称不能为空。"));
             return;
         }
         accept();
@@ -188,7 +196,7 @@ void MaterialDialog::setMaterial(const Material &mat)
 std::optional<Material> MaterialDialog::createMaterial(QWidget *parent)
 {
     MaterialDialog dlg(parent);
-    dlg.setWindowTitle("Create Material");
+    dlg.setWindowTitle(zh(u8"创建材料"));
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.material();
     }
@@ -198,7 +206,7 @@ std::optional<Material> MaterialDialog::createMaterial(QWidget *parent)
 std::optional<Material> MaterialDialog::editMaterial(QWidget *parent, const Material &existing)
 {
     MaterialDialog dlg(parent);
-    dlg.setWindowTitle("Edit Material");
+    dlg.setWindowTitle(zh(u8"编辑材料"));
     dlg.setMaterial(existing);
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.material();
