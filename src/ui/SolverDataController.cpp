@@ -14,10 +14,15 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 SolverDataControllerResult noProjectResult(const QString &action)
 {
     SolverDataControllerResult result;
-    result.logMessages.append(action + " failed: create or open a project first.");
+    result.logMessages.append(action + zh(u8"失败：请先创建或打开工程。"));
     return result;
 }
 
@@ -76,7 +81,7 @@ QStringList SolverDataController::showMaterialCategory(ProjectModel &projectMode
     if (propertyPanel) {
         propertyPanel->showMaterialCategory(solverRepository.materials());
     }
-    return {QString("Materials: %1 defined.").arg(solverRepository.materials().size())};
+    return {zh(u8"材料：已定义 %1 个。").arg(solverRepository.materials().size())};
 }
 
 QStringList SolverDataController::showBoundaryConditionCategory(
@@ -89,7 +94,7 @@ QStringList SolverDataController::showBoundaryConditionCategory(
     if (propertyPanel) {
         propertyPanel->showBoundaryConditionCategory(solverRepository.boundaryConditions());
     }
-    return {QString("Boundary conditions: %1 defined.").arg(solverRepository.boundaryConditions().size())};
+    return {zh(u8"边界条件：已定义 %1 个。").arg(solverRepository.boundaryConditions().size())};
 }
 
 QStringList SolverDataController::showLoadCategory(ProjectModel &projectModel, PropertyPanel *propertyPanel)
@@ -99,7 +104,7 @@ QStringList SolverDataController::showLoadCategory(ProjectModel &projectModel, P
     if (propertyPanel) {
         propertyPanel->showLoadCategory(solverRepository.loads());
     }
-    return {QString("Loads: %1 defined.").arg(solverRepository.loads().size())};
+    return {zh(u8"载荷：已定义 %1 个。").arg(solverRepository.loads().size())};
 }
 
 QStringList SolverDataController::showMaterial(
@@ -111,14 +116,14 @@ QStringList SolverDataController::showMaterial(
     const Material *material = projectModel.solverRepository().findMaterialById(materialId);
     if (!material) {
         projectModel.clearSolverSelection();
-        return {"Material selection failed: not found: " + materialId};
+        return {zh(u8"材料选择失败：未找到：") + materialId};
     }
 
     projectModel.setSelection(Selection::item(SelectionKind::Material, material->id, material->name));
     if (propertyPanel) {
         propertyPanel->showMaterial(*material);
     }
-    return {"Material selected: " + material->name};
+    return {zh(u8"材料已选择：") + material->name};
 }
 
 QStringList SolverDataController::showBoundaryCondition(
@@ -131,7 +136,7 @@ QStringList SolverDataController::showBoundaryCondition(
         projectModel.solverRepository().findBoundaryConditionById(boundaryConditionId);
     if (!boundaryCondition) {
         projectModel.clearSolverSelection();
-        return {"Boundary condition selection failed: not found: " + boundaryConditionId};
+        return {zh(u8"边界条件选择失败：未找到：") + boundaryConditionId};
     }
 
     projectModel.setSelection(Selection::item(
@@ -142,7 +147,7 @@ QStringList SolverDataController::showBoundaryCondition(
     if (propertyPanel) {
         propertyPanel->showBoundaryCondition(*boundaryCondition);
     }
-    return {"Boundary condition selected: " + boundaryCondition->name};
+    return {zh(u8"边界条件已选择：") + boundaryCondition->name};
 }
 
 QStringList SolverDataController::showLoad(
@@ -154,26 +159,26 @@ QStringList SolverDataController::showLoad(
     const Load *load = projectModel.solverRepository().findLoadById(loadId);
     if (!load) {
         projectModel.clearSolverSelection();
-        return {"Load selection failed: not found: " + loadId};
+        return {zh(u8"载荷选择失败：未找到：") + loadId};
     }
 
     projectModel.setSelection(Selection::item(SelectionKind::Load, load->id, load->name));
     if (propertyPanel) {
         propertyPanel->showLoad(*load);
     }
-    return {"Load selected: " + load->name};
+    return {zh(u8"载荷已选择：") + load->name};
 }
 
 SolverDataControllerResult SolverDataController::createMaterial(QWidget *parent, ProjectModel &projectModel)
 {
     if (!projectModel.hasProject()) {
-        return noProjectResult("Create material");
+        return noProjectResult(zh(u8"创建材料"));
     }
 
     SolverDataControllerResult result;
     const std::optional<Material> newMaterial = MaterialDialog::createMaterial(parent);
     if (!newMaterial) {
-        result.logMessages.append("Create material canceled.");
+        result.logMessages.append(zh(u8"已取消创建材料。"));
         return result;
     }
     return SolverDataService::createMaterial(projectModel, *newMaterial);
@@ -182,14 +187,14 @@ SolverDataControllerResult SolverDataController::createMaterial(QWidget *parent,
 SolverDataControllerResult SolverDataController::createBoundaryCondition(QWidget *parent, ProjectModel &projectModel)
 {
     if (!projectModel.hasProject()) {
-        return noProjectResult("Create boundary condition");
+        return noProjectResult(zh(u8"创建边界条件"));
     }
 
     SolverDataControllerResult result;
     const std::optional<BoundaryCondition> newBoundaryCondition =
         BoundaryConditionDialog::createBoundaryCondition(parent, boundaryConditionDialogOptions(projectModel));
     if (!newBoundaryCondition) {
-        result.logMessages.append("Create boundary condition canceled.");
+        result.logMessages.append(zh(u8"已取消创建边界条件。"));
         return result;
     }
     return SolverDataService::createBoundaryCondition(projectModel, *newBoundaryCondition);
@@ -198,13 +203,13 @@ SolverDataControllerResult SolverDataController::createBoundaryCondition(QWidget
 SolverDataControllerResult SolverDataController::createLoad(QWidget *parent, ProjectModel &projectModel)
 {
     if (!projectModel.hasProject()) {
-        return noProjectResult("Create load");
+        return noProjectResult(zh(u8"创建载荷"));
     }
 
     SolverDataControllerResult result;
     const std::optional<Load> newLoad = LoadDialog::createLoad(parent, loadDialogOptions(projectModel));
     if (!newLoad) {
-        result.logMessages.append("Create load canceled.");
+        result.logMessages.append(zh(u8"已取消创建载荷。"));
         return result;
     }
     return SolverDataService::createLoad(projectModel, *newLoad);
@@ -213,7 +218,7 @@ SolverDataControllerResult SolverDataController::createLoad(QWidget *parent, Pro
 SolverDataControllerResult SolverDataController::editSelected(QWidget *parent, ProjectModel &projectModel)
 {
     if (!projectModel.hasProject()) {
-        return noProjectResult("Edit solver data");
+        return noProjectResult(zh(u8"编辑求解数据"));
     }
 
     SolverDataControllerResult result;
@@ -221,7 +226,7 @@ SolverDataControllerResult SolverDataController::editSelected(QWidget *parent, P
         const QString originalId = material->id;
         const std::optional<Material> editedMaterial = MaterialDialog::editMaterial(parent, *material);
         if (!editedMaterial) {
-            result.logMessages.append("Edit material canceled.");
+            result.logMessages.append(zh(u8"已取消编辑材料。"));
             return result;
         }
         return SolverDataService::updateMaterial(projectModel, originalId, *editedMaterial);
@@ -236,7 +241,7 @@ SolverDataControllerResult SolverDataController::editSelected(QWidget *parent, P
                 boundaryConditionDialogOptions(projectModel)
             );
         if (!editedBoundaryCondition) {
-            result.logMessages.append("Edit boundary condition canceled.");
+            result.logMessages.append(zh(u8"已取消编辑边界条件。"));
             return result;
         }
         return SolverDataService::updateBoundaryCondition(projectModel, originalId, *editedBoundaryCondition);
@@ -247,20 +252,20 @@ SolverDataControllerResult SolverDataController::editSelected(QWidget *parent, P
         const std::optional<Load> editedLoad =
             LoadDialog::editLoad(parent, *load, loadDialogOptions(projectModel));
         if (!editedLoad) {
-            result.logMessages.append("Edit load canceled.");
+            result.logMessages.append(zh(u8"已取消编辑载荷。"));
             return result;
         }
         return SolverDataService::updateLoad(projectModel, originalId, *editedLoad);
     }
 
-    result.logMessages.append("Edit solver data failed: select a material, boundary condition, or load first.");
+    result.logMessages.append(zh(u8"编辑求解数据失败：请先选择材料、边界条件或载荷。"));
     return result;
 }
 
 SolverDataControllerResult SolverDataController::deleteSelected(QWidget *parent, ProjectModel &projectModel)
 {
     if (!projectModel.hasProject()) {
-        return noProjectResult("Delete solver data");
+        return noProjectResult(zh(u8"删除求解数据"));
     }
 
     SolverDataControllerResult result;
@@ -269,11 +274,11 @@ SolverDataControllerResult SolverDataController::deleteSelected(QWidget *parent,
         const QString name = material->name;
         const QMessageBox::StandardButton answer = QMessageBox::question(
             parent,
-            "Delete Material",
-            "Delete material \"" + name + "\"?\nBoundary conditions using this material will keep an empty material ID."
+            zh(u8"删除材料"),
+            zh(u8"删除材料“%1”？\n使用此材料的边界条件会保留空材料 ID。").arg(name)
         );
         if (answer != QMessageBox::Yes) {
-            result.logMessages.append("Delete material canceled.");
+            result.logMessages.append(zh(u8"已取消删除材料。"));
             return result;
         }
 
@@ -285,11 +290,11 @@ SolverDataControllerResult SolverDataController::deleteSelected(QWidget *parent,
         const QString name = boundaryCondition->name;
         const QMessageBox::StandardButton answer = QMessageBox::question(
             parent,
-            "Delete Boundary Condition",
-            "Delete boundary condition \"" + name + "\"?\nLoads linked to it will also be deleted."
+            zh(u8"删除边界条件"),
+            zh(u8"删除边界条件“%1”？\n关联到它的载荷也会被删除。").arg(name)
         );
         if (answer != QMessageBox::Yes) {
-            result.logMessages.append("Delete boundary condition canceled.");
+            result.logMessages.append(zh(u8"已取消删除边界条件。"));
             return result;
         }
 
@@ -301,17 +306,17 @@ SolverDataControllerResult SolverDataController::deleteSelected(QWidget *parent,
         const QString name = load->name;
         const QMessageBox::StandardButton answer = QMessageBox::question(
             parent,
-            "Delete Load",
-            "Delete load \"" + name + "\"?"
+            zh(u8"删除载荷"),
+            zh(u8"删除载荷“%1”？").arg(name)
         );
         if (answer != QMessageBox::Yes) {
-            result.logMessages.append("Delete load canceled.");
+            result.logMessages.append(zh(u8"已取消删除载荷。"));
             return result;
         }
 
         return SolverDataService::deleteLoad(projectModel, id);
     }
 
-    result.logMessages.append("Delete solver data failed: select a material, boundary condition, or load first.");
+    result.logMessages.append(zh(u8"删除求解数据失败：请先选择材料、边界条件或载荷。"));
     return result;
 }

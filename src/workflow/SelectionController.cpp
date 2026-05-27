@@ -12,6 +12,14 @@
 #include "ui/RenderView.h"
 #include "ui/SolverDataController.h"
 
+namespace
+{
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+}
+
 SelectionController::SelectionController(ProjectModel &projectModel, PropertyPanel *propertyPanel, RenderView *renderView)
     : m_projectModel(projectModel)
     , m_propertyPanel(propertyPanel)
@@ -65,7 +73,7 @@ SelectionControllerResult SelectionController::apply(const Selection &selection)
                     result.logMessages.append(highlightResult.logMessages);
                 } else {
                     result.logMessages.append(
-                        "Boundary condition face group not found: " + boundaryCondition->target.faceGroupId
+                        zh(u8"边界条件引用的面组不存在：") + boundaryCondition->target.faceGroupId
                     );
                 }
             }
@@ -99,7 +107,7 @@ SelectionControllerResult SelectionController::showResult(const QString &resultI
     SelectionControllerResult result;
     ResultObject *resultObject = m_projectModel.findResultById(resultId);
     if (!resultObject) {
-        result.logMessages.append("Result selection failed: not found: " + resultId);
+        result.logMessages.append(zh(u8"结果选择失败：未找到：") + resultId);
         return result;
     }
 
@@ -115,7 +123,7 @@ SelectionControllerResult SelectionController::showResult(const QString &resultI
     if (m_propertyPanel) {
         m_propertyPanel->showResult(*resultObject);
     }
-    result.logMessages.append("Result selected: " + resultObject->id);
+    result.logMessages.append(zh(u8"结果已选择：") + resultObject->id);
     result.accepted = true;
     return result;
 }
@@ -126,7 +134,7 @@ SelectionControllerResult SelectionController::showGeometry(const QString &geome
     const GeometryObject *geometry = m_projectModel.findGeometryByName(geometryName);
     if (!geometry) {
         m_projectModel.clearSelectionIfKind(SelectionKind::Geometry);
-        result.logMessages.append("Geometry selection failed: not found: " + geometryName);
+        result.logMessages.append(zh(u8"几何选择失败：未找到：") + geometryName);
         return result;
     }
 
@@ -159,7 +167,7 @@ SelectionControllerResult SelectionController::showMesh(const QString &meshName)
     const MeshObject *meshObject = m_projectModel.findMeshByName(meshName);
     if (!meshObject) {
         m_projectModel.clearSelectionIfKind(SelectionKind::Mesh);
-        result.logMessages.append("Mesh selection failed: not found: " + meshName);
+        result.logMessages.append(zh(u8"网格选择失败：未找到：") + meshName);
         return result;
     }
 
@@ -180,7 +188,7 @@ SelectionControllerResult SelectionController::showFaceGroup(const QString &face
     SelectionControllerResult result;
     const FaceGroup *faceGroup = m_projectModel.findFaceGroupById(faceGroupId);
     if (!faceGroup) {
-        result.logMessages.append("Face group selection failed: not found: " + faceGroupId);
+        result.logMessages.append(zh(u8"面组选择失败：未找到：") + faceGroupId);
         return result;
     }
 
@@ -195,7 +203,7 @@ SelectionControllerResult SelectionController::showFaceGroup(const QString &face
         );
         result.logMessages.append(displayResult.logMessages);
     } else {
-        result.logMessages.append("Face group geometry is not loaded: " + faceGroup->geometryName);
+        result.logMessages.append(zh(u8"面组所属几何尚未加载：") + faceGroup->geometryName);
     }
 
     const RenderHighlightController highlightController;
@@ -205,7 +213,7 @@ SelectionControllerResult SelectionController::showFaceGroup(const QString &face
     if (m_propertyPanel) {
         m_propertyPanel->showFaceGroup(*faceGroup);
     }
-    result.logMessages.append("Face group selected: " + faceGroup->id);
+    result.logMessages.append(zh(u8"面组已选择：") + faceGroup->id);
     result.accepted = true;
     return result;
 }
@@ -229,13 +237,13 @@ SelectionControllerResult SelectionController::showSolverCategory(SelectionKind 
         if (m_propertyPanel) {
             m_propertyPanel->showSolverCategory(SimulationCaseBuilder::fromProjectModel(m_projectModel));
         }
-        result.logMessages.append("Solver settings displayed.");
+        result.logMessages.append(zh(u8"求解器设置已显示。"));
         break;
     case SelectionKind::ResultCategory:
         if (m_propertyPanel) {
             m_propertyPanel->showResultCategory(m_projectModel.resultRepository().results());
         }
-        result.logMessages.append("Solver results displayed.");
+        result.logMessages.append(zh(u8"求解结果已显示。"));
         break;
     default:
         break;

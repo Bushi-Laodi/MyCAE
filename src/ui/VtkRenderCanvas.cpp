@@ -94,11 +94,31 @@ VtkRenderCanvas::VtkRenderCanvas(QWidget *parent)
     // or from the first paint event.
 }
 
+VtkRenderCanvas::~VtkRenderCanvas()
+{
+    if (m_renderWindow && m_renderWindow->GetInteractor() && m_leftButtonReleaseCallback) {
+        m_renderWindow->GetInteractor()->RemoveObserver(m_leftButtonReleaseCallback);
+    }
+    if (m_vtkWidget) {
+        m_vtkWidget->setRenderWindow(static_cast<vtkGenericOpenGLRenderWindow *>(nullptr));
+    }
+    if (m_renderWindow) {
+        m_renderWindow->Finalize();
+    }
+    m_scalarBarActor = nullptr;
+    m_highlightActors.clear();
+    m_primaryActor = nullptr;
+    m_currentResultGrid = nullptr;
+    m_currentPolyData = nullptr;
+    m_renderer = nullptr;
+    m_renderWindow = nullptr;
+}
+
 void VtkRenderCanvas::showEmpty()
 {
     resetSceneState();
     m_renderer->RemoveAllViewProps();
-    m_renderWindow->Render();
+    renderIfReady();
 }
 
 void VtkRenderCanvas::showBoxGeometry(const BoxGeometry &box)
@@ -140,7 +160,7 @@ void VtkRenderCanvas::showBoxGeometry(const BoxGeometry &box)
     m_renderer->RemoveAllViewProps();
     m_renderer->AddActor(m_primaryActor);
     resetCamera();
-    m_renderWindow->Render();
+    renderIfReady();
 }
 
 void VtkRenderCanvas::showOccShape(const TopoDS_Shape &shape, const QString &geometryName)
@@ -165,7 +185,7 @@ void VtkRenderCanvas::showOccShape(const TopoDS_Shape &shape, const QString &geo
     m_renderer->RemoveAllViewProps();
     m_renderer->AddActor(m_primaryActor);
     resetCamera();
-    m_renderWindow->Render();
+    renderIfReady();
 }
 
 void VtkRenderCanvas::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid)
@@ -185,7 +205,7 @@ void VtkRenderCanvas::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid)
     m_renderer->RemoveAllViewProps();
     m_renderer->AddActor(actor);
     resetCamera();
-    m_renderWindow->Render();
+    renderIfReady();
 }
 
 void VtkRenderCanvas::showResultGrid(
@@ -273,7 +293,7 @@ void VtkRenderCanvas::showResultGrid(
     if (resetCameraView) {
         resetCamera();
     }
-    m_renderWindow->Render();
+    renderIfReady();
 }
 
 void VtkRenderCanvas::setPickMode(PickMode mode)
@@ -290,7 +310,7 @@ void VtkRenderCanvas::clearHighlight()
             }
         }
         m_highlightActors.clear();
-        m_renderWindow->Render();
+        renderIfReady();
     }
 }
 
@@ -302,14 +322,14 @@ void VtkRenderCanvas::highlightFaceIndices(const std::vector<int> &faceIndices)
         m_highlightActors.push_back(actor);
         m_renderer->AddActor(actor);
     }
-    m_renderWindow->Render();
+    renderIfReady();
 }
 
 void VtkRenderCanvas::highlightResultPosition(double x, double y, double z)
 {
     clearHighlight();
     addResultMarker(x, y, z, 1.0, 0.86, 0.18, 0.025);
-    m_renderWindow->Render();
+    renderIfReady();
 }
 
 void VtkRenderCanvas::highlightResultExtrema(const ResultExtremeMarker &minimum, const ResultExtremeMarker &maximum)
@@ -321,7 +341,7 @@ void VtkRenderCanvas::highlightResultExtrema(const ResultExtremeMarker &minimum,
     if (maximum.valid) {
         addResultMarker(maximum.x, maximum.y, maximum.z, 1.0, 0.32, 0.18, 0.026);
     }
-    m_renderWindow->Render();
+    renderIfReady();
 }
 
 void VtkRenderCanvas::addResultMarker(
@@ -386,13 +406,21 @@ void VtkRenderCanvas::handleVtkLeftButtonRelease(
     canvas->handlePickAtRenderWindowPosition(position[0], position[1]);
 }
 
+void VtkRenderCanvas::renderIfReady()
+{
+    if (!m_renderWindow || !m_vtkWidget || !m_vtkWidget->isVisible() || !m_vtkWidget->windowHandle()) {
+        return;
+    }
+    m_renderWindow->Render();
+}
+
 void VtkRenderCanvas::resetCamera()
 {
     m_renderer->ResetCamera();
     m_renderer->GetActiveCamera()->Azimuth(35.0);
     m_renderer->GetActiveCamera()->Elevation(25.0);
     m_renderer->ResetCameraClippingRange();
-    m_renderWindow->Render();
+    renderIfReady();
 }
 
 void VtkRenderCanvas::resetSceneState()

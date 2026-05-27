@@ -5,7 +5,16 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QVBoxLayout>
+
+namespace
+{
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+}
 
 BooleanOperationDialog::BooleanOperationDialog(
     const QVector<GeometryObject> &geometries,
@@ -14,7 +23,7 @@ BooleanOperationDialog::BooleanOperationDialog(
 )
     : QDialog(parent)
 {
-    setWindowTitle("Boolean Operation");
+    setWindowTitle(zh(u8"布尔运算"));
     setupUi(geometries, preferredLeftGeometryName);
 }
 
@@ -38,20 +47,22 @@ void BooleanOperationDialog::setupUi(
     }
 
     m_operationCombo = new QComboBox(this);
-    m_operationCombo->addItem("Union", static_cast<int>(GeometryBooleanOperationType::Union));
-    m_operationCombo->addItem("Cut", static_cast<int>(GeometryBooleanOperationType::Cut));
-    m_operationCombo->addItem("Common", static_cast<int>(GeometryBooleanOperationType::Common));
+    m_operationCombo->addItem(zh(u8"并集"), static_cast<int>(GeometryBooleanOperationType::Union));
+    m_operationCombo->addItem(zh(u8"切除"), static_cast<int>(GeometryBooleanOperationType::Cut));
+    m_operationCombo->addItem(zh(u8"交集"), static_cast<int>(GeometryBooleanOperationType::Common));
 
     m_resultNameEdit = new QLineEdit(this);
-    m_resultNameEdit->setPlaceholderText("Leave empty to generate a name automatically");
+    m_resultNameEdit->setPlaceholderText(zh(u8"留空则自动生成名称"));
 
-    form->addRow("Left Geometry:", m_leftGeometryCombo);
-    form->addRow("Right Geometry:", m_rightGeometryCombo);
-    form->addRow("Operation:", m_operationCombo);
-    form->addRow("Result Name:", m_resultNameEdit);
+    form->addRow(zh(u8"左侧几何:"), m_leftGeometryCombo);
+    form->addRow(zh(u8"右侧几何:"), m_rightGeometryCombo);
+    form->addRow(zh(u8"运算:"), m_operationCombo);
+    form->addRow(zh(u8"结果名称:"), m_resultNameEdit);
     mainLayout->addLayout(form);
 
     auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    buttonBox->button(QDialogButtonBox::Ok)->setText(zh(u8"确定"));
+    buttonBox->button(QDialogButtonBox::Cancel)->setText(zh(u8"取消"));
     connect(buttonBox, &QDialogButtonBox::accepted, this, [this]() {
         if (validate()) {
             accept();
@@ -88,11 +99,11 @@ bool BooleanOperationDialog::validate()
 {
     if (m_leftGeometryCombo->currentText().trimmed().isEmpty()
             || m_rightGeometryCombo->currentText().trimmed().isEmpty()) {
-        QMessageBox::warning(this, "Validation", "Please choose two geometry objects.");
+        QMessageBox::warning(this, zh(u8"校验"), zh(u8"请选择两个几何对象。"));
         return false;
     }
     if (m_leftGeometryCombo->currentText() == m_rightGeometryCombo->currentText()) {
-        QMessageBox::warning(this, "Validation", "Boolean inputs must be different geometry objects.");
+        QMessageBox::warning(this, zh(u8"校验"), zh(u8"布尔运算的输入必须是不同几何对象。"));
         return false;
     }
     return true;

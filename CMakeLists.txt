@@ -233,6 +233,8 @@ qt_add_executable(MyCAE
     src/result/ResultDataLoader.h
     src/result/ResultDisplayController.cpp
     src/result/ResultDisplayController.h
+    src/result/ResultDisplaySummary.cpp
+    src/result/ResultDisplaySummary.h
     src/result/ResultFieldMetadata.cpp
     src/result/ResultFieldMetadata.h
     src/result/ResultExtrema.h
@@ -374,6 +376,8 @@ qt_add_executable(MyCAE
     src/ui/PropertyPanel.h
     src/ui/ResultPostprocessPanel.cpp
     src/ui/ResultPostprocessPanel.h
+    src/ui/ResultPostprocessText.cpp
+    src/ui/ResultPostprocessText.h
     src/ui/SampleValidationDialog.cpp
     src/ui/SampleValidationDialog.h
     src/ui/SelectionInteractionController.cpp
@@ -416,6 +420,8 @@ qt_add_executable(MyCAE
     src/validation/DemoProjectValidator.h
     src/validation/SampleProjectValidator.cpp
     src/validation/SampleProjectValidator.h
+    src/validation/UiAutomationSupport.cpp
+    src/validation/UiAutomationSupport.h
     src/validation/UiSmokeValidator.cpp
     src/validation/UiSmokeValidator.h
     src/validation/UiSampleScreenshotter.cpp

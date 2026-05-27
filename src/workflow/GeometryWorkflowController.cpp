@@ -9,6 +9,14 @@
 
 #include <QMessageBox>
 
+namespace
+{
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+}
+
 GeometryWorkflowController::GeometryWorkflowController(
     GeometryManager &geometryManager,
     ProjectModel &projectModel,
@@ -39,7 +47,7 @@ GeometryWorkflowResult GeometryWorkflowController::createGeometry(GeometryCreate
         return workflowResult;
     }
     if (!creationResult.success) {
-        QMessageBox::warning(m_parent, "Create geometry failed", creationResult.errorMessage);
+        QMessageBox::warning(m_parent, zh(u8"创建几何失败"), creationResult.errorMessage);
         return workflowResult;
     }
 
@@ -52,7 +60,7 @@ GeometryWorkflowResult GeometryWorkflowController::createGeometry(GeometryCreate
         selectionController.apply(Selection::item(SelectionKind::Geometry, createdGeometryName, createdGeometryName));
     workflowResult.logMessages.append(selectionResult.logMessages);
     if (!selectionResult.accepted) {
-        workflowResult.logMessages.append("Created geometry was saved but could not be selected: " + createdGeometryName);
+        workflowResult.logMessages.append(zh(u8"几何已保存，但无法选中：") + createdGeometryName);
     }
 
     workflowResult.logMessages.append(m_projectWorkflow.saveSimulationCase().logMessages);

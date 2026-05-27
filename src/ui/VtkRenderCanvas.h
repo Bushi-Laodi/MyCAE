@@ -29,6 +29,7 @@ class VtkRenderCanvas final : public QWidget
 
 public:
     explicit VtkRenderCanvas(QWidget *parent = nullptr);
+    ~VtkRenderCanvas() override;
 
     void showEmpty();
     void showBoxGeometry(const BoxGeometry &box);
@@ -60,6 +61,7 @@ signals:
 private:
     static void handleVtkLeftButtonRelease(vtkObject *caller, unsigned long eventId, void *clientData, void *callData);
 
+    void renderIfReady();
     void resetCamera();
     void resetSceneState();
     void handlePickAtRenderWindowPosition(int x, int y);

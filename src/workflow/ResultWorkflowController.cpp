@@ -29,6 +29,11 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 QString sanitizedFileStem(QString value)
 {
     value = value.trimmed();
@@ -74,7 +79,7 @@ QStringList ResultWorkflowController::setSelectedField(const QString &fieldName)
     QStringList logMessages;
     ResultObject *resultObject = m_projectModel.resultForSelection();
     if (!resultObject) {
-        return {"Result field change skipped: no result is selected."};
+        return {zh(u8"未切换结果场：当前未选择结果。")};
     }
 
     resultObject->displayFieldName = fieldName;
@@ -88,7 +93,7 @@ QStringList ResultWorkflowController::setSelectedDeformationScale(double scale)
     QStringList logMessages;
     ResultObject *resultObject = m_projectModel.resultForSelection();
     if (!resultObject) {
-        return {"Result deformation scale change skipped: no result is selected."};
+        return {zh(u8"未修改变形比例：当前未选择结果。")};
     }
 
     resultObject->deformationScale = scale;
@@ -102,7 +107,7 @@ QStringList ResultWorkflowController::setSelectedMeshEdges(bool enabled)
     QStringList logMessages;
     ResultObject *resultObject = m_projectModel.resultForSelection();
     if (!resultObject) {
-        return {"Mesh edge toggle skipped: no result is selected."};
+        return {zh(u8"未切换网格边显示：当前未选择结果。")};
     }
 
     resultObject->showMeshEdges = enabled;
@@ -116,7 +121,7 @@ QStringList ResultWorkflowController::setSelectedUndeformedOverlay(bool enabled)
     QStringList logMessages;
     ResultObject *resultObject = m_projectModel.resultForSelection();
     if (!resultObject) {
-        return {"Undeformed overlay toggle skipped: no result is selected."};
+        return {zh(u8"未切换未变形轮廓：当前未选择结果。")};
     }
 
     resultObject->showUndeformedOverlay = enabled;
@@ -130,7 +135,7 @@ QStringList ResultWorkflowController::setSelectedScalarRangeLock(bool locked)
     QStringList logMessages;
     ResultObject *resultObject = m_projectModel.resultForSelection();
     if (!resultObject) {
-        return {"Scalar range lock skipped: no result is selected."};
+        return {zh(u8"未切换色标范围锁定：当前未选择结果。")};
     }
 
     resultObject->scalarRangeLocked = locked;
@@ -140,7 +145,7 @@ QStringList ResultWorkflowController::setSelectedScalarRangeLock(bool locked)
     }
     saveResultIndex(logMessages);
     logMessages.append(redisplaySelectedResult(false));
-    logMessages.append(locked ? "Result scalar range locked." : "Result scalar range set to automatic.");
+    logMessages.append(locked ? zh(u8"结果色标范围已锁定。") : zh(u8"结果色标范围已设为自动。"));
     return logMessages;
 }
 
@@ -149,7 +154,7 @@ QStringList ResultWorkflowController::setSelectedScalarRange(double minimum, dou
     QStringList logMessages;
     ResultObject *resultObject = m_projectModel.resultForSelection();
     if (!resultObject) {
-        return {"Scalar range change skipped: no result is selected."};
+        return {zh(u8"未修改色标范围：当前未选择结果。")};
     }
 
     resultObject->scalarRangeLocked = true;
@@ -157,7 +162,7 @@ QStringList ResultWorkflowController::setSelectedScalarRange(double minimum, dou
     resultObject->lockedScalarMax = maximum;
     saveResultIndex(logMessages);
     logMessages.append(redisplaySelectedResult(false));
-    logMessages.append(QString("Result scalar range locked: [%1, %2].")
+    logMessages.append(zh(u8"结果色标范围已锁定：[%1, %2]。")
         .arg(minimum, 0, 'g', 6)
         .arg(maximum, 0, 'g', 6));
     return logMessages;
@@ -167,16 +172,16 @@ QStringList ResultWorkflowController::setSelectedProbe(const ResultProbe &probe)
 {
     ResultObject *resultObject = m_projectModel.resultForSelection();
     if (!resultObject) {
-        return {"Result probe skipped: no result is selected."};
+        return {zh(u8"未执行结果探针：当前未选择结果。")};
     }
 
     if (m_resultPostprocessPanel) {
         m_resultPostprocessPanel->setProbe(probe);
     }
     if (!probe.valid) {
-        return {"Result probe cleared."};
+        return {zh(u8"结果探针已清空。")};
     }
-    return {QString("Result probe: node=%1, element=%2, U=(%3,%4,%5), Von Mises=%6.")
+    return {zh(u8"结果探针：节点=%1，单元=%2，U=(%3,%4,%5)，Von Mises=%6。")
         .arg(probe.nodeId)
         .arg(probe.elementId)
         .arg(probe.ux, 0, 'g', 6)
@@ -189,16 +194,16 @@ QStringList ResultWorkflowController::playSelectedAnimation(double speed)
 {
     const ResultObject *resultObject = m_projectModel.resultForSelection();
     if (!resultObject) {
-        return {"Play animation skipped: no result is selected."};
+        return {zh(u8"未播放动画：当前未选择结果。")};
     }
 
     QStringList logMessages;
     const double peakScale = resultObject->deformationScale;
     if (peakScale <= 0.0) {
-        logMessages.append("Play animation started with zero deformation scale; increase Deformation to see motion.");
+        logMessages.append(zh(u8"动画已启动，但当前变形比例为 0；请增大变形比例以看到运动。"));
     }
     m_animationController.start(peakScale, speed);
-    logMessages.append(QString("Result animation started: peakScale=%1, speed=%2 Hz.")
+    logMessages.append(zh(u8"结果动画已启动：峰值比例=%1，速度=%2 Hz。")
         .arg(peakScale, 0, 'g', 6)
         .arg(speed, 0, 'g', 6));
     return logMessages;
@@ -207,13 +212,13 @@ QStringList ResultWorkflowController::playSelectedAnimation(double speed)
 QStringList ResultWorkflowController::stopSelectedAnimation()
 {
     if (!m_animationController.isRunning()) {
-        return {"Stop animation skipped: animation is not running."};
+        return {zh(u8"未停止动画：动画当前未运行。")};
     }
 
     QStringList logMessages;
     m_animationController.stop();
     saveResultIndex(logMessages);
-    logMessages.append(QString("Result animation stopped: scale=%1.")
+    logMessages.append(zh(u8"结果动画已停止：比例=%1。")
         .arg(m_animationController.currentScale(), 0, 'g', 6));
     return logMessages;
 }
@@ -246,10 +251,10 @@ QStringList ResultWorkflowController::exportSelectedCsv()
 {
     const ResultObject *resultObject = m_projectModel.resultForSelection();
     if (!resultObject) {
-        return {"Export CSV skipped: no result is selected."};
+        return {zh(u8"未导出 CSV：当前未选择结果。")};
     }
     if (!m_projectModel.hasProject()) {
-        return {"Export CSV failed: no project is open."};
+        return {zh(u8"导出 CSV 失败：当前未打开工程。")};
     }
 
     QStringList logMessages;
@@ -257,12 +262,12 @@ QStringList ResultWorkflowController::exportSelectedCsv()
         .filePath(QString("solver/exports/%1_result.csv").arg(sanitizedFileStem(resultObject->name)));
     const QString selectedPath = QFileDialog::getSaveFileName(
         m_parentWidget,
-        "Export Result CSV",
+        zh(u8"导出结果 CSV"),
         initialPath,
-        "CSV File (*.csv)"
+        zh(u8"CSV 文件 (*.csv)")
     );
     if (selectedPath.isEmpty()) {
-        return {"Export CSV canceled."};
+        return {zh(u8"已取消导出 CSV。")};
     }
 
     const ResultCsvExportResult exportResult =
@@ -270,12 +275,12 @@ QStringList ResultWorkflowController::exportSelectedCsv()
     logMessages.append(exportResult.warnings);
     if (!exportResult.success) {
         logMessages.append(exportResult.errorMessage);
-        QMessageBox::warning(m_parentWidget, "Export CSV", exportResult.errorMessage);
+        QMessageBox::warning(m_parentWidget, zh(u8"导出 CSV"), exportResult.errorMessage);
         return logMessages;
     }
 
-    logMessages.append("Node displacement CSV exported: " + exportResult.nodeDisplacementCsvPath);
-    logMessages.append("Element Von Mises CSV exported: " + exportResult.elementStressCsvPath);
+    logMessages.append(zh(u8"节点位移 CSV 已导出：") + exportResult.nodeDisplacementCsvPath);
+    logMessages.append(zh(u8"单元 Von Mises CSV 已导出：") + exportResult.elementStressCsvPath);
     return logMessages;
 }
 
@@ -283,13 +288,13 @@ QStringList ResultWorkflowController::exportSelectedReport()
 {
     const ResultObject *resultObject = m_projectModel.resultForSelection();
     if (!resultObject) {
-        return {"Export report skipped: no result is selected."};
+        return {zh(u8"未导出报告：当前未选择结果。")};
     }
     if (!m_projectModel.hasProject()) {
-        return {"Export report failed: no project is open."};
+        return {zh(u8"导出报告失败：当前未打开工程。")};
     }
     if (!m_renderView) {
-        return {"Export report failed: render view is not available."};
+        return {zh(u8"导出报告失败：渲染视图不可用。")};
     }
 
     QStringList logMessages;
@@ -297,43 +302,43 @@ QStringList ResultWorkflowController::exportSelectedReport()
         .filePath(QString("solver/reports/%1_report.md").arg(sanitizedFileStem(resultObject->name)));
     const QString selectedPath = QFileDialog::getSaveFileName(
         m_parentWidget,
-        "Export Result Report",
+        zh(u8"导出结果报告"),
         initialPath,
-        "Markdown File (*.md)"
+        zh(u8"Markdown 文件 (*.md)")
     );
     if (selectedPath.isEmpty()) {
-        return {"Export report canceled."};
+        return {zh(u8"已取消导出报告。")};
     }
 
     const QString reportPath = ensureFileSuffix(selectedPath, ".md");
     const QString screenshotPath = reportScreenshotPath(reportPath);
     if (!QDir().mkpath(QFileInfo(reportPath).absolutePath())) {
-        const QString message = "Export report failed: cannot create " + QFileInfo(reportPath).absolutePath();
-        QMessageBox::warning(m_parentWidget, "Export Report", message);
+        const QString message = zh(u8"导出报告失败：无法创建目录 ") + QFileInfo(reportPath).absolutePath();
+        QMessageBox::warning(m_parentWidget, zh(u8"导出报告"), message);
         return {message};
     }
     if (!m_renderView->saveScreenshot(screenshotPath)) {
-        const QString message = "Export report failed: cannot save screenshot " + screenshotPath;
-        QMessageBox::warning(m_parentWidget, "Export Report", message);
+        const QString message = zh(u8"导出报告失败：无法保存截图 ") + screenshotPath;
+        QMessageBox::warning(m_parentWidget, zh(u8"导出报告"), message);
         return {message};
     }
 
     const ResultReportExportResult exportResult =
         ResultReportExporter().exportMarkdown(m_projectModel.project(), *resultObject, reportPath, screenshotPath);
     if (!exportResult.success) {
-        QMessageBox::warning(m_parentWidget, "Export Report", exportResult.errorMessage);
+        QMessageBox::warning(m_parentWidget, zh(u8"导出报告"), exportResult.errorMessage);
         return {exportResult.errorMessage};
     }
 
-    logMessages.append("Result report exported: " + exportResult.reportPath);
-    logMessages.append("Result report screenshot exported: " + screenshotPath);
+    logMessages.append(zh(u8"结果报告已导出：") + exportResult.reportPath);
+    logMessages.append(zh(u8"结果报告截图已导出：") + screenshotPath);
     return logMessages;
 }
 
 QStringList ResultWorkflowController::exportRenderScreenshot()
 {
     if (!m_renderView) {
-        return {"Export screenshot failed: render view is not available."};
+        return {zh(u8"导出截图失败：渲染视图不可用。")};
     }
 
     QString initialPath;
@@ -345,32 +350,32 @@ QStringList ResultWorkflowController::exportRenderScreenshot()
     }
     const QString filePath = QFileDialog::getSaveFileName(
         m_parentWidget,
-        "Export Render Screenshot",
+        zh(u8"导出渲染截图"),
         initialPath,
-        "PNG Image (*.png);;JPEG Image (*.jpg *.jpeg);;Bitmap Image (*.bmp)"
+        zh(u8"PNG 图像 (*.png);;JPEG 图像 (*.jpg *.jpeg);;位图图像 (*.bmp)")
     );
     if (filePath.isEmpty()) {
-        return {"Export screenshot canceled."};
+        return {zh(u8"已取消导出截图。")};
     }
 
     if (!m_renderView->saveScreenshot(filePath)) {
-        return {"Export screenshot failed: " + filePath};
+        return {zh(u8"导出截图失败：") + filePath};
     }
     m_appSettings.setRecentExportDirectory(QFileInfo(filePath).absolutePath());
-    return {"Render screenshot exported: " + filePath};
+    return {zh(u8"渲染截图已导出：") + filePath};
 }
 
 QStringList ResultWorkflowController::openSelectedResultDirectory()
 {
     const ResultObject *resultObject = m_projectModel.resultForSelection();
     if (!resultObject) {
-        return {"Open result directory skipped: no result is selected."};
+        return {zh(u8"未打开结果目录：当前未选择结果。")};
     }
     if (resultObject->casePath.isEmpty()) {
-        return {"Open result directory failed: result has no case path."};
+        return {zh(u8"打开结果目录失败：结果没有算例路径。")};
     }
     if (!QDesktopServices::openUrl(QUrl::fromLocalFile(resultObject->casePath))) {
-        return {"Open result directory failed: " + resultObject->casePath};
+        return {zh(u8"打开结果目录失败：") + resultObject->casePath};
     }
     return {};
 }
@@ -379,20 +384,20 @@ QStringList ResultWorkflowController::renameSelectedResult()
 {
     ResultObject *resultObject = m_projectModel.resultForSelection();
     if (!resultObject) {
-        return {"Rename result skipped: no result is selected."};
+        return {zh(u8"未重命名结果：当前未选择结果。")};
     }
 
     bool accepted = false;
     const QString newName = QInputDialog::getText(
         m_parentWidget,
-        "Rename Result",
-        "Result name",
+        zh(u8"重命名结果"),
+        zh(u8"结果名称"),
         QLineEdit::Normal,
         resultObject->name,
         &accepted
     ).trimmed();
     if (!accepted || newName.isEmpty()) {
-        return {"Rename result canceled."};
+        return {zh(u8"已取消重命名结果。")};
     }
 
     QStringList logMessages;
@@ -402,7 +407,7 @@ QStringList ResultWorkflowController::renameSelectedResult()
         m_projectTreePanel->setResultItems(m_projectModel.resultRepository().results());
     }
     logMessages.append(redisplaySelectedResult());
-    logMessages.append("Result renamed: " + newName);
+    logMessages.append(zh(u8"结果已重命名：") + newName);
     return logMessages;
 }
 
@@ -410,17 +415,17 @@ QStringList ResultWorkflowController::deleteSelectedResultHistory()
 {
     const ResultObject *selectedResult = m_projectModel.resultForSelection();
     if (!selectedResult) {
-        return {"Delete result skipped: no result is selected."};
+        return {zh(u8"未删除结果：当前未选择结果。")};
     }
 
     const QString resultId = selectedResult->id;
     const QMessageBox::StandardButton answer = QMessageBox::question(
         m_parentWidget,
-        "Delete Result History",
-        "Remove this result from the project result list? Solver files on disk will not be deleted."
+        zh(u8"删除结果历史"),
+        zh(u8"从工程结果列表中移除此结果？磁盘上的求解文件不会被删除。")
     );
     if (answer != QMessageBox::Yes) {
-        return {"Delete result canceled."};
+        return {zh(u8"已取消删除结果。")};
     }
 
     QStringList logMessages;
@@ -431,7 +436,7 @@ QStringList ResultWorkflowController::deleteSelectedResultHistory()
     m_projectModel.clearSelectionIfKind(SelectionKind::Result);
     saveResultIndex(logMessages);
     refreshResultPanels();
-    logMessages.append("Result history deleted: " + resultId);
+    logMessages.append(zh(u8"结果历史已删除：") + resultId);
     return logMessages;
 }
 
@@ -463,7 +468,7 @@ void ResultWorkflowController::saveResultIndex(QStringList &logMessages)
     QString saveError;
     if (m_projectModel.hasProject()
             && !ResultManager().save(m_projectModel.project(), m_projectModel.resultRepository().results(), &saveError)) {
-        logMessages.append("Save result index failed: " + saveError);
+        logMessages.append(zh(u8"保存结果索引失败：") + saveError);
     }
 }
 

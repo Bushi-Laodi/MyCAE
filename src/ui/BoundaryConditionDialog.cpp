@@ -7,9 +7,18 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QVBoxLayout>
 
 #include <utility>
+
+namespace
+{
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+}
 
 BoundaryConditionDialog::BoundaryConditionDialog(
     BoundaryConditionDialogOptions options,
@@ -18,7 +27,7 @@ BoundaryConditionDialog::BoundaryConditionDialog(
     : QDialog(parent)
     , m_options(std::move(options))
 {
-    setWindowTitle("Create Boundary Condition");
+    setWindowTitle(zh(u8"创建边界条件"));
     setupUi();
 }
 
@@ -35,39 +44,39 @@ void BoundaryConditionDialog::setupUi()
     auto *form = new QFormLayout;
 
     m_nameEdit = new QLineEdit(this);
-    m_nameEdit->setPlaceholderText("e.g. Inlet1, Outlet, Wall");
-    form->addRow("Name:", m_nameEdit);
+    m_nameEdit->setPlaceholderText(zh(u8"例如：入口、出口、壁面"));
+    form->addRow(zh(u8"名称:"), m_nameEdit);
 
     m_typeCombo = new QComboBox(this);
-    m_typeCombo->addItem("Wall", static_cast<int>(BoundaryConditionType::Wall));
-    m_typeCombo->addItem("Velocity Inlet", static_cast<int>(BoundaryConditionType::VelocityInlet));
-    m_typeCombo->addItem("Pressure Inlet", static_cast<int>(BoundaryConditionType::PressureInlet));
-    m_typeCombo->addItem("Pressure Outlet", static_cast<int>(BoundaryConditionType::PressureOutlet));
-    m_typeCombo->addItem("Symmetry", static_cast<int>(BoundaryConditionType::Symmetry));
-    form->addRow("Type:", m_typeCombo);
+    m_typeCombo->addItem(zh(u8"壁面"), static_cast<int>(BoundaryConditionType::Wall));
+    m_typeCombo->addItem(zh(u8"速度入口"), static_cast<int>(BoundaryConditionType::VelocityInlet));
+    m_typeCombo->addItem(zh(u8"压力入口"), static_cast<int>(BoundaryConditionType::PressureInlet));
+    m_typeCombo->addItem(zh(u8"压力出口"), static_cast<int>(BoundaryConditionType::PressureOutlet));
+    m_typeCombo->addItem(zh(u8"对称"), static_cast<int>(BoundaryConditionType::Symmetry));
+    form->addRow(zh(u8"类型:"), m_typeCombo);
 
     m_geometryNameCombo = new QComboBox(this);
     m_geometryNameCombo->addItems(m_options.geometryNames);
     m_geometryNameCombo->setEditable(m_options.geometryNames.isEmpty());
     if (m_geometryNameCombo->isEditable()) {
-        m_geometryNameCombo->setPlaceholderText("e.g. Pipe");
+        m_geometryNameCombo->setPlaceholderText(zh(u8"例如：管道"));
     }
     if (!m_options.defaultGeometryName.trimmed().isEmpty()) {
         setComboCurrentText(m_geometryNameCombo, m_options.defaultGeometryName);
     }
-    form->addRow("Geometry:", m_geometryNameCombo);
+    form->addRow(zh(u8"几何:"), m_geometryNameCombo);
 
     m_faceGroupNameCombo = new QComboBox(this);
     m_faceGroupNameCombo->setEditable(true);
-    form->addRow("Face Group:", m_faceGroupNameCombo);
+    form->addRow(zh(u8"面组:"), m_faceGroupNameCombo);
 
     m_materialIdCombo = new QComboBox(this);
     m_materialIdCombo->addItems(m_options.materialIds);
     m_materialIdCombo->setEditable(true);
     if (m_materialIdCombo->isEditable()) {
-        m_materialIdCombo->setPlaceholderText("e.g. water, air");
+        m_materialIdCombo->setPlaceholderText(zh(u8"例如：water, air（材料 ID）"));
     }
-    form->addRow("Material ID:", m_materialIdCombo);
+    form->addRow(zh(u8"材料 ID:"), m_materialIdCombo);
 
     connect(m_geometryNameCombo, &QComboBox::currentTextChanged, this, [this](const QString &geometryName) {
         updateFaceGroupItems(geometryName);
@@ -81,17 +90,19 @@ void BoundaryConditionDialog::setupUi()
 
     auto *buttonBox = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    buttonBox->button(QDialogButtonBox::Ok)->setText(zh(u8"确定"));
+    buttonBox->button(QDialogButtonBox::Cancel)->setText(zh(u8"取消"));
     connect(buttonBox, &QDialogButtonBox::accepted, this, [this]() {
         if (m_nameEdit->text().trimmed().isEmpty()) {
-            QMessageBox::warning(this, "Validation", "Boundary condition name cannot be empty.");
+            QMessageBox::warning(this, zh(u8"校验"), zh(u8"边界条件名称不能为空。"));
             return;
         }
         if (m_geometryNameCombo->currentText().trimmed().isEmpty()) {
-            QMessageBox::warning(this, "Validation", "Please choose a target geometry.");
+            QMessageBox::warning(this, zh(u8"校验"), zh(u8"请选择目标几何。"));
             return;
         }
         if (m_faceGroupNameCombo->currentText().trimmed().isEmpty()) {
-            QMessageBox::warning(this, "Validation", "Please choose or enter a face group.");
+            QMessageBox::warning(this, zh(u8"校验"), zh(u8"请选择或输入面组。"));
             return;
         }
         accept();
@@ -186,7 +197,7 @@ std::optional<BoundaryCondition> BoundaryConditionDialog::createBoundaryConditio
 )
 {
     BoundaryConditionDialog dlg(std::move(options), parent);
-    dlg.setWindowTitle("Create Boundary Condition");
+    dlg.setWindowTitle(zh(u8"创建边界条件"));
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.boundaryCondition();
     }
@@ -200,7 +211,7 @@ std::optional<BoundaryCondition> BoundaryConditionDialog::editBoundaryCondition(
 )
 {
     BoundaryConditionDialog dlg(std::move(options), parent);
-    dlg.setWindowTitle("Edit Boundary Condition");
+    dlg.setWindowTitle(zh(u8"编辑边界条件"));
     dlg.setBoundaryCondition(existing);
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.boundaryCondition();

@@ -9,6 +9,11 @@
 
 namespace
 {
+QString zh(const char *text)
+{
+    return QString::fromUtf8(text);
+}
+
 QDoubleSpinBox *createDimensionSpinBox(QWidget *parent, double value)
 {
     auto *spinBox = new QDoubleSpinBox(parent);
@@ -24,7 +29,7 @@ QDoubleSpinBox *createDimensionSpinBox(QWidget *parent, double value)
 CylinderDialog::CylinderDialog(QWidget *parent)
     : QDialog(parent)
 {
-    setWindowTitle("Create Cylinder");
+    setWindowTitle(zh(u8"创建圆柱体"));
     setModal(true);
 
     auto *layout = new QVBoxLayout(this);
@@ -41,14 +46,14 @@ CylinderDialog::CylinderDialog(QWidget *parent)
         m_heightSpinBox->setSuffix(suffix);
     });
 
-    form->addRow("Radius", m_radiusSpinBox);
-    form->addRow("Height", m_heightSpinBox);
-    form->addRow("Unit", m_unitComboBox);
+    form->addRow(zh(u8"半径"), m_radiusSpinBox);
+    form->addRow(zh(u8"高度"), m_heightSpinBox);
+    form->addRow(zh(u8"单位"), m_unitComboBox);
     layout->addLayout(form);
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    buttons->button(QDialogButtonBox::Ok)->setText("OK");
-    buttons->button(QDialogButtonBox::Cancel)->setText("Cancel");
+    buttons->button(QDialogButtonBox::Ok)->setText(zh(u8"确定"));
+    buttons->button(QDialogButtonBox::Cancel)->setText(zh(u8"取消"));
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     layout->addWidget(buttons);
