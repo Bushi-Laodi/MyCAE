@@ -338,6 +338,8 @@ void validateDemoProjectUi(
     }
     addActionEnabledStep(report, window, "geometry.create.box");
     addActionEnabledStep(report, window, "geometry.create.cylinder");
+    addActionEnabledStep(report, window, "geometry.create.sphere");
+    addActionEnabledStep(report, window, "geometry.import.step");
     addActionEnabledStep(report, window, "solverData.create.material");
     addActionEnabledStep(report, window, "solverData.create.boundaryCondition");
     addActionEnabledStep(report, window, "solverData.create.load");
@@ -563,7 +565,9 @@ UiValidationReport UiSmokeValidator::validate() const
             "app.exit",
             "geometry.create.box",
             "geometry.create.cylinder",
+            "geometry.create.sphere",
             "geometry.import.step",
+            "geometry.deleteSelected",
             "mesh.checkGmsh",
             "mesh.generate",
             "mesh.readInfo",
@@ -591,6 +595,9 @@ UiValidationReport UiSmokeValidator::validate() const
         const QStringList disabledWithoutProject{
             "geometry.create.box",
             "geometry.create.cylinder",
+            "geometry.create.sphere",
+            "geometry.import.step",
+            "geometry.deleteSelected",
             "mesh.generate",
             "mesh.readInfo",
             "mesh.show",

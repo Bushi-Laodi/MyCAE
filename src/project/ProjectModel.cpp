@@ -100,6 +100,16 @@ const QVector<CylinderGeometry> &ProjectModel::cylinders() const
     return m_context.geometry().cylinders();
 }
 
+QVector<SphereGeometry> &ProjectModel::spheres()
+{
+    return m_context.geometry().spheres();
+}
+
+const QVector<SphereGeometry> &ProjectModel::spheres() const
+{
+    return m_context.geometry().spheres();
+}
+
 QVector<MeshObject> &ProjectModel::meshObjects()
 {
     return m_context.mesh().meshObjects();
@@ -248,6 +258,11 @@ const BoxGeometry *ProjectModel::findBoxByName(const QString &name) const
 const CylinderGeometry *ProjectModel::findCylinderByName(const QString &name) const
 {
     return m_context.geometry().findCylinderByName(name);
+}
+
+const SphereGeometry *ProjectModel::findSphereByName(const QString &name) const
+{
+    return m_context.geometry().findSphereByName(name);
 }
 
 const MeshObject *ProjectModel::findMeshByName(const QString &name) const

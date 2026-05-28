@@ -12,7 +12,8 @@ class QWidget;
 enum class GeometryCreateType
 {
     Box,
-    Cylinder
+    Cylinder,
+    Sphere
 };
 
 struct GeometryCreationResult

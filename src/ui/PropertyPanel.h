@@ -15,6 +15,7 @@ class QLabel;
 class QVBoxLayout;
 struct BoxGeometry;
 struct CylinderGeometry;
+struct SphereGeometry;
 struct FaceGroup;
 struct GeometryObject;
 struct MeshObject;
@@ -28,6 +29,7 @@ public:
     void showEmptySelection();
     void showBoxGeometry(const BoxGeometry &box);
     void showCylinderGeometry(const CylinderGeometry &cylinder);
+    void showSphereGeometry(const SphereGeometry &sphere);
     void showGeometryObject(const GeometryObject &geometry);
     void showMeshObject(const MeshObject &meshObject);
     void showFaceGroup(const FaceGroup &faceGroup);
@@ -55,6 +57,7 @@ private:
     QLabel *m_lengthValue = nullptr;
     QLabel *m_widthValue = nullptr;
     QLabel *m_heightValue = nullptr;
+    QLabel *m_centerValue = nullptr;
     QLabel *m_sourceGeometryValue = nullptr;
     QLabel *m_sourceGeometryTypeValue = nullptr;
     QLabel *m_sourceStepFileValue = nullptr;

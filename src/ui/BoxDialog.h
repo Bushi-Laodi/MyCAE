@@ -20,5 +20,8 @@ private:
     QDoubleSpinBox *m_lengthSpinBox = nullptr;
     QDoubleSpinBox *m_widthSpinBox = nullptr;
     QDoubleSpinBox *m_heightSpinBox = nullptr;
+    QDoubleSpinBox *m_centerXSpinBox = nullptr;
+    QDoubleSpinBox *m_centerYSpinBox = nullptr;
+    QDoubleSpinBox *m_centerZSpinBox = nullptr;
     QComboBox *m_unitComboBox = nullptr;
 };

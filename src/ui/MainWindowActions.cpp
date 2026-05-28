@@ -30,7 +30,10 @@ constexpr auto CommandOpenProject = "project.open";
 constexpr auto CommandExit = "app.exit";
 constexpr auto CommandCreateBox = "geometry.create.box";
 constexpr auto CommandCreateCylinder = "geometry.create.cylinder";
+constexpr auto CommandCreateSphere = "geometry.create.sphere";
+constexpr auto CommandImportStep = "geometry.import.step";
 constexpr auto CommandCreateBoolean = "geometry.create.boolean";
+constexpr auto CommandDeleteGeometry = "geometry.deleteSelected";
 constexpr auto CommandToggleGeometryEdges = "display.geometryEdges.toggle";
 constexpr auto CommandCheckGmsh = "mesh.checkGmsh";
 constexpr auto CommandGenerateMesh = "mesh.generate";
@@ -119,6 +122,24 @@ MainWindowActions MainWindowActionBuilder::build(
         makeGeometryCreateCommand(context, GeometryCreateType::Cylinder)
     );
 
+    actions.createSphere = new QAction(zh(u8"创建球体"), window);
+    actions.createSphere->setStatusTip(zh(u8"通过中心点和半径创建球体几何"));
+    actionRegistry.registerActionCommand(
+        CommandCreateSphere,
+        actions.createSphere,
+        window,
+        makeGeometryCreateCommand(context, GeometryCreateType::Sphere)
+    );
+
+    actions.importStep = new QAction(zh(u8"导入 STEP"), window);
+    actions.importStep->setStatusTip(zh(u8"导入 STEP/STP 文件为可显示、可网格、可布尔的几何对象"));
+    actionRegistry.registerActionCommand(
+        CommandImportStep,
+        actions.importStep,
+        window,
+        makeGeometryImportStepCommand(context)
+    );
+
     actions.createBoolean = new QAction(zh(u8"布尔操作"), window);
     actions.createBoolean->setStatusTip(zh(u8"对两个几何体执行并集、切除或交集操作"));
     actionRegistry.registerActionCommand(
@@ -126,6 +147,15 @@ MainWindowActions MainWindowActionBuilder::build(
         actions.createBoolean,
         window,
         makeGeometryBooleanCommand(context)
+    );
+
+    actions.deleteGeometry = new QAction(zh(u8"删除选中几何体"), window);
+    actions.deleteGeometry->setStatusTip(zh(u8"删除当前选中的几何体，并清理关联的网格、面组和求解引用"));
+    actionRegistry.registerActionCommand(
+        CommandDeleteGeometry,
+        actions.deleteGeometry,
+        window,
+        makeGeometryDeleteSelectedCommand(context)
     );
 
     actions.showGeometryEdges = new QAction(zh(u8"显示几何边线"), window);

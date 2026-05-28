@@ -5,6 +5,7 @@ void GeometryRepository::clear()
     m_geometryObjects.clear();
     m_boxes.clear();
     m_cylinders.clear();
+    m_spheres.clear();
 }
 
 QVector<GeometryObject> &GeometryRepository::geometryObjects()
@@ -37,6 +38,16 @@ const QVector<CylinderGeometry> &GeometryRepository::cylinders() const
     return m_cylinders;
 }
 
+QVector<SphereGeometry> &GeometryRepository::spheres()
+{
+    return m_spheres;
+}
+
+const QVector<SphereGeometry> &GeometryRepository::spheres() const
+{
+    return m_spheres;
+}
+
 const GeometryObject *GeometryRepository::findGeometryByName(const QString &name) const
 {
     for (const GeometryObject &geometry : m_geometryObjects) {
@@ -62,6 +73,16 @@ const CylinderGeometry *GeometryRepository::findCylinderByName(const QString &na
     for (const CylinderGeometry &cylinder : m_cylinders) {
         if (cylinder.name == name) {
             return &cylinder;
+        }
+    }
+    return nullptr;
+}
+
+const SphereGeometry *GeometryRepository::findSphereByName(const QString &name) const
+{
+    for (const SphereGeometry &sphere : m_spheres) {
+        if (sphere.name == name) {
+            return &sphere;
         }
     }
     return nullptr;

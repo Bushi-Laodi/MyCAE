@@ -1,4 +1,4 @@
-#include "CylinderDialog.h"
+#include "SphereDialog.h"
 
 #include <QComboBox>
 #include <QDialogButtonBox>
@@ -14,12 +14,12 @@ QString zh(const char *text)
     return QString::fromUtf8(text);
 }
 
-QDoubleSpinBox *createDimensionSpinBox(QWidget *parent, double value)
+QDoubleSpinBox *createRadiusSpinBox(QWidget *parent)
 {
     auto *spinBox = new QDoubleSpinBox(parent);
     spinBox->setRange(0.001, 1000000.0);
     spinBox->setDecimals(3);
-    spinBox->setValue(value);
+    spinBox->setValue(50.0);
     spinBox->setSingleStep(10.0);
     spinBox->setSuffix(" mm");
     return spinBox;
@@ -37,10 +37,10 @@ QDoubleSpinBox *createCoordinateSpinBox(QWidget *parent)
 }
 }
 
-CylinderDialog::CylinderDialog(QWidget *parent)
+SphereDialog::SphereDialog(QWidget *parent)
     : QDialog(parent)
 {
-    setWindowTitle(zh(u8"创建圆柱体"));
+    setWindowTitle(zh(u8"创建球体"));
     setModal(true);
 
     auto *layout = new QVBoxLayout(this);
@@ -49,8 +49,7 @@ CylinderDialog::CylinderDialog(QWidget *parent)
     m_centerXSpinBox = createCoordinateSpinBox(this);
     m_centerYSpinBox = createCoordinateSpinBox(this);
     m_centerZSpinBox = createCoordinateSpinBox(this);
-    m_radiusSpinBox = createDimensionSpinBox(this, 50.0);
-    m_heightSpinBox = createDimensionSpinBox(this, 200.0);
+    m_radiusSpinBox = createRadiusSpinBox(this);
 
     m_unitComboBox = new QComboBox(this);
     m_unitComboBox->addItems({"mm", "m"});
@@ -60,14 +59,12 @@ CylinderDialog::CylinderDialog(QWidget *parent)
         m_centerYSpinBox->setSuffix(suffix);
         m_centerZSpinBox->setSuffix(suffix);
         m_radiusSpinBox->setSuffix(suffix);
-        m_heightSpinBox->setSuffix(suffix);
     });
 
     form->addRow(zh(u8"中心 X"), m_centerXSpinBox);
     form->addRow(zh(u8"中心 Y"), m_centerYSpinBox);
     form->addRow(zh(u8"中心 Z"), m_centerZSpinBox);
     form->addRow(zh(u8"半径"), m_radiusSpinBox);
-    form->addRow(zh(u8"高度"), m_heightSpinBox);
     form->addRow(zh(u8"单位"), m_unitComboBox);
     layout->addLayout(form);
 
@@ -79,14 +76,13 @@ CylinderDialog::CylinderDialog(QWidget *parent)
     layout->addWidget(buttons);
 }
 
-CylinderGeometry CylinderDialog::cylinderParameters() const
+SphereGeometry SphereDialog::sphereParameters() const
 {
-    CylinderGeometry cylinder;
-    cylinder.centerX = m_centerXSpinBox->value();
-    cylinder.centerY = m_centerYSpinBox->value();
-    cylinder.centerZ = m_centerZSpinBox->value();
-    cylinder.radius = m_radiusSpinBox->value();
-    cylinder.height = m_heightSpinBox->value();
-    cylinder.unit = m_unitComboBox->currentText();
-    return cylinder;
+    SphereGeometry sphere;
+    sphere.centerX = m_centerXSpinBox->value();
+    sphere.centerY = m_centerYSpinBox->value();
+    sphere.centerZ = m_centerZSpinBox->value();
+    sphere.radius = m_radiusSpinBox->value();
+    sphere.unit = m_unitComboBox->currentText();
+    return sphere;
 }

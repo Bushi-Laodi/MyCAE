@@ -4,6 +4,7 @@
 #include "project/Project.h"
 #include "ui/BoxDialog.h"
 #include "ui/CylinderDialog.h"
+#include "ui/SphereDialog.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -34,6 +35,33 @@ GeometryObject geometryObjectFromCylinder(const Project &project, const Cylinder
     geometry.brepFile = cylinder.occBrepFile;
     geometry.stepFile = cylinder.occStepFile;
     return geometry;
+}
+
+GeometryObject geometryObjectFromSphere(const Project &project, const SphereGeometry &sphere)
+{
+    GeometryObject geometry;
+    geometry.name = sphere.name;
+    geometry.type = "sphere";
+    geometry.jsonFile = QFileInfo(sphere.filePath).isAbsolute()
+        ? QDir(project.rootPath).relativeFilePath(sphere.filePath)
+        : sphere.filePath;
+    geometry.brepFile = sphere.occBrepFile;
+    geometry.stepFile = sphere.occStepFile;
+    return geometry;
+}
+
+void appendOccSaveMessages(
+    GeometryCreationResult &result,
+    bool brepSaved,
+    const QString &brepFile,
+    const QString &brepError,
+    bool stepSaved,
+    const QString &stepFile,
+    const QString &stepError
+)
+{
+    result.logMessages.append(brepSaved ? "BREP saved: " + brepFile : "BREP save failed: " + brepError);
+    result.logMessages.append(stepSaved ? "STEP saved: " + stepFile : "STEP save failed: " + stepError);
 }
 }
 
@@ -70,17 +98,55 @@ GeometryCreationResult GeometryCreationController::createGeometry(QWidget *paren
 
         result.success = true;
         result.geometryObject = geometryObjectFromBox(project, box);
-        if (box.occBrepSaved) {
-            result.logMessages.append("BREP saved: " + box.occBrepFile);
-        } else {
-            result.logMessages.append("BREP save failed: " + box.occBrepErrorMessage);
-        }
-        if (box.occStepSaved) {
-            result.logMessages.append("STEP saved: " + box.occStepFile);
-        } else {
-            result.logMessages.append("STEP save failed: " + box.occStepErrorMessage);
-        }
+        appendOccSaveMessages(
+            result,
+            box.occBrepSaved,
+            box.occBrepFile,
+            box.occBrepErrorMessage,
+            box.occStepSaved,
+            box.occStepFile,
+            box.occStepErrorMessage
+        );
         result.logMessages.append("Box geometry created: " + box.name);
+        return result;
+    }
+
+    if (type == GeometryCreateType::Sphere) {
+        GeometryCreationResult result;
+
+        if (project.rootPath.isEmpty()) {
+            result.errorMessage = "Please create or open a project first.";
+            result.logMessages.append("Create sphere failed: no project is open.");
+            return result;
+        }
+
+        SphereDialog dialog(parent);
+        if (dialog.exec() != QDialog::Accepted) {
+            result.canceled = true;
+            result.logMessages.append("Create sphere canceled.");
+            return result;
+        }
+
+        QString errorMessage;
+        SphereGeometry sphere;
+        if (!m_geometryManager.createSphere(project, dialog.sphereParameters(), &sphere, &errorMessage)) {
+            result.errorMessage = errorMessage;
+            result.logMessages.append("Create sphere failed: " + errorMessage);
+            return result;
+        }
+
+        result.success = true;
+        result.geometryObject = geometryObjectFromSphere(project, sphere);
+        appendOccSaveMessages(
+            result,
+            sphere.occBrepSaved,
+            sphere.occBrepFile,
+            sphere.occBrepErrorMessage,
+            sphere.occStepSaved,
+            sphere.occStepFile,
+            sphere.occStepErrorMessage
+        );
+        result.logMessages.append("Sphere geometry created: " + sphere.name);
         return result;
     }
 
@@ -109,16 +175,15 @@ GeometryCreationResult GeometryCreationController::createGeometry(QWidget *paren
 
     result.success = true;
     result.geometryObject = geometryObjectFromCylinder(project, cylinder);
-    if (cylinder.occBrepSaved) {
-        result.logMessages.append("BREP saved: " + cylinder.occBrepFile);
-    } else {
-        result.logMessages.append("BREP save failed: " + cylinder.occBrepErrorMessage);
-    }
-    if (cylinder.occStepSaved) {
-        result.logMessages.append("STEP saved: " + cylinder.occStepFile);
-    } else {
-        result.logMessages.append("STEP save failed: " + cylinder.occStepErrorMessage);
-    }
+    appendOccSaveMessages(
+        result,
+        cylinder.occBrepSaved,
+        cylinder.occBrepFile,
+        cylinder.occBrepErrorMessage,
+        cylinder.occStepSaved,
+        cylinder.occStepFile,
+        cylinder.occStepErrorMessage
+    );
     result.logMessages.append("Cylinder geometry created: " + cylinder.name);
     return result;
 }

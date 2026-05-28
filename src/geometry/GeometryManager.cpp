@@ -74,6 +74,33 @@ bool loadGeometryShape(const Project &project, const GeometryObject &geometry, T
     return false;
 }
 
+bool removeProjectFileIfExists(
+    const Project &project,
+    const QString &filePath,
+    QStringList *deletedFiles,
+    QString *errorMessage
+)
+{
+    if (filePath.trimmed().isEmpty()) {
+        return true;
+    }
+
+    const QString absolutePath = absoluteProjectFilePath(project, filePath);
+    if (!QFileInfo::exists(absolutePath)) {
+        return true;
+    }
+    if (!QFile::remove(absolutePath)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to delete file: " + absolutePath;
+        }
+        return false;
+    }
+    if (deletedFiles) {
+        deletedFiles->append(absolutePath);
+    }
+    return true;
+}
+
 bool geometryNameExists(const Project &project, const QString &geometryDirPath, const QString &name)
 {
     const QDir geometryDir(geometryDirPath);
@@ -91,6 +118,44 @@ bool geometryNameExists(const Project &project, const QString &geometryDirPath, 
 
     Q_UNUSED(project);
     return false;
+}
+
+QString uniqueGeometryName(const Project &project, const QString &geometryDirPath, const QString &requestedBase)
+{
+    QString baseName = requestedBase.trimmed();
+    if (baseName.isEmpty()) {
+        baseName = "Imported_STEP";
+    }
+
+    QString candidate = baseName;
+    int index = 1;
+    while (geometryNameExists(project, geometryDirPath, candidate)) {
+        candidate = QString("%1_%2").arg(baseName).arg(index++);
+    }
+    return candidate;
+}
+
+QJsonObject centerObject(double x, double y, double z)
+{
+    QJsonObject center;
+    center.insert("x", x);
+    center.insert("y", y);
+    center.insert("z", z);
+    return center;
+}
+
+void readCenterObject(const QJsonObject &object, double *x, double *y, double *z)
+{
+    const QJsonObject center = object.value("center").toObject();
+    if (x) {
+        *x = center.value("x").toDouble(0.0);
+    }
+    if (y) {
+        *y = center.value("y").toDouble(0.0);
+    }
+    if (z) {
+        *z = center.value("z").toDouble(0.0);
+    }
 }
 }
 
@@ -125,6 +190,9 @@ bool GeometryManager::createBox(const Project &project, const BoxGeometry &param
 
     BoxGeometry createdBox;
     createdBox.name = nextBoxName(geometryDirPath);
+    createdBox.centerX = parameters.centerX;
+    createdBox.centerY = parameters.centerY;
+    createdBox.centerZ = parameters.centerZ;
     createdBox.length = parameters.length;
     createdBox.width = parameters.width;
     createdBox.height = parameters.height;
@@ -222,6 +290,9 @@ bool GeometryManager::createCylinder(const Project &project, const CylinderGeome
 
     CylinderGeometry createdCylinder;
     createdCylinder.name = nextCylinderName(geometryDirPath);
+    createdCylinder.centerX = parameters.centerX;
+    createdCylinder.centerY = parameters.centerY;
+    createdCylinder.centerZ = parameters.centerZ;
     createdCylinder.radius = parameters.radius;
     createdCylinder.height = parameters.height;
     createdCylinder.unit = parameters.unit;
@@ -261,6 +332,81 @@ bool GeometryManager::createCylinder(const Project &project, const CylinderGeome
     }
 
     *cylinder = createdCylinder;
+    return true;
+}
+
+bool GeometryManager::createSphere(
+    const Project &project,
+    const SphereGeometry &parameters,
+    SphereGeometry *sphere,
+    QString *errorMessage
+) const
+{
+    if (!sphere) {
+        if (errorMessage) {
+            *errorMessage = "Internal error: sphere output object is null.";
+        }
+        return false;
+    }
+
+    if (project.rootPath.isEmpty()) {
+        if (errorMessage) {
+            *errorMessage = "Please create or open a project before creating geometry.";
+        }
+        return false;
+    }
+
+    const QString geometryDirPath = geometryDirectory(project);
+    if (!QDir().mkpath(geometryDirPath)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to create geometry directory: " + geometryDirPath;
+        }
+        return false;
+    }
+
+    SphereGeometry createdSphere;
+    createdSphere.name = nextSphereName(geometryDirPath);
+    createdSphere.centerX = parameters.centerX;
+    createdSphere.centerY = parameters.centerY;
+    createdSphere.centerZ = parameters.centerZ;
+    createdSphere.radius = parameters.radius;
+    createdSphere.unit = parameters.unit;
+    createdSphere.filePath = QDir(geometryDirPath).filePath(createdSphere.name.toLower() + ".json");
+    createdSphere.occBrepFile = QDir(project.rootPath).relativeFilePath(
+        QDir(geometryDirPath).filePath(createdSphere.name.toLower() + ".brep")
+    );
+    createdSphere.occStepFile = QDir(project.rootPath).relativeFilePath(
+        QDir(geometryDirPath).filePath(createdSphere.name.toLower() + ".step")
+    );
+
+    try {
+        OCCGeometryFactory factory;
+        OCCShapeIO shapeIO;
+        const TopoDS_Shape shape = factory.createShape(createdSphere);
+
+        createdSphere.occBrepSaved = shapeIO.saveBREP(
+            shape,
+            QDir(project.rootPath).filePath(createdSphere.occBrepFile),
+            &createdSphere.occBrepErrorMessage
+        );
+        createdSphere.occStepSaved = shapeIO.saveSTEP(
+            shape,
+            QDir(project.rootPath).filePath(createdSphere.occStepFile),
+            &createdSphere.occStepErrorMessage
+        );
+    } catch (const std::exception &error) {
+        createdSphere.occBrepErrorMessage = error.what();
+        createdSphere.occStepErrorMessage = error.what();
+    } catch (...) {
+        createdSphere.occBrepErrorMessage = "Unknown OCC export error.";
+        createdSphere.occStepErrorMessage = "Unknown OCC export error.";
+    }
+
+    if (!writeSphereFile(createdSphere, errorMessage)) {
+        return false;
+    }
+
+    *sphere = createdSphere;
     return true;
 }
 
@@ -369,6 +515,105 @@ bool GeometryManager::createBooleanGeometry(
     return true;
 }
 
+bool GeometryManager::importStepGeometry(
+    const Project &project,
+    const QString &sourceStepFile,
+    GeometryObject *geometry,
+    QString *errorMessage
+) const
+{
+    if (!geometry) {
+        if (errorMessage) {
+            *errorMessage = "Internal error: imported geometry output object is null.";
+        }
+        return false;
+    }
+    if (project.rootPath.isEmpty()) {
+        if (errorMessage) {
+            *errorMessage = "Please create or open a project before importing STEP.";
+        }
+        return false;
+    }
+
+    const QFileInfo sourceInfo(sourceStepFile);
+    if (!sourceInfo.exists() || !sourceInfo.isFile()) {
+        if (errorMessage) {
+            *errorMessage = "STEP file does not exist: " + sourceStepFile;
+        }
+        return false;
+    }
+
+    const QString geometryDirPath = geometryDirectory(project);
+    if (!QDir().mkpath(geometryDirPath)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to create geometry directory: " + geometryDirPath;
+        }
+        return false;
+    }
+
+    OCCShapeIO shapeIO;
+    TopoDS_Shape shape;
+    if (!shapeIO.loadSTEP(sourceInfo.absoluteFilePath(), shape, errorMessage)) {
+        return false;
+    }
+
+    const QString geometryName = uniqueGeometryName(project, geometryDirPath, sourceInfo.completeBaseName());
+    const QString fileBase = sanitizedFileBase(geometryName);
+
+    GeometryObject imported;
+    imported.name = geometryName;
+    imported.type = "step";
+    imported.jsonFile = QDir(project.rootPath).relativeFilePath(QDir(geometryDirPath).filePath(fileBase + ".json"));
+    imported.brepFile = QDir(project.rootPath).relativeFilePath(QDir(geometryDirPath).filePath(fileBase + ".brep"));
+    imported.stepFile = QDir(project.rootPath).relativeFilePath(QDir(geometryDirPath).filePath(fileBase + ".step"));
+
+    if (!shapeIO.saveBREP(shape, absoluteProjectFilePath(project, imported.brepFile), errorMessage)) {
+        return false;
+    }
+    if (!shapeIO.saveSTEP(shape, absoluteProjectFilePath(project, imported.stepFile), errorMessage)) {
+        return false;
+    }
+    if (!writeImportedStepGeometryFile(project, imported, sourceInfo.absoluteFilePath(), errorMessage)) {
+        return false;
+    }
+
+    *geometry = imported;
+    return true;
+}
+
+bool GeometryManager::deleteGeometry(
+    const Project &project,
+    const GeometryObject &geometry,
+    QStringList *deletedFiles,
+    QString *errorMessage
+) const
+{
+    if (project.rootPath.isEmpty()) {
+        if (errorMessage) {
+            *errorMessage = "Please create or open a project before deleting geometry.";
+        }
+        return false;
+    }
+    if (geometry.name.trimmed().isEmpty()) {
+        if (errorMessage) {
+            *errorMessage = "Geometry name is empty.";
+        }
+        return false;
+    }
+
+    if (!removeProjectFileIfExists(project, geometry.jsonFile, deletedFiles, errorMessage)) {
+        return false;
+    }
+    if (!removeProjectFileIfExists(project, geometry.brepFile, deletedFiles, errorMessage)) {
+        return false;
+    }
+    if (!removeProjectFileIfExists(project, geometry.stepFile, deletedFiles, errorMessage)) {
+        return false;
+    }
+
+    return true;
+}
+
 bool GeometryManager::loadCylinderGeometries(const Project &project, QVector<CylinderGeometry> *cylinders, QString *errorMessage) const
 {
     if (!cylinders) {
@@ -392,6 +637,34 @@ bool GeometryManager::loadCylinderGeometries(const Project &project, QVector<Cyl
             return false;
         }
         cylinders->append(cylinder);
+    }
+
+    return true;
+}
+
+bool GeometryManager::loadSphereGeometries(const Project &project, QVector<SphereGeometry> *spheres, QString *errorMessage) const
+{
+    if (!spheres) {
+        if (errorMessage) {
+            *errorMessage = "Internal error: sphere output list is null.";
+        }
+        return false;
+    }
+
+    spheres->clear();
+
+    const QDir geometryDir(geometryDirectory(project));
+    if (!geometryDir.exists()) {
+        return true;
+    }
+
+    const QFileInfoList files = geometryDir.entryInfoList(QStringList{"sphere_*.json"}, QDir::Files, QDir::Name);
+    for (const QFileInfo &fileInfo : files) {
+        SphereGeometry sphere;
+        if (!readSphereFile(fileInfo.absoluteFilePath(), &sphere, errorMessage)) {
+            return false;
+        }
+        spheres->append(sphere);
     }
 
     return true;
@@ -426,7 +699,7 @@ bool GeometryManager::loadGeometryObjects(const Project &project, std::vector<Ge
 
         const QJsonObject object = document.object();
         const QString type = object.value("type").toString();
-        if (type != "box" && type != "cylinder" && type != "boolean") {
+        if (type != "box" && type != "cylinder" && type != "sphere" && type != "boolean" && type != "step") {
             continue;
         }
 
@@ -474,6 +747,16 @@ QString GeometryManager::nextCylinderName(const QString &geometryDirPath) const
     return QString("Cylinder_%1").arg(index);
 }
 
+QString GeometryManager::nextSphereName(const QString &geometryDirPath) const
+{
+    const QDir geometryDir(geometryDirPath);
+    int index = 1;
+    while (QFileInfo::exists(geometryDir.filePath(QString("sphere_%1.json").arg(index)))) {
+        ++index;
+    }
+    return QString("Sphere_%1").arg(index);
+}
+
 QString GeometryManager::nextBooleanName(
     const QString &geometryDirPath,
     GeometryBooleanOperationType operationType
@@ -503,6 +786,7 @@ bool GeometryManager::writeBoxFile(const BoxGeometry &box, QString *errorMessage
     QJsonObject object;
     object.insert("type", "box");
     object.insert("name", box.name);
+    object.insert("center", centerObject(box.centerX, box.centerY, box.centerZ));
     object.insert("dimensions", dimensions);
     object.insert("occ", occ);
     object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
@@ -553,6 +837,13 @@ bool GeometryManager::readBoxFile(const QString &filePath, BoxGeometry *box, QSt
     loadedBox.length = dimensions.value("length").toDouble(200.0);
     loadedBox.width = dimensions.value("width").toDouble(200.0);
     loadedBox.height = dimensions.value("height").toDouble(200.0);
+    if (object.contains("center")) {
+        readCenterObject(object, &loadedBox.centerX, &loadedBox.centerY, &loadedBox.centerZ);
+    } else {
+        loadedBox.centerX = loadedBox.length * 0.5;
+        loadedBox.centerY = loadedBox.width * 0.5;
+        loadedBox.centerZ = loadedBox.height * 0.5;
+    }
     loadedBox.unit = dimensions.value("unit").toString("mm");
     loadedBox.filePath = QFileInfo(filePath).absoluteFilePath();
     loadedBox.occBrepFile = occ.value("brepFile").toString();
@@ -582,6 +873,7 @@ bool GeometryManager::writeCylinderFile(const CylinderGeometry &cylinder, QStrin
     QJsonObject object;
     object.insert("type", "cylinder");
     object.insert("name", cylinder.name);
+    object.insert("center", centerObject(cylinder.centerX, cylinder.centerY, cylinder.centerZ));
     object.insert("dimensions", dimensions);
     object.insert("occ", occ);
     object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
@@ -631,6 +923,13 @@ bool GeometryManager::readCylinderFile(const QString &filePath, CylinderGeometry
     loadedCylinder.name = object.value("name").toString(QFileInfo(filePath).baseName());
     loadedCylinder.radius = dimensions.value("radius").toDouble(50.0);
     loadedCylinder.height = dimensions.value("height").toDouble(200.0);
+    if (object.contains("center")) {
+        readCenterObject(object, &loadedCylinder.centerX, &loadedCylinder.centerY, &loadedCylinder.centerZ);
+    } else {
+        loadedCylinder.centerX = 0.0;
+        loadedCylinder.centerY = 0.0;
+        loadedCylinder.centerZ = loadedCylinder.height * 0.5;
+    }
     loadedCylinder.unit = dimensions.value("unit").toString("mm");
     loadedCylinder.filePath = QFileInfo(filePath).absoluteFilePath();
     loadedCylinder.occBrepFile = occ.value("brepFile").toString();
@@ -643,6 +942,84 @@ bool GeometryManager::readCylinderFile(const QString &filePath, CylinderGeometry
     }
 
     *cylinder = loadedCylinder;
+    return true;
+}
+
+bool GeometryManager::writeSphereFile(const SphereGeometry &sphere, QString *errorMessage) const
+{
+    QJsonObject dimensions;
+    dimensions.insert("radius", sphere.radius);
+    dimensions.insert("unit", sphere.unit);
+
+    QJsonObject occ;
+    occ.insert("brepFile", sphere.occBrepFile);
+    occ.insert("stepFile", sphere.occStepFile);
+
+    QJsonObject object;
+    object.insert("type", "sphere");
+    object.insert("name", sphere.name);
+    object.insert("center", centerObject(sphere.centerX, sphere.centerY, sphere.centerZ));
+    object.insert("dimensions", dimensions);
+    object.insert("occ", occ);
+    object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
+
+    QFile file(sphere.filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to write sphere file: " + file.errorString();
+        }
+        return false;
+    }
+
+    file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
+    return true;
+}
+
+bool GeometryManager::readSphereFile(const QString &filePath, SphereGeometry *sphere, QString *errorMessage) const
+{
+    if (!sphere) {
+        if (errorMessage) {
+            *errorMessage = "Internal error: sphere output object is null.";
+        }
+        return false;
+    }
+
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to open sphere file: " + file.errorString();
+        }
+        return false;
+    }
+
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+    if (!document.isObject()) {
+        if (errorMessage) {
+            *errorMessage = "Invalid sphere file: root is not a JSON object.";
+        }
+        return false;
+    }
+
+    const QJsonObject object = document.object();
+    const QJsonObject dimensions = object.value("dimensions").toObject();
+    const QJsonObject occ = object.value("occ").toObject();
+
+    SphereGeometry loadedSphere;
+    loadedSphere.name = object.value("name").toString(QFileInfo(filePath).baseName());
+    readCenterObject(object, &loadedSphere.centerX, &loadedSphere.centerY, &loadedSphere.centerZ);
+    loadedSphere.radius = dimensions.value("radius").toDouble(50.0);
+    loadedSphere.unit = dimensions.value("unit").toString("mm");
+    loadedSphere.filePath = QFileInfo(filePath).absoluteFilePath();
+    loadedSphere.occBrepFile = occ.value("brepFile").toString();
+    loadedSphere.occStepFile = occ.value("stepFile").toString();
+    if (loadedSphere.occBrepFile.isEmpty()) {
+        loadedSphere.occBrepFile = QDir("geometry").filePath(QFileInfo(filePath).completeBaseName() + ".brep");
+    }
+    if (loadedSphere.occStepFile.isEmpty()) {
+        loadedSphere.occStepFile = QDir("geometry").filePath(QFileInfo(filePath).completeBaseName() + ".step");
+    }
+
+    *sphere = loadedSphere;
     return true;
 }
 
@@ -680,6 +1057,39 @@ bool GeometryManager::writeBooleanGeometryFile(
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         if (errorMessage) {
             *errorMessage = "Failed to write boolean geometry file: " + file.errorString();
+        }
+        return false;
+    }
+
+    file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
+    return true;
+}
+
+bool GeometryManager::writeImportedStepGeometryFile(
+    const Project &project,
+    const GeometryObject &geometry,
+    const QString &sourceStepFile,
+    QString *errorMessage
+) const
+{
+    QJsonObject source;
+    source.insert("importedFrom", sourceStepFile);
+
+    QJsonObject occ;
+    occ.insert("brepFile", geometry.brepFile);
+    occ.insert("stepFile", geometry.stepFile);
+
+    QJsonObject object;
+    object.insert("type", geometry.type);
+    object.insert("name", geometry.name);
+    object.insert("source", source);
+    object.insert("occ", occ);
+    object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
+
+    QFile file(absoluteProjectFilePath(project, geometry.jsonFile));
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to write imported STEP geometry file: " + file.errorString();
         }
         return false;
     }

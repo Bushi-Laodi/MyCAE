@@ -4,6 +4,7 @@
 #include "geometry/CylinderGeometry.h"
 #include "geometry/FaceGroup.h"
 #include "geometry/GeometryObject.h"
+#include "geometry/SphereGeometry.h"
 #include "mesh/MeshObject.h"
 #include "result/ResultObject.h"
 #include "ui/property/FaceGroupPropertyView.h"
@@ -57,6 +58,15 @@ QWidget *createDetailsSection(QVBoxLayout *layout, QWidget *parent)
     layout->addWidget(group);
     return group;
 }
+
+QString centerText(double x, double y, double z, const QString &unit)
+{
+    return QString("(%1, %2, %3) %4")
+        .arg(x, 0, 'g', 6)
+        .arg(y, 0, 'g', 6)
+        .arg(z, 0, 'g', 6)
+        .arg(unit);
+}
 }
 
 PropertyPanel::PropertyPanel(QWidget *parent)
@@ -74,6 +84,7 @@ PropertyPanel::PropertyPanel(QWidget *parent)
     m_lengthValue = createValueLabel("-", this, "property.length.value");
     m_widthValue = createValueLabel("-", this, "property.width.value");
     m_heightValue = createValueLabel("-", this, "property.height.value");
+    m_centerValue = createValueLabel("-", this, "property.center.value");
     m_sourceGeometryValue = createValueLabel("-", this, "property.sourceGeometry.value");
     m_sourceGeometryTypeValue = createValueLabel("-", this, "property.sourceType.value");
     m_sourceStepFileValue = createValueLabel("-", this, "property.sourceStep.value");
@@ -91,6 +102,7 @@ PropertyPanel::PropertyPanel(QWidget *parent)
     identityForm->addRow(zh(u8"源类型"), m_sourceGeometryTypeValue);
 
     QFormLayout *geometryForm = createSection(m_mainLayout, zh(u8"几何"), this, "property.section.geometry");
+    geometryForm->addRow(zh(u8"中心"), m_centerValue);
     geometryForm->addRow(zh(u8"半径"), m_radiusValue);
     geometryForm->addRow(zh(u8"长度"), m_lengthValue);
     geometryForm->addRow(zh(u8"宽度"), m_widthValue);
@@ -115,6 +127,7 @@ void PropertyPanel::clearAll()
     m_lengthValue->setText("-");
     m_widthValue->setText("-");
     m_heightValue->setText("-");
+    m_centerValue->setText("-");
     m_sourceGeometryValue->setText("-");
     m_sourceGeometryTypeValue->setText("-");
     m_sourceStepFileValue->setText("-");
@@ -151,6 +164,7 @@ void PropertyPanel::showBoxGeometry(const BoxGeometry &box)
     m_selectionValue->setText(box.name);
     m_typeValue->setText(zh(u8"长方体"));
     m_nameValue->setText(box.name);
+    m_centerValue->setText(centerText(box.centerX, box.centerY, box.centerZ, box.unit));
     m_radiusValue->setText("-");
     m_lengthValue->setText(QString::number(box.length) + suffix);
     m_widthValue->setText(QString::number(box.width) + suffix);
@@ -172,6 +186,7 @@ void PropertyPanel::showCylinderGeometry(const CylinderGeometry &cylinder)
     m_selectionValue->setText(cylinder.name);
     m_typeValue->setText(zh(u8"圆柱体"));
     m_nameValue->setText(cylinder.name);
+    m_centerValue->setText(centerText(cylinder.centerX, cylinder.centerY, cylinder.centerZ, cylinder.unit));
     m_radiusValue->setText(QString::number(cylinder.radius) + suffix);
     m_lengthValue->setText("-");
     m_widthValue->setText("-");
@@ -179,6 +194,28 @@ void PropertyPanel::showCylinderGeometry(const CylinderGeometry &cylinder)
     m_sourceGeometryValue->setText("-");
     m_sourceGeometryTypeValue->setText("-");
     m_sourceStepFileValue->setText(cylinder.occStepFile);
+    m_meshFileValue->setText("-");
+    m_nodeCountValue->setText("-");
+    m_tetraCountValue->setText("-");
+    m_createdAtValue->setText("-");
+
+    resetDynamicArea(false);
+}
+
+void PropertyPanel::showSphereGeometry(const SphereGeometry &sphere)
+{
+    const QString suffix = " " + sphere.unit;
+    m_selectionValue->setText(sphere.name);
+    m_typeValue->setText(zh(u8"球体"));
+    m_nameValue->setText(sphere.name);
+    m_centerValue->setText(centerText(sphere.centerX, sphere.centerY, sphere.centerZ, sphere.unit));
+    m_radiusValue->setText(QString::number(sphere.radius) + suffix);
+    m_lengthValue->setText("-");
+    m_widthValue->setText("-");
+    m_heightValue->setText("-");
+    m_sourceGeometryValue->setText("-");
+    m_sourceGeometryTypeValue->setText("-");
+    m_sourceStepFileValue->setText(sphere.occStepFile);
     m_meshFileValue->setText("-");
     m_nodeCountValue->setText("-");
     m_tetraCountValue->setText("-");
@@ -208,6 +245,7 @@ void PropertyPanel::showMeshObject(const MeshObject &meshObject)
     m_lengthValue->setText("-");
     m_widthValue->setText("-");
     m_heightValue->setText("-");
+    m_centerValue->setText("-");
     m_sourceGeometryValue->setText(meshObject.sourceGeometryName);
     m_sourceGeometryTypeValue->setText(meshObject.sourceGeometryType);
     m_sourceStepFileValue->setText(meshObject.sourceStepFile);

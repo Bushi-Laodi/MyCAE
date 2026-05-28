@@ -34,8 +34,17 @@ void MainWindowStateController::update(
     if (actions.createCylinder) {
         actions.createCylinder->setEnabled(hasProject);
     }
+    if (actions.createSphere) {
+        actions.createSphere->setEnabled(hasProject);
+    }
+    if (actions.importStep) {
+        actions.importStep->setEnabled(hasProject);
+    }
     if (actions.createBoolean) {
         actions.createBoolean->setEnabled(hasProject && projectModel.geometryRepository().geometryObjects().size() >= 2);
+    }
+    if (actions.deleteGeometry) {
+        actions.deleteGeometry->setEnabled(hasProject && projectModel.selection().kind == SelectionKind::Geometry);
     }
     if (actions.showGeometryEdges) {
         actions.showGeometryEdges->setEnabled(hasProject);

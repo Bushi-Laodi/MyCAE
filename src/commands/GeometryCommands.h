@@ -8,3 +8,5 @@
 
 std::unique_ptr<AppCommand> makeGeometryCreateCommand(WorkflowCommandContext context, GeometryCreateType type);
 std::unique_ptr<AppCommand> makeGeometryBooleanCommand(WorkflowCommandContext context);
+std::unique_ptr<AppCommand> makeGeometryImportStepCommand(WorkflowCommandContext context);
+std::unique_ptr<AppCommand> makeGeometryDeleteSelectedCommand(WorkflowCommandContext context);

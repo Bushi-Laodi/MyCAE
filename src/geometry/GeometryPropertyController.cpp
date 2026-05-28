@@ -1,5 +1,6 @@
 #include "GeometryPropertyController.h"
 
+#include "geometry/SphereGeometry.h"
 #include "project/ProjectModel.h"
 #include "ui/PropertyPanel.h"
 
@@ -37,7 +38,18 @@ GeometryPropertyResult GeometryPropertyController::showGeometryProperties(
         return result;
     }
 
-    if (geometry.type == "boolean") {
+    if (geometry.type == "sphere") {
+        const SphereGeometry *sphere = projectModel.findSphereByName(geometry.name);
+        if (!sphere) {
+            result.errorMessage = "Property display failed: missing Sphere parameters for " + geometry.name;
+            return result;
+        }
+        propertyPanel->showSphereGeometry(*sphere);
+        result.success = true;
+        return result;
+    }
+
+    if (geometry.type == "boolean" || geometry.type == "step") {
         propertyPanel->showGeometryObject(geometry);
         result.success = true;
         return result;

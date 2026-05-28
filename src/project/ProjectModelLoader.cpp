@@ -106,6 +106,11 @@ bool ProjectModelLoader::loadGeometries(ProjectModel &projectModel, QString *err
         return false;
     }
 
+    QVector<SphereGeometry> loadedSpheres;
+    if (!m_geometryManager.loadSphereGeometries(projectModel.project(), &loadedSpheres, errorMessage)) {
+        return false;
+    }
+
     std::vector<GeometryObject> loadedGeometries;
     if (!m_geometryManager.loadGeometryObjects(projectModel.project(), loadedGeometries, errorMessage)) {
         return false;
@@ -114,6 +119,7 @@ bool ProjectModelLoader::loadGeometries(ProjectModel &projectModel, QString *err
     GeometryRepository &geometryRepository = projectModel.geometryRepository();
     geometryRepository.boxes() = loadedBoxes;
     geometryRepository.cylinders() = loadedCylinders;
+    geometryRepository.spheres() = loadedSpheres;
     geometryRepository.geometryObjects().clear();
     for (const GeometryObject &geometry : loadedGeometries) {
         geometryRepository.geometryObjects().append(geometry);

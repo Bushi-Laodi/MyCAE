@@ -6,6 +6,7 @@
 #include "render/VtkHighlightActorFactory.h"
 #include "result/ResultExtrema.h"
 #include "result/ResultProbe.h"
+#include "ui/RenderGeometryItem.h"
 
 #include <QString>
 #include <QWidget>
@@ -38,6 +39,11 @@ public:
     void showEmpty();
     void showBoxGeometry(const BoxGeometry &box);
     void showOccShape(const TopoDS_Shape &shape, const QString &geometryName);
+    void showGeometryScene(
+        const std::vector<RenderGeometryItem> &items,
+        const QString &selectedGeometryName,
+        bool resetCamera = true
+    );
     void showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid);
     void showResultGrid(
         vtkSmartPointer<vtkUnstructuredGrid> grid,
@@ -76,6 +82,7 @@ private:
     void resetCamera();
     void resetSceneState();
     void applyPrimaryGeometryEdgeVisibility();
+    void applyGeometrySceneEdgeVisibility();
     bool effectiveGeometryEdgesVisible() const;
     void handlePickAtRenderWindowPosition(int x, int y);
     bool pickResultAtRenderWindowPosition(int x, int y, ResultProbe &probe);
@@ -88,6 +95,7 @@ private:
     vtkSmartPointer<vtkPolyData> m_currentPolyData;
     vtkSmartPointer<vtkUnstructuredGrid> m_currentResultGrid;
     vtkSmartPointer<vtkActor> m_primaryActor;
+    std::vector<vtkSmartPointer<vtkActor>> m_geometrySceneActors;
     std::vector<vtkSmartPointer<vtkActor>> m_highlightActors;
     vtkSmartPointer<vtkScalarBarActor> m_scalarBarActor;
     QString m_activeGeometryName;

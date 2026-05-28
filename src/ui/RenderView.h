@@ -5,6 +5,7 @@
 #include "render/VtkHighlightActorFactory.h"
 #include "result/ResultExtrema.h"
 #include "result/ResultProbe.h"
+#include "ui/RenderGeometryItem.h"
 
 #include <QFrame>
 #include <QString>
@@ -29,6 +30,12 @@ public:
     void showEmpty();
     void showBoxGeometry(const BoxGeometry &box);
     void showOccShape(const TopoDS_Shape &shape, const QString &title, const QString &subtitle);
+    void showGeometryScene(
+        const std::vector<RenderGeometryItem> &items,
+        const QString &selectedGeometryName,
+        const QString &subtitle,
+        bool resetCamera = true
+    );
     void showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const QString &title, const QString &subtitle);
     void showResultGrid(
         vtkSmartPointer<vtkUnstructuredGrid> grid,

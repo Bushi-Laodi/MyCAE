@@ -24,7 +24,10 @@ struct MainWindowActions
     QAction *redo = nullptr;
     QAction *createBox = nullptr;
     QAction *createCylinder = nullptr;
+    QAction *createSphere = nullptr;
+    QAction *importStep = nullptr;
     QAction *createBoolean = nullptr;
+    QAction *deleteGeometry = nullptr;
     QAction *showGeometryEdges = nullptr;
     QAction *checkGmsh = nullptr;
     QAction *generateMesh = nullptr;

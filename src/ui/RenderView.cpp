@@ -167,6 +167,21 @@ void RenderView::setGeometryEdgesVisible(bool visible)
     }
 }
 
+void RenderView::showGeometryScene(
+    const std::vector<RenderGeometryItem> &items,
+    const QString &selectedGeometryName,
+    const QString &subtitle,
+    bool resetCamera
+)
+{
+    m_titleLabel->setText(selectedGeometryName);
+    m_subtitleLabel->setText(subtitle);
+    m_detailLabel->setText(zh(u8"工程几何同屏显示，当前选中几何已高亮。"));
+    if (m_canvas) {
+        m_canvas->showGeometryScene(items, selectedGeometryName, resetCamera);
+    }
+}
+
 bool RenderView::geometryEdgesVisible() const
 {
     return m_canvas ? m_canvas->geometryEdgesVisible() : false;

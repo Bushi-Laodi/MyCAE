@@ -1,7 +1,6 @@
 #include "ui/MainWindowMenuBuilder.h"
 
 #include "commands/SolverCommands.h"
-#include "commands/UtilityCommands.h"
 #include "commands/WorkflowCommandContext.h"
 #include "solver/plugin/SolverPluginDescriptorFormatter.h"
 #include "solver/plugin/SolverPluginManager.h"
@@ -16,8 +15,6 @@
 
 namespace
 {
-constexpr auto CommandImportStep = "geometry.import.step";
-
 QString zh(const char *text)
 {
     return QString::fromUtf8(text);
@@ -38,6 +35,8 @@ void MainWindowMenuBuilder::build(
     LogPanel *logPanel
 )
 {
+    Q_UNUSED(logPanel);
+
     auto *fileMenu = window->menuBar()->addMenu(zh(u8"文件"));
     fileMenu->addAction(actions.newProject);
     fileMenu->addAction(actions.openProject);
@@ -57,14 +56,10 @@ void MainWindowMenuBuilder::build(
     auto *geometryMenu = window->menuBar()->addMenu(zh(u8"几何"));
     geometryMenu->addAction(actions.createBox);
     geometryMenu->addAction(actions.createCylinder);
+    geometryMenu->addAction(actions.createSphere);
+    geometryMenu->addAction(actions.importStep);
     geometryMenu->addAction(actions.createBoolean);
-    QAction *importStepAction = geometryMenu->addAction(zh(u8"导入 STEP"));
-    actionRegistry.registerActionCommand(
-        CommandImportStep,
-        importStepAction,
-        window,
-        makeLogMessageCommand(logPanel, zh(u8"STEP 导入功能将在后续阶段实现。"))
-    );
+    geometryMenu->addAction(actions.deleteGeometry);
     geometryMenu->addSeparator();
     geometryMenu->addAction(actions.showGeometryEdges);
     geometryMenu->addAction(actions.pickFace);

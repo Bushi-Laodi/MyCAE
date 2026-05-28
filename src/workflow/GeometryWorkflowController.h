@@ -32,6 +32,8 @@ public:
 
     GeometryWorkflowResult createGeometry(GeometryCreateType type) const;
     GeometryWorkflowResult createBooleanGeometry() const;
+    GeometryWorkflowResult importStepGeometry() const;
+    GeometryWorkflowResult deleteSelectedGeometry() const;
 
 private:
     GeometryManager &m_geometryManager;

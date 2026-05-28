@@ -1,26 +1,25 @@
 #pragma once
 
-#include "geometry/CylinderGeometry.h"
+#include "geometry/SphereGeometry.h"
 
 #include <QDialog>
 
 class QComboBox;
 class QDoubleSpinBox;
 
-class CylinderDialog final : public QDialog
+class SphereDialog final : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit CylinderDialog(QWidget *parent = nullptr);
+    explicit SphereDialog(QWidget *parent = nullptr);
 
-    CylinderGeometry cylinderParameters() const;
+    SphereGeometry sphereParameters() const;
 
 private:
-    QDoubleSpinBox *m_radiusSpinBox = nullptr;
-    QDoubleSpinBox *m_heightSpinBox = nullptr;
     QDoubleSpinBox *m_centerXSpinBox = nullptr;
     QDoubleSpinBox *m_centerYSpinBox = nullptr;
     QDoubleSpinBox *m_centerZSpinBox = nullptr;
+    QDoubleSpinBox *m_radiusSpinBox = nullptr;
     QComboBox *m_unitComboBox = nullptr;
 };

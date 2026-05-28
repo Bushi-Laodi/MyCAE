@@ -138,6 +138,7 @@ qt_add_executable(MyCAE
     src/geometry/GeometryObject.h
     src/geometry/GeometryPropertyController.cpp
     src/geometry/GeometryPropertyController.h
+    src/geometry/SphereGeometry.h
     src/commands/AppCommand.h
     src/commands/CommandUtilities.cpp
     src/commands/CommandUtilities.h
@@ -194,6 +195,8 @@ qt_add_executable(MyCAE
     src/occ/OCCShapeConverter.h
     src/occ/OCCShapeIO.cpp
     src/occ/OCCShapeIO.h
+    src/occ/OCCSphereBuilder.cpp
+    src/occ/OCCSphereBuilder.h
     src/project/GeometryRepository.cpp
     src/project/GeometryRepository.h
     src/project/MeshRepository.cpp
@@ -388,6 +391,8 @@ qt_add_executable(MyCAE
     src/ui/SampleValidationDialog.h
     src/ui/SelectionInteractionController.cpp
     src/ui/SelectionInteractionController.h
+    src/ui/SphereDialog.cpp
+    src/ui/SphereDialog.h
     src/ui/UiIconFactory.cpp
     src/ui/UiIconFactory.h
     src/ui/property/FaceGroupPropertyView.cpp
@@ -401,6 +406,7 @@ qt_add_executable(MyCAE
     src/ui/property/SolverPropertyView.cpp
     src/ui/property/SolverPropertyView.h
     src/ui/RenderView.cpp
+    src/ui/RenderGeometryItem.h
     src/ui/RenderView.h
     src/ui/SolverDataController.cpp
     src/ui/SolverDataController.h

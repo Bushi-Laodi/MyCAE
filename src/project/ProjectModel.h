@@ -33,6 +33,8 @@ public:
     const QVector<BoxGeometry> &boxes() const;
     QVector<CylinderGeometry> &cylinders();
     const QVector<CylinderGeometry> &cylinders() const;
+    QVector<SphereGeometry> &spheres();
+    const QVector<SphereGeometry> &spheres() const;
     QVector<MeshObject> &meshObjects();
     const QVector<MeshObject> &meshObjects() const;
     std::vector<Material> &materials();
@@ -65,6 +67,7 @@ public:
     const GeometryObject *findGeometryByName(const QString &name) const;
     const BoxGeometry *findBoxByName(const QString &name) const;
     const CylinderGeometry *findCylinderByName(const QString &name) const;
+    const SphereGeometry *findSphereByName(const QString &name) const;
     const MeshObject *findMeshByName(const QString &name) const;
     FaceGroup *findFaceGroupById(const QString &id);
     const FaceGroup *findFaceGroupById(const QString &id) const;

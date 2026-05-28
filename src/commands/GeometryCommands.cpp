@@ -52,6 +52,50 @@ public:
 private:
     WorkflowCommandContext m_context;
 };
+
+class GeometryImportStepCommand final : public AppCommand
+{
+public:
+    explicit GeometryImportStepCommand(WorkflowCommandContext context)
+        : m_context(context)
+    {
+    }
+
+    void execute() override
+    {
+        ProjectWorkflowController projectWorkflow = makeProjectWorkflow(m_context);
+        const GeometryWorkflowResult result = makeGeometryWorkflow(m_context, projectWorkflow).importStepGeometry();
+        if (result.success && m_context.pickController) {
+            m_context.pickController->clear(m_context.renderView);
+        }
+        writeLogMessages(m_context.logPanel, result.logMessages);
+    }
+
+private:
+    WorkflowCommandContext m_context;
+};
+
+class GeometryDeleteSelectedCommand final : public AppCommand
+{
+public:
+    explicit GeometryDeleteSelectedCommand(WorkflowCommandContext context)
+        : m_context(context)
+    {
+    }
+
+    void execute() override
+    {
+        ProjectWorkflowController projectWorkflow = makeProjectWorkflow(m_context);
+        const GeometryWorkflowResult result = makeGeometryWorkflow(m_context, projectWorkflow).deleteSelectedGeometry();
+        if (result.success && m_context.pickController) {
+            m_context.pickController->clear(m_context.renderView);
+        }
+        writeLogMessages(m_context.logPanel, result.logMessages);
+    }
+
+private:
+    WorkflowCommandContext m_context;
+};
 }
 
 std::unique_ptr<AppCommand> makeGeometryCreateCommand(WorkflowCommandContext context, GeometryCreateType type)
@@ -62,4 +106,14 @@ std::unique_ptr<AppCommand> makeGeometryCreateCommand(WorkflowCommandContext con
 std::unique_ptr<AppCommand> makeGeometryBooleanCommand(WorkflowCommandContext context)
 {
     return std::make_unique<GeometryBooleanCommand>(context);
+}
+
+std::unique_ptr<AppCommand> makeGeometryImportStepCommand(WorkflowCommandContext context)
+{
+    return std::make_unique<GeometryImportStepCommand>(context);
+}
+
+std::unique_ptr<AppCommand> makeGeometryDeleteSelectedCommand(WorkflowCommandContext context)
+{
+    return std::make_unique<GeometryDeleteSelectedCommand>(context);
 }

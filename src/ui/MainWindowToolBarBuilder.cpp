@@ -48,6 +48,9 @@ void MainWindowToolBarBuilder::build(QMainWindow *window, const MainWindowAction
     );
     prepareToolAction(actions.createBox, UiIconFactory::toolbarBadge("B", QColor("#2563eb")), zh(u8"创建长方体"));
     prepareToolAction(actions.createCylinder, UiIconFactory::toolbarBadge("C", QColor("#0f766e")), zh(u8"创建圆柱体"));
+    prepareToolAction(actions.createSphere, UiIconFactory::toolbarBadge("S", QColor("#9333ea")), zh(u8"创建球体"));
+    prepareToolAction(actions.importStep, UiIconFactory::toolbarBadge("I", QColor("#475569")), zh(u8"导入 STEP"));
+    prepareToolAction(actions.deleteGeometry, UiIconFactory::toolbarBadge("D", QColor("#dc2626")), zh(u8"删除选中几何体"));
     prepareToolAction(actions.pickFace, UiIconFactory::toolbarBadge("P", QColor("#7c3aed")), zh(u8"拾取面"));
     prepareToolAction(
         actions.createFaceGroupFromPick,
@@ -70,6 +73,9 @@ void MainWindowToolBarBuilder::build(QMainWindow *window, const MainWindowAction
     toolBar->addSeparator();
     toolBar->addAction(actions.createBox);
     toolBar->addAction(actions.createCylinder);
+    toolBar->addAction(actions.createSphere);
+    toolBar->addAction(actions.importStep);
+    toolBar->addAction(actions.deleteGeometry);
     toolBar->addSeparator();
     toolBar->addAction(actions.pickFace);
     toolBar->addAction(actions.createFaceGroupFromPick);
