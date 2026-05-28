@@ -789,7 +789,6 @@ bool GeometryManager::transformGeometry(
     translate.SetTranslation(gp_Vec(dx, dy, dz));
 
     gp_Trsf transform;
-    transform.SetIdentity();
     transform.Multiply(translate);
     transform.Multiply(rotateZ);
     transform.Multiply(rotateY);
