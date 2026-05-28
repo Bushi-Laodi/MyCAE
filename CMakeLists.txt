@@ -8,11 +8,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(CTest)
 
 set(MYCAE_QT_ROOT "D:\\dev\\Qt\\6.6.3\\msvc2019_64" CACHE PATH "Root directory of the local Qt 6 installation")
+set(MYCAE_QT_ROOT "D:\\qt\\6.6.3\\msvc2019_64" CACHE PATH "Root directory of the local Qt 6 installation")
 if (EXISTS "${MYCAE_QT_ROOT}/lib/cmake/Qt6/Qt6Config.cmake")
     list(PREPEND CMAKE_PREFIX_PATH "${MYCAE_QT_ROOT}")
 endif()
 
 set(MYCAE_VTK_ROOT "D:\\dev\\VTK-9.4.2" CACHE PATH "Root directory of the local VTK installation")
+set(MYCAE_VTK_ROOT "D:\\VTK" CACHE PATH "Root directory of the local VTK installation")
 set(MYCAE_VTK_RELEASE_DIR "${MYCAE_VTK_ROOT}/vtk-9.4.2-qt-release/lib/cmake/vtk-9.4")
 set(MYCAE_VTK_DEBUG_DIR "${MYCAE_VTK_ROOT}/vtk-9.4.2-qt-debug/lib/cmake/vtk-9.4")
 set(MYCAE_VTK_FALLBACK_DIR "${MYCAE_VTK_ROOT}/install/lib/cmake/vtk-9.4")
@@ -35,6 +37,7 @@ if (NOT DEFINED VTK_DIR OR NOT EXISTS "${VTK_DIR}/vtk-config.cmake")
 endif()
 
 set(MYCAE_OCC_ROOT "D:\\dev\\OCC" CACHE PATH "Root directory of the local Open CASCADE installation")
+set(MYCAE_OCC_ROOT "D:\\cpp_lib\\OCC" CACHE PATH "Root directory of the local Open CASCADE installation")
 set(MYCAE_OCC_CMAKE_CANDIDATES
     "${MYCAE_OCC_ROOT}/opencascade-7.9.3-vc14-64/cmake"
     "${MYCAE_OCC_ROOT}/OCC/cmake"
@@ -55,10 +58,12 @@ endforeach()
 
 set(MYCAE_GMSH_EXECUTABLE
     "D:\\dev\\Gmsh\\gmsh-4.15.2-Windows64-sdk\\bin\\gmsh.exe"
+    ""D:\\cpp_lib\\Gmsh\\gmsh-4.15.2-Windows64\\gmsh.exe""
     CACHE FILEPATH "Path to the local Gmsh executable"
 )
 set(MYCAE_CALCULIX_EXECUTABLE
     "E:\\tools\\Anaconda\\envs\\calculix\\Library\\bin\\ccx.exe"
+    ""D:\\cpp_lib\\calculix\\CalculiX-2.23.0-win-x64\\bin\\ccx.exe""
     CACHE FILEPATH "Path to the local CalculiX ccx executable"
 )
 
