@@ -259,6 +259,8 @@ qt_add_executable(MyCAE
     src/result/ResultExtrema.h
     src/result/ResultExtremaCalculator.cpp
     src/result/ResultExtremaCalculator.h
+    src/result/ResultHistoryNormalizer.cpp
+    src/result/ResultHistoryNormalizer.h
     src/result/ResultManager.cpp
     src/result/ResultManager.h
     src/result/ResultObject.h

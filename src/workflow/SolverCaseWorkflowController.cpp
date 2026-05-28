@@ -1,6 +1,7 @@
 #include "workflow/SolverCaseWorkflowController.h"
 
 #include "project/ProjectModel.h"
+#include "result/ResultHistoryNormalizer.h"
 #include "result/ResultObject.h"
 #include "result/ResultManager.h"
 #include "solver/calculix/CalculiXResultGridBuilder.h"
@@ -14,7 +15,6 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
-#include <QUuid>
 
 namespace
 {
@@ -88,11 +88,6 @@ QString solverCaseDirectory(
     return QDir(projectModel.project().rootPath).filePath("solver/" + safePluginId + "/" + runName);
 }
 
-QString resultId(const QString &pluginId)
-{
-    return pluginId + "_" + QUuid::createUuid().toString(QUuid::WithoutBraces);
-}
-
 ResultObject makeResultObject(
     const QString &pluginId,
     const SolverPluginDescriptor &descriptor,
@@ -103,8 +98,14 @@ ResultObject makeResultObject(
 )
 {
     ResultObject resultObject;
-    resultObject.id = resultId(pluginId);
-    resultObject.name = descriptor.name + " Result";
+    const QString createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);
+    resultObject.id = ResultHistoryNormalizer::makeResultId(pluginId);
+    resultObject.name = ResultHistoryNormalizer::makeResultName(
+        descriptor.name,
+        simulationCase.name,
+        caseDirectory,
+        createdAt
+    );
     resultObject.solverName = descriptor.name;
     resultObject.meshName = descriptor.id == "openfoam" && !simulationCase.cfdCase.meshName.trimmed().isEmpty()
         ? simulationCase.cfdCase.meshName
@@ -136,7 +137,7 @@ ResultObject makeResultObject(
             CalculiXResultFields::VonMisesStress
         };
     }
-    resultObject.createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);
+    resultObject.createdAt = createdAt;
     resultObject.success = true;
     resultObject.summary = readResult.summary;
     return resultObject;
@@ -239,9 +240,14 @@ SolverCaseWorkflowResult SolverCaseWorkflowController::runPlugin(const QString &
         return result;
     }
 
-    m_projectModel.resultRepository().results().push_back(
-        makeResultObject(pluginId, *descriptor, simulationCase, caseDirectory, runResult, readResult)
-    );
+    ResultObject resultObject = makeResultObject(pluginId, *descriptor, simulationCase, caseDirectory, runResult, readResult);
+    m_projectModel.resultRepository().results().push_back(resultObject);
+    QStringList normalizeMessages;
+    ResultHistoryNormalizer::normalize(m_projectModel.resultRepository().results(), &normalizeMessages);
+    appendMessages(result, normalizeMessages);
+    const ResultObject &savedResultObject = m_projectModel.resultRepository().results().back();
+    result.resultId = savedResultObject.id;
+    result.logMessages.append(zh(u8"结果记录已创建：") + savedResultObject.name + " (" + savedResultObject.id + ")");
     QString saveError;
     if (!ResultManager().save(m_projectModel.project(), m_projectModel.resultRepository().results(), &saveError)) {
         result.logMessages.append(zh(u8"保存结果索引失败：") + saveError);

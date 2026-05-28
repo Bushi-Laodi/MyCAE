@@ -10,6 +10,7 @@ class SolverPluginManager;
 struct SolverCaseWorkflowResult
 {
     bool success = false;
+    QString resultId;
     QStringList logMessages;
 };
 

@@ -5,6 +5,7 @@
 #include "mesh/MeshData.h"
 #include "mesh/MshReader.h"
 #include "project/ProjectModel.h"
+#include "result/ResultHistoryNormalizer.h"
 #include "result/ResultManager.h"
 #include "solver/calculix/CalculiXResultGridBuilder.h"
 #include "solver/SimulationCaseManager.h"
@@ -189,6 +190,7 @@ bool ProjectModelLoader::loadResults(ProjectModel &projectModel, QString *errorM
     projectModel.resultRepository().clear();
     if (!resultManager.exists(projectModel.project())) {
         projectModel.resultRepository().results() = recoverCalculiXResultsFromDisk(projectModel);
+        ResultHistoryNormalizer::normalize(projectModel.resultRepository().results());
         projectModel.clearSelectionIfKind(SelectionKind::Result);
         return true;
     }
@@ -199,6 +201,10 @@ bool ProjectModelLoader::loadResults(ProjectModel &projectModel, QString *errorM
     }
 
     projectModel.resultRepository().results() = loadedResults;
+    if (ResultHistoryNormalizer::normalize(projectModel.resultRepository().results())) {
+        QString saveError;
+        resultManager.save(projectModel.project(), projectModel.resultRepository().results(), &saveError);
+    }
     projectModel.clearSelectionIfKind(SelectionKind::Result);
     return true;
 }

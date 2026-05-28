@@ -95,6 +95,12 @@ SolverWorkflowResult SolverWorkflowController::runSolverPlugin(const QString &pl
     result.success = caseResult.success;
     if (result.success) {
         m_projectWorkflow.refreshResultTree();
+        if (!caseResult.resultId.isEmpty()) {
+            const SelectionController selectionController(m_projectModel, m_propertyPanel, m_renderView);
+            result.logMessages.append(selectionController.apply(
+                Selection::item(SelectionKind::Result, caseResult.resultId)
+            ).logMessages);
+        }
     }
     return result;
 }
