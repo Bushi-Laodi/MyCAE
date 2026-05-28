@@ -2,6 +2,8 @@
 
 #include <QStringList>
 
+#include <cmath>
+
 QString calculixSafeName(QString value, const QString &fallback)
 {
     value = value.trimmed();
@@ -16,6 +18,14 @@ QString calculixSafeName(QString value, const QString &fallback)
         }
     }
     return hasUsefulCharacter ? value : fallback;
+}
+
+QString calculixNumber(double value)
+{
+    if (std::abs(value) < 1.0e-12) {
+        value = 0.0;
+    }
+    return QString::number(value, 'g', 12);
 }
 
 void appendCalculiXIdList(CalculiXInputDeck &deck, const std::vector<int> &ids)

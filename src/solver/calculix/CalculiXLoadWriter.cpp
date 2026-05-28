@@ -1,5 +1,7 @@
 #include "solver/calculix/CalculiXLoadWriter.h"
 
+#include "solver/calculix/CalculiXDeckFormatting.h"
+
 #include <optional>
 
 namespace
@@ -58,20 +60,20 @@ bool appendConcentratedLoad(
             deck.appendLine(QString("%1, %2, %3")
                 .arg(nodeId)
                 .arg(*dof)
-                .arg(load.value.x / nodeCount, 0, 'g', 16));
+                .arg(calculixNumber(load.value.x / nodeCount)));
         }
         return true;
     }
 
     for (const int nodeId : boundary.nodeIds) {
         if (load.value.x != 0.0) {
-            deck.appendLine(QString("%1, 1, %2").arg(nodeId).arg(load.value.x / nodeCount, 0, 'g', 16));
+            deck.appendLine(QString("%1, 1, %2").arg(nodeId).arg(calculixNumber(load.value.x / nodeCount)));
         }
         if (load.value.y != 0.0) {
-            deck.appendLine(QString("%1, 2, %2").arg(nodeId).arg(load.value.y / nodeCount, 0, 'g', 16));
+            deck.appendLine(QString("%1, 2, %2").arg(nodeId).arg(calculixNumber(load.value.y / nodeCount)));
         }
         if (load.value.z != 0.0) {
-            deck.appendLine(QString("%1, 3, %2").arg(nodeId).arg(load.value.z / nodeCount, 0, 'g', 16));
+            deck.appendLine(QString("%1, 3, %2").arg(nodeId).arg(calculixNumber(load.value.z / nodeCount)));
         }
     }
     return true;
@@ -98,7 +100,7 @@ bool appendPressureLoad(
     deck.appendLine("*DLOAD");
     deck.appendLine(QString("%1, P, %2")
         .arg(boundary.surfaceName)
-        .arg(load.value.x, 0, 'g', 16));
+        .arg(calculixNumber(load.value.x)));
     return true;
 }
 }

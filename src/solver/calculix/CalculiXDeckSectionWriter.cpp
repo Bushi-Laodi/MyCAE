@@ -14,9 +14,9 @@ void appendNodes(CalculiXInputDeck &deck, const MeshData &meshData)
     for (const MeshNode &node : meshData.nodes) {
         deck.appendLine(QString("%1, %2, %3, %4")
             .arg(node.id)
-            .arg(node.x, 0, 'g', 16)
-            .arg(node.y, 0, 'g', 16)
-            .arg(node.z, 0, 'g', 16));
+            .arg(calculixNumber(node.x))
+            .arg(calculixNumber(node.y))
+            .arg(calculixNumber(node.z)));
     }
 }
 
@@ -96,11 +96,11 @@ void CalculiXDeckSectionWriter::appendMaterial(
     deck.appendLine("*MATERIAL, NAME=" + materialName);
     deck.appendLine("*ELASTIC");
     deck.appendLine(QString("%1, %2")
-        .arg(material.youngModulus, 0, 'g', 16)
-        .arg(material.poissonRatio, 0, 'g', 16));
+        .arg(calculixNumber(material.youngModulus))
+        .arg(calculixNumber(material.poissonRatio)));
     if (material.density > 0.0) {
         deck.appendLine("*DENSITY");
-        deck.appendLine(QString::number(material.density, 'g', 16));
+        deck.appendLine(calculixNumber(material.density));
     }
     deck.appendLine("*SOLID SECTION, ELSET=EALL, MATERIAL=" + materialName);
 }
