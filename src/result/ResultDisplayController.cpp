@@ -9,8 +9,12 @@
 #include <QFileInfo>
 #include <vtkCellData.h>
 #include <vtkDataArray.h>
+#include <vtkDataSetAttributes.h>
+#include <vtkNew.h>
 #include <vtkPointData.h>
+#include <vtkSmartPointer.h>
 #include <vtkUnstructuredGrid.h>
+#include <vtkUnstructuredGridReader.h>
 
 #include <algorithm>
 
@@ -21,9 +25,43 @@ bool fileExistsOrEmpty(const QString &filePath)
     return !filePath.isEmpty() && QFileInfo::exists(filePath);
 }
 
+bool isVtkResult(const ResultObject &resultObject)
+{
+    if (resultObject.solverName.compare("OpenFOAM", Qt::CaseInsensitive) == 0) {
+        return true;
+    }
+    for (const QString &filePath : resultObject.resultFiles) {
+        if (QFileInfo(filePath).suffix().compare("vtk", Qt::CaseInsensitive) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QString firstExistingVtkFile(const ResultObject &resultObject)
+{
+    for (const QString &filePath : resultObject.resultFiles) {
+        const QFileInfo info(filePath);
+        if (info.suffix().compare("vtk", Qt::CaseInsensitive) == 0 && info.exists()) {
+            return filePath;
+        }
+    }
+    return QString();
+}
+
 QStringList fileCompletenessMessages(const ResultObject &resultObject)
 {
     QStringList messages;
+    if (isVtkResult(resultObject)) {
+        if (firstExistingVtkFile(resultObject).isEmpty()) {
+            messages.append("Missing .vtk result file.");
+        }
+        if (!fileExistsOrEmpty(resultObject.logFile)) {
+            messages.append("Missing OpenFOAM service log file.");
+        }
+        return messages;
+    }
+
     if (!fileExistsOrEmpty(resultObject.datFile)) {
         messages.append("Missing .dat file.");
     }
@@ -37,6 +75,84 @@ QStringList fileCompletenessMessages(const ResultObject &resultObject)
         messages.append("Missing .frd file.");
     }
     return messages;
+}
+
+QStringList arrayNames(vtkDataSetAttributes *attributes)
+{
+    QStringList names;
+    if (!attributes) {
+        return names;
+    }
+    for (int i = 0; i < attributes->GetNumberOfArrays(); ++i) {
+        vtkDataArray *array = attributes->GetArray(i);
+        if (array && array->GetName()) {
+            names.append(QString::fromUtf8(array->GetName()));
+        }
+    }
+    return names;
+}
+
+vtkDataArray *firstScalarArray(vtkDataSetAttributes *attributes, QString &arrayName)
+{
+    if (!attributes) {
+        return nullptr;
+    }
+    vtkDataArray *preferred = attributes->GetArray("pressure");
+    if (preferred) {
+        arrayName = "pressure";
+        return preferred;
+    }
+    preferred = attributes->GetArray("p");
+    if (preferred) {
+        arrayName = "p";
+        return preferred;
+    }
+    for (int i = 0; i < attributes->GetNumberOfArrays(); ++i) {
+        vtkDataArray *array = attributes->GetArray(i);
+        if (array && array->GetNumberOfComponents() == 1 && array->GetName()) {
+            arrayName = QString::fromUtf8(array->GetName());
+            return array;
+        }
+    }
+    return nullptr;
+}
+
+vtkDataArray *vtkResultArray(
+    vtkUnstructuredGrid *grid,
+    const QString &requestedFieldName,
+    QString &selectedFieldName,
+    bool &useCellScalars
+)
+{
+    if (!grid) {
+        return nullptr;
+    }
+    if (!requestedFieldName.isEmpty() && grid->GetPointData()) {
+        vtkDataArray *array = grid->GetPointData()->GetArray(requestedFieldName.toUtf8().constData());
+        if (array) {
+            selectedFieldName = requestedFieldName;
+            useCellScalars = false;
+            return array;
+        }
+    }
+    if (!requestedFieldName.isEmpty() && grid->GetCellData()) {
+        vtkDataArray *array = grid->GetCellData()->GetArray(requestedFieldName.toUtf8().constData());
+        if (array) {
+            selectedFieldName = requestedFieldName;
+            useCellScalars = true;
+            return array;
+        }
+    }
+
+    if (vtkDataArray *array = firstScalarArray(grid->GetPointData(), selectedFieldName)) {
+        useCellScalars = false;
+        return array;
+    }
+    if (vtkDataArray *array = firstScalarArray(grid->GetCellData(), selectedFieldName)) {
+        useCellScalars = true;
+        return array;
+    }
+    return nullptr;
 }
 
 bool isDisplacementField(const QString &fieldName)
@@ -83,6 +199,107 @@ QString resultCacheKey(const ResultObject &resultObject)
 {
     return resultObject.id + "|" + resultObject.name;
 }
+
+ResultDisplayResult displayVtkResult(ResultObject &resultObject, RenderView *renderView, bool resetCamera)
+{
+    ResultDisplayResult displayResult;
+    const QString vtkFile = firstExistingVtkFile(resultObject);
+    if (vtkFile.isEmpty()) {
+        displayResult.logMessages.append("OpenFOAM result display failed: .vtk file is missing.");
+        return displayResult;
+    }
+
+    vtkNew<vtkUnstructuredGridReader> reader;
+    reader->SetFileName(QFileInfo(vtkFile).absoluteFilePath().toLocal8Bit().constData());
+    reader->Update();
+
+    vtkUnstructuredGrid *readerOutput = reader->GetOutput();
+    if (!readerOutput || readerOutput->GetNumberOfPoints() <= 0 || readerOutput->GetNumberOfCells() <= 0) {
+        displayResult.logMessages.append("OpenFOAM result display failed: VTK file did not contain an unstructured grid.");
+        return displayResult;
+    }
+
+    vtkSmartPointer<vtkUnstructuredGrid> grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
+    grid->DeepCopy(readerOutput);
+
+    QStringList fields = arrayNames(grid->GetPointData());
+    fields.append(arrayNames(grid->GetCellData()));
+    fields.removeDuplicates();
+    resultObject.availableFields = fields;
+
+    const QString requestedFieldName = resultObject.displayFieldName.isEmpty()
+        ? resultObject.primaryFieldName
+        : resultObject.displayFieldName;
+    QString selectedFieldName;
+    bool useCellScalars = false;
+    vtkDataArray *array = vtkResultArray(grid, requestedFieldName, selectedFieldName, useCellScalars);
+
+    resultObject.meshNodeCount = static_cast<int>(grid->GetNumberOfPoints());
+    resultObject.matchedNodeCount = resultObject.meshNodeCount;
+    resultObject.meshElementCount = static_cast<int>(grid->GetNumberOfCells());
+    resultObject.matchedElementCount = resultObject.meshElementCount;
+
+    if (!array) {
+        renderView->showMeshGrid(
+            grid,
+            resultObject.name,
+            QString("OpenFOAM VTK result, points=%1, cells=%2.")
+                .arg(resultObject.meshNodeCount)
+                .arg(resultObject.meshElementCount)
+        );
+        displayResult.logMessages.append("OpenFOAM VTK result displayed without scalar field: " + vtkFile);
+        displayResult.success = true;
+        return displayResult;
+    }
+
+    double range[2] = {0.0, 0.0};
+    array->GetRange(range);
+    resultObject.primaryFieldName = resultObject.primaryFieldName.isEmpty() ? selectedFieldName : resultObject.primaryFieldName;
+    resultObject.displayFieldName = selectedFieldName;
+    resultObject.scalarMin = range[0];
+    resultObject.scalarMax = range[1];
+    if (!resultObject.scalarRangeLocked) {
+        resultObject.lockedScalarMin = range[0];
+        resultObject.lockedScalarMax = range[1];
+    }
+
+    double displayScalarMin = resultObject.scalarRangeLocked ? resultObject.lockedScalarMin : resultObject.scalarMin;
+    double displayScalarMax = resultObject.scalarRangeLocked ? resultObject.lockedScalarMax : resultObject.scalarMax;
+    if (displayScalarMin > displayScalarMax) {
+        std::swap(displayScalarMin, displayScalarMax);
+    }
+
+    const bool pressureField = selectedFieldName.compare("pressure", Qt::CaseInsensitive) == 0
+        || selectedFieldName.compare("p", Qt::CaseInsensitive) == 0;
+    const QString unit = pressureField ? QString("Pa") : QString();
+    vtkSmartPointer<vtkUnstructuredGrid> overlayGrid;
+    renderView->showResultGrid(
+        grid,
+        overlayGrid,
+        resultObject.name,
+        QString("OpenFOAM VTK field=%1, points=%2, cells=%3.")
+            .arg(selectedFieldName)
+            .arg(resultObject.meshNodeCount)
+            .arg(resultObject.meshElementCount),
+        selectedFieldName,
+        unit,
+        useCellScalars,
+        displayScalarMin,
+        displayScalarMax,
+        resultObject.showMeshEdges,
+        ResultExtremeMarker{},
+        ResultExtremeMarker{},
+        resetCamera
+    );
+
+    displayResult.logMessages.append("OpenFOAM VTK result displayed: " + vtkFile);
+    displayResult.logMessages.append(QString("OpenFOAM result field: %1, points=%2, cells=%3.")
+        .arg(selectedFieldName)
+        .arg(resultObject.meshNodeCount)
+        .arg(resultObject.meshElementCount));
+    displayResult.success = true;
+    return displayResult;
+}
 }
 
 ResultDisplayResult ResultDisplayController::displayResult(
@@ -99,6 +316,10 @@ ResultDisplayResult ResultDisplayController::displayResult(
         displayResult.logMessages.append("Result display skipped: render view is not available.");
         return displayResult;
     }
+    if (isVtkResult(resultObject)) {
+        return displayVtkResult(resultObject, renderView, resetCamera);
+    }
+
     ResultDisplayCacheData cachedData = ResultDisplayCache::instance().loadData(projectModel, resultObject);
     const std::shared_ptr<ResultDataLoadResult> loaded = cachedData.loaded;
     if (!loaded) {

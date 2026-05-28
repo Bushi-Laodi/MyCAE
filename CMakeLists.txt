@@ -63,11 +63,12 @@ set(MYCAE_CALCULIX_EXECUTABLE
 )
 
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Network)
 find_package(VTK REQUIRED COMPONENTS
     FiltersSources
     GUISupportQt
     InteractionStyle
+    IOLegacy
     RenderingAnnotation
     RenderingCore
     RenderingOpenGL2
@@ -319,6 +320,8 @@ qt_add_executable(MyCAE
     src/solver/export/SolverCaseWriterResult.h
     src/solver/openfoam/OpenFoamPlugin.cpp
     src/solver/openfoam/OpenFoamPlugin.h
+    src/solver/openfoam/OpenFoamServiceClient.cpp
+    src/solver/openfoam/OpenFoamServiceClient.h
     src/solver/plugin/BuiltInSolverPluginRegistry.cpp
     src/solver/plugin/BuiltInSolverPluginRegistry.h
     src/solver/plugin/ExternalProcessSolverPlugin.cpp
@@ -454,7 +457,7 @@ target_compile_definitions(MyCAE PRIVATE
     MYCAE_CALCULIX_EXECUTABLE_PATH="${MYCAE_CALCULIX_EXECUTABLE}"
     MYCAE_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
 )
-target_link_libraries(MyCAE PRIVATE Qt6::Widgets ${VTK_LIBRARIES} ${MYCAE_OCC_LIBRARIES})
+target_link_libraries(MyCAE PRIVATE Qt6::Widgets Qt6::Network ${VTK_LIBRARIES} ${MYCAE_OCC_LIBRARIES})
 
 vtk_module_autoinit(
     TARGETS MyCAE
