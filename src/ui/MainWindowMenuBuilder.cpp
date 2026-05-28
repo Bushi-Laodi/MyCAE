@@ -62,6 +62,7 @@ void MainWindowMenuBuilder::build(
     geometryMenu->addAction(actions.deleteGeometry);
     geometryMenu->addSeparator();
     geometryMenu->addAction(actions.showGeometryEdges);
+    geometryMenu->addAction(actions.showOrientationMarker);
     geometryMenu->addAction(actions.pickFace);
     geometryMenu->addAction(actions.clearPick);
     auto *faceGroupMenu = geometryMenu->addMenu(zh(u8"面组"));

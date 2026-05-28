@@ -15,6 +15,7 @@
 #include <QVBoxLayout>
 #include <QVTKOpenGLNativeWidget.h>
 #include <vtkActor.h>
+#include <vtkAxesActor.h>
 #include <vtkCamera.h>
 #include <vtkCallbackCommand.h>
 #include <vtkCell.h>
@@ -30,6 +31,7 @@
 #include <vtkLookupTable.h>
 #include <vtkNew.h>
 #include <vtkObject.h>
+#include <vtkOrientationMarkerWidget.h>
 #include <vtkPointData.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataMapper.h>
@@ -85,6 +87,7 @@ VtkRenderCanvas::VtkRenderCanvas(QWidget *parent)
             m_leftButtonReleaseCallback
         );
     }
+    initializeOrientationMarker();
 
     m_renderer->SetBackground(0.125, 0.141, 0.165);
 
@@ -110,6 +113,10 @@ VtkRenderCanvas::~VtkRenderCanvas()
         m_renderWindow->Finalize();
     }
     m_scalarBarActor = nullptr;
+    if (m_orientationMarker) {
+        m_orientationMarker->EnabledOff();
+        m_orientationMarker = nullptr;
+    }
     m_highlightActors.clear();
     m_geometrySceneActors.clear();
     m_primaryActor = nullptr;
@@ -374,6 +381,20 @@ bool VtkRenderCanvas::geometryEdgesVisible() const
     return m_geometryEdgesVisible;
 }
 
+void VtkRenderCanvas::setOrientationMarkerVisible(bool visible)
+{
+    m_orientationMarkerVisible = visible;
+    if (m_orientationMarker) {
+        m_orientationMarker->SetEnabled(visible ? 1 : 0);
+    }
+    requestRender();
+}
+
+bool VtkRenderCanvas::orientationMarkerVisible() const
+{
+    return m_orientationMarkerVisible;
+}
+
 void VtkRenderCanvas::setPickMode(PickMode mode)
 {
     if (m_pickMode == mode) {
@@ -543,6 +564,7 @@ bool VtkRenderCanvas::renderIfReady()
     if (!m_renderWindow || !m_renderer || !m_vtkWidget || !m_vtkWidget->isVisible() || m_vtkWidget->size().isEmpty()) {
         return false;
     }
+    initializeOrientationMarker();
     m_renderer->Modified();
     m_renderWindow->Modified();
     m_renderWindow->Render();
@@ -570,6 +592,29 @@ void VtkRenderCanvas::resetSceneState()
     m_highlightActors.clear();
     m_scalarBarActor = nullptr;
     m_activeGeometryName.clear();
+}
+
+void VtkRenderCanvas::initializeOrientationMarker()
+{
+    vtkRenderWindowInteractor *interactor = m_renderWindow ? m_renderWindow->GetInteractor() : nullptr;
+    if (!interactor || m_orientationMarker) {
+        return;
+    }
+
+    vtkNew<vtkAxesActor> axes;
+    axes->SetTotalLength(1.1, 1.1, 1.1);
+    axes->SetShaftTypeToCylinder();
+    axes->SetCylinderRadius(0.035);
+    axes->SetConeRadius(0.16);
+    axes->SetSphereRadius(0.18);
+    axes->AxisLabelsOn();
+
+    m_orientationMarker = vtkSmartPointer<vtkOrientationMarkerWidget>::New();
+    m_orientationMarker->SetOrientationMarker(axes);
+    m_orientationMarker->SetInteractor(interactor);
+    m_orientationMarker->SetViewport(0.015, 0.015, 0.18, 0.18);
+    m_orientationMarker->SetEnabled(m_orientationMarkerVisible ? 1 : 0);
+    m_orientationMarker->InteractiveOff();
 }
 
 bool VtkRenderCanvas::effectiveGeometryEdgesVisible() const

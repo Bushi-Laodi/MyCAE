@@ -35,6 +35,7 @@ constexpr auto CommandImportStep = "geometry.import.step";
 constexpr auto CommandCreateBoolean = "geometry.create.boolean";
 constexpr auto CommandDeleteGeometry = "geometry.deleteSelected";
 constexpr auto CommandToggleGeometryEdges = "display.geometryEdges.toggle";
+constexpr auto CommandToggleOrientationMarker = "display.orientationMarker.toggle";
 constexpr auto CommandCheckGmsh = "mesh.checkGmsh";
 constexpr auto CommandGenerateMesh = "mesh.generate";
 constexpr auto CommandReadMeshInfo = "mesh.readInfo";
@@ -172,6 +173,17 @@ MainWindowActions MainWindowActionBuilder::build(
         actions.showGeometryEdges,
         window,
         makeToggleGeometryEdgesCommand(context)
+    );
+
+    actions.showOrientationMarker = new QAction(zh(u8"显示 XYZ 坐标轴"), window);
+    actions.showOrientationMarker->setCheckable(true);
+    actions.showOrientationMarker->setChecked(true);
+    actions.showOrientationMarker->setStatusTip(zh(u8"在渲染窗口左下角显示或隐藏 XYZ 方向坐标轴"));
+    actionRegistry.registerActionCommand(
+        CommandToggleOrientationMarker,
+        actions.showOrientationMarker,
+        window,
+        makeToggleOrientationMarkerCommand(context)
     );
 
     actions.checkGmsh = new QAction(zh(u8"检查 Gmsh"), window);

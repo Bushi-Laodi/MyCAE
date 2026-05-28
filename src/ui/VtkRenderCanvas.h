@@ -22,6 +22,7 @@ class vtkActor;
 class vtkCallbackCommand;
 class vtkGenericOpenGLRenderWindow;
 class vtkObject;
+class vtkOrientationMarkerWidget;
 class vtkPolyData;
 class vtkRenderer;
 class vtkScalarBarActor;
@@ -60,6 +61,8 @@ public:
     );
     void setGeometryEdgesVisible(bool visible);
     bool geometryEdgesVisible() const;
+    void setOrientationMarkerVisible(bool visible);
+    bool orientationMarkerVisible() const;
     void setPickMode(PickMode mode);
     void clearHighlight();
     void highlightFaceGroup(const FaceGroup &faceGroup, const VtkHighlightStyle &style = VtkHighlightStyle{});
@@ -81,6 +84,7 @@ private:
     bool renderIfReady();
     void resetCamera();
     void resetSceneState();
+    void initializeOrientationMarker();
     void applyPrimaryGeometryEdgeVisibility();
     void applyGeometrySceneEdgeVisibility();
     bool effectiveGeometryEdgesVisible() const;
@@ -92,6 +96,7 @@ private:
     vtkSmartPointer<vtkGenericOpenGLRenderWindow> m_renderWindow;
     vtkSmartPointer<vtkRenderer> m_renderer;
     vtkSmartPointer<vtkCallbackCommand> m_leftButtonReleaseCallback;
+    vtkSmartPointer<vtkOrientationMarkerWidget> m_orientationMarker;
     vtkSmartPointer<vtkPolyData> m_currentPolyData;
     vtkSmartPointer<vtkUnstructuredGrid> m_currentResultGrid;
     vtkSmartPointer<vtkActor> m_primaryActor;
@@ -101,6 +106,7 @@ private:
     QString m_activeGeometryName;
     PickMode m_pickMode = PickMode::None;
     bool m_geometryEdgesVisible = false;
+    bool m_orientationMarkerVisible = true;
     bool m_primaryActorUsesGeometryEdges = false;
     bool m_renderQueued = false;
 };

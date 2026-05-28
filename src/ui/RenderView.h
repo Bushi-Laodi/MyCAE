@@ -54,6 +54,8 @@ public:
     );
     void setGeometryEdgesVisible(bool visible);
     bool geometryEdgesVisible() const;
+    void setOrientationMarkerVisible(bool visible);
+    bool orientationMarkerVisible() const;
     bool saveScreenshot(const QString &filePath);
     void setPickMode(PickMode mode);
     void clearHighlight();

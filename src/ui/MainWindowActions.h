@@ -29,6 +29,7 @@ struct MainWindowActions
     QAction *createBoolean = nullptr;
     QAction *deleteGeometry = nullptr;
     QAction *showGeometryEdges = nullptr;
+    QAction *showOrientationMarker = nullptr;
     QAction *checkGmsh = nullptr;
     QAction *generateMesh = nullptr;
     QAction *readMeshInfo = nullptr;

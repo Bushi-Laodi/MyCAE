@@ -50,6 +50,10 @@ void MainWindowStateController::update(
         actions.showGeometryEdges->setEnabled(hasProject);
         actions.showGeometryEdges->setChecked(renderView && renderView->geometryEdgesVisible());
     }
+    if (actions.showOrientationMarker) {
+        actions.showOrientationMarker->setEnabled(renderView != nullptr);
+        actions.showOrientationMarker->setChecked(renderView && renderView->orientationMarkerVisible());
+    }
     if (actions.generateMesh) {
         actions.generateMesh->setEnabled(hasProject && capabilities.canGenerateMesh);
     }

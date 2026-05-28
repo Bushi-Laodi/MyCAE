@@ -68,6 +68,7 @@ find_package(VTK REQUIRED COMPONENTS
     FiltersSources
     GUISupportQt
     InteractionStyle
+    InteractionWidgets
     IOLegacy
     RenderingAnnotation
     RenderingCore

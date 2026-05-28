@@ -187,6 +187,18 @@ bool RenderView::geometryEdgesVisible() const
     return m_canvas ? m_canvas->geometryEdgesVisible() : false;
 }
 
+void RenderView::setOrientationMarkerVisible(bool visible)
+{
+    if (m_canvas) {
+        m_canvas->setOrientationMarkerVisible(visible);
+    }
+}
+
+bool RenderView::orientationMarkerVisible() const
+{
+    return m_canvas ? m_canvas->orientationMarkerVisible() : false;
+}
+
 bool RenderView::saveScreenshot(const QString &filePath)
 {
     if (filePath.isEmpty()) {
