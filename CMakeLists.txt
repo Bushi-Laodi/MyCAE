@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(CTest)
 
 set(MYCAE_QT_ROOT "D:\\dev\\Qt\\6.6.3\\msvc2019_64" CACHE PATH "Root directory of the local Qt 6 installation")
+
 set(MYCAE_QT_ROOT "D:\\qt\\6.6.3\\msvc2019_64" CACHE PATH "Root directory of the local Qt 6 installation")
 if (EXISTS "${MYCAE_QT_ROOT}/lib/cmake/Qt6/Qt6Config.cmake")
     list(PREPEND CMAKE_PREFIX_PATH "${MYCAE_QT_ROOT}")
