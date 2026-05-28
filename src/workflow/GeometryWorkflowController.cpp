@@ -1,5 +1,6 @@
 #include "workflow/GeometryWorkflowController.h"
 
+#include "geometry/GeometryBooleanController.h"
 #include "geometry/GeometryManager.h"
 #include "project/ProjectModel.h"
 #include "workflow/ProjectWorkflowController.h"
@@ -61,6 +62,39 @@ GeometryWorkflowResult GeometryWorkflowController::createGeometry(GeometryCreate
     workflowResult.logMessages.append(selectionResult.logMessages);
     if (!selectionResult.accepted) {
         workflowResult.logMessages.append(zh(u8"几何已保存，但无法选中：") + createdGeometryName);
+    }
+
+    workflowResult.logMessages.append(m_projectWorkflow.saveSimulationCase().logMessages);
+    workflowResult.success = true;
+    return workflowResult;
+}
+
+GeometryWorkflowResult GeometryWorkflowController::createBooleanGeometry() const
+{
+    GeometryWorkflowResult workflowResult;
+    const GeometryBooleanController booleanController(m_geometryManager);
+    const GeometryBooleanResult booleanResult = booleanController.createBooleanGeometry(m_parent, m_projectModel);
+
+    workflowResult.logMessages.append(booleanResult.logMessages);
+    if (booleanResult.canceled) {
+        workflowResult.canceled = true;
+        return workflowResult;
+    }
+    if (!booleanResult.success) {
+        QMessageBox::warning(m_parent, zh(u8"布尔操作失败"), booleanResult.errorMessage);
+        return workflowResult;
+    }
+
+    const QString createdGeometryName = booleanResult.geometryObject.name;
+    workflowResult.logMessages.append(m_projectWorkflow.loadGeometries().logMessages);
+    m_projectWorkflow.refreshProjectTree();
+
+    const SelectionController selectionController(m_projectModel, m_propertyPanel, m_renderView);
+    const SelectionControllerResult selectionResult =
+        selectionController.apply(Selection::item(SelectionKind::Geometry, createdGeometryName, createdGeometryName));
+    workflowResult.logMessages.append(selectionResult.logMessages);
+    if (!selectionResult.accepted) {
+        workflowResult.logMessages.append(zh(u8"布尔几何已保存，但无法选中：") + createdGeometryName);
     }
 
     workflowResult.logMessages.append(m_projectWorkflow.saveSimulationCase().logMessages);

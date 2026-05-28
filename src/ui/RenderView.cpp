@@ -160,6 +160,18 @@ void RenderView::showResultGrid(
     );
 }
 
+void RenderView::setGeometryEdgesVisible(bool visible)
+{
+    if (m_canvas) {
+        m_canvas->setGeometryEdgesVisible(visible);
+    }
+}
+
+bool RenderView::geometryEdgesVisible() const
+{
+    return m_canvas ? m_canvas->geometryEdgesVisible() : false;
+}
+
 bool RenderView::saveScreenshot(const QString &filePath)
 {
     if (filePath.isEmpty()) {

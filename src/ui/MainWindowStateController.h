@@ -3,6 +3,7 @@
 class DiagnosticCollector;
 class PickController;
 class ProjectModel;
+class RenderView;
 class ResultPostprocessPanel;
 struct MainWindowActions;
 
@@ -14,6 +15,7 @@ public:
         const ProjectModel &projectModel,
         const PickController &pickController,
         const DiagnosticCollector &diagnosticCollector,
+        const RenderView *renderView,
         ResultPostprocessPanel *resultPostprocessPanel
     );
 };

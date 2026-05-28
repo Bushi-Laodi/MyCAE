@@ -1,5 +1,6 @@
 #include "ui/MainWindowActions.h"
 
+#include "commands/DisplayModeCommands.h"
 #include "commands/FaceGroupEditCommands.h"
 #include "commands/GeometryCommands.h"
 #include "commands/MeshCommands.h"
@@ -29,6 +30,8 @@ constexpr auto CommandOpenProject = "project.open";
 constexpr auto CommandExit = "app.exit";
 constexpr auto CommandCreateBox = "geometry.create.box";
 constexpr auto CommandCreateCylinder = "geometry.create.cylinder";
+constexpr auto CommandCreateBoolean = "geometry.create.boolean";
+constexpr auto CommandToggleGeometryEdges = "display.geometryEdges.toggle";
 constexpr auto CommandCheckGmsh = "mesh.checkGmsh";
 constexpr auto CommandGenerateMesh = "mesh.generate";
 constexpr auto CommandReadMeshInfo = "mesh.readInfo";
@@ -114,6 +117,25 @@ MainWindowActions MainWindowActionBuilder::build(
         actions.createCylinder,
         window,
         makeGeometryCreateCommand(context, GeometryCreateType::Cylinder)
+    );
+
+    actions.createBoolean = new QAction(zh(u8"布尔操作"), window);
+    actions.createBoolean->setStatusTip(zh(u8"对两个几何体执行并集、切除或交集操作"));
+    actionRegistry.registerActionCommand(
+        CommandCreateBoolean,
+        actions.createBoolean,
+        window,
+        makeGeometryBooleanCommand(context)
+    );
+
+    actions.showGeometryEdges = new QAction(zh(u8"显示几何边线"), window);
+    actions.showGeometryEdges->setCheckable(true);
+    actions.showGeometryEdges->setStatusTip(zh(u8"普通查看时显示或隐藏几何三角剖分边线；拾取面模式会临时自动显示边线"));
+    actionRegistry.registerActionCommand(
+        CommandToggleGeometryEdges,
+        actions.showGeometryEdges,
+        window,
+        makeToggleGeometryEdgesCommand(context)
     );
 
     actions.checkGmsh = new QAction(zh(u8"检查 Gmsh"), window);

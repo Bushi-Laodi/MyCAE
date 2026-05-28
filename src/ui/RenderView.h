@@ -45,6 +45,8 @@ public:
         const ResultExtremeMarker &maximumMarker,
         bool resetCamera = true
     );
+    void setGeometryEdgesVisible(bool visible);
+    bool geometryEdgesVisible() const;
     bool saveScreenshot(const QString &filePath);
     void setPickMode(PickMode mode);
     void clearHighlight();

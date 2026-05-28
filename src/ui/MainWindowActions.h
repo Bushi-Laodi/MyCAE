@@ -24,6 +24,8 @@ struct MainWindowActions
     QAction *redo = nullptr;
     QAction *createBox = nullptr;
     QAction *createCylinder = nullptr;
+    QAction *createBoolean = nullptr;
+    QAction *showGeometryEdges = nullptr;
     QAction *checkGmsh = nullptr;
     QAction *generateMesh = nullptr;
     QAction *readMeshInfo = nullptr;

@@ -328,6 +328,7 @@ void MainWindow::updateActionStates()
         m_projectModel,
         m_pickController,
         m_diagnosticCollector,
+        m_docks.renderView,
         m_docks.resultPostprocessPanel
     );
 }

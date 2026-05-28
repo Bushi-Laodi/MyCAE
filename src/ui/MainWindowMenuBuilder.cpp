@@ -57,6 +57,7 @@ void MainWindowMenuBuilder::build(
     auto *geometryMenu = window->menuBar()->addMenu(zh(u8"几何"));
     geometryMenu->addAction(actions.createBox);
     geometryMenu->addAction(actions.createCylinder);
+    geometryMenu->addAction(actions.createBoolean);
     QAction *importStepAction = geometryMenu->addAction(zh(u8"导入 STEP"));
     actionRegistry.registerActionCommand(
         CommandImportStep,
@@ -65,6 +66,7 @@ void MainWindowMenuBuilder::build(
         makeLogMessageCommand(logPanel, zh(u8"STEP 导入功能将在后续阶段实现。"))
     );
     geometryMenu->addSeparator();
+    geometryMenu->addAction(actions.showGeometryEdges);
     geometryMenu->addAction(actions.pickFace);
     geometryMenu->addAction(actions.clearPick);
     auto *faceGroupMenu = geometryMenu->addMenu(zh(u8"面组"));

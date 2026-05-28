@@ -52,6 +52,8 @@ public:
         const ResultExtremeMarker &maximumMarker,
         bool resetCamera = true
     );
+    void setGeometryEdgesVisible(bool visible);
+    bool geometryEdgesVisible() const;
     void setPickMode(PickMode mode);
     void clearHighlight();
     void highlightFaceGroup(const FaceGroup &faceGroup, const VtkHighlightStyle &style = VtkHighlightStyle{});
@@ -73,6 +75,8 @@ private:
     bool renderIfReady();
     void resetCamera();
     void resetSceneState();
+    void applyPrimaryGeometryEdgeVisibility();
+    bool effectiveGeometryEdgesVisible() const;
     void handlePickAtRenderWindowPosition(int x, int y);
     bool pickResultAtRenderWindowPosition(int x, int y, ResultProbe &probe);
     void addResultMarker(double x, double y, double z, double red, double green, double blue, double radiusScale);
@@ -88,5 +92,7 @@ private:
     vtkSmartPointer<vtkScalarBarActor> m_scalarBarActor;
     QString m_activeGeometryName;
     PickMode m_pickMode = PickMode::None;
+    bool m_geometryEdgesVisible = false;
+    bool m_primaryActorUsesGeometryEdges = false;
     bool m_renderQueued = false;
 };

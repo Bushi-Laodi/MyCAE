@@ -7,6 +7,7 @@
 #include "project/SelectionState.h"
 #include "result/ResultObject.h"
 #include "ui/MainWindowActions.h"
+#include "ui/RenderView.h"
 #include "ui/ResultPostprocessPanel.h"
 
 #include <QAction>
@@ -17,6 +18,7 @@ void MainWindowStateController::update(
     const ProjectModel &projectModel,
     const PickController &pickController,
     const DiagnosticCollector &diagnosticCollector,
+    const RenderView *renderView,
     ResultPostprocessPanel *resultPostprocessPanel
 )
 {
@@ -31,6 +33,13 @@ void MainWindowStateController::update(
     }
     if (actions.createCylinder) {
         actions.createCylinder->setEnabled(hasProject);
+    }
+    if (actions.createBoolean) {
+        actions.createBoolean->setEnabled(hasProject && projectModel.geometryRepository().geometryObjects().size() >= 2);
+    }
+    if (actions.showGeometryEdges) {
+        actions.showGeometryEdges->setEnabled(hasProject);
+        actions.showGeometryEdges->setChecked(renderView && renderView->geometryEdgesVisible());
     }
     if (actions.generateMesh) {
         actions.generateMesh->setEnabled(hasProject && capabilities.canGenerateMesh);

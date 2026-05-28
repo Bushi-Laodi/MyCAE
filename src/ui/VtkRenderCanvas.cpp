@@ -154,13 +154,14 @@ void VtkRenderCanvas::showBoxGeometry(const BoxGeometry &box)
     actor->SetMapper(mapper);
     actor->GetProperty()->SetColor(0.84, 0.87, 0.90);
     actor->GetProperty()->SetEdgeColor(0.18, 0.24, 0.32);
-    actor->GetProperty()->EdgeVisibilityOn();
+    actor->GetProperty()->SetEdgeVisibility(effectiveGeometryEdgesVisible());
     actor->GetProperty()->SetLineWidth(1.5);
 
     resetSceneState();
     m_currentPolyData = polyData;
     m_activeGeometryName = box.name;
     m_primaryActor = actor;
+    m_primaryActorUsesGeometryEdges = true;
     m_renderer->RemoveAllViewProps();
     m_renderer->AddActor(m_primaryActor);
     resetCamera();
@@ -179,13 +180,14 @@ void VtkRenderCanvas::showOccShape(const TopoDS_Shape &shape, const QString &geo
     actor->SetMapper(mapper);
     actor->GetProperty()->SetColor(0.62, 0.78, 0.95);
     actor->GetProperty()->SetEdgeColor(0.12, 0.18, 0.24);
-    actor->GetProperty()->EdgeVisibilityOn();
+    actor->GetProperty()->SetEdgeVisibility(effectiveGeometryEdgesVisible());
     actor->GetProperty()->SetLineWidth(1.2);
 
     resetSceneState();
     m_currentPolyData = polyData;
     m_activeGeometryName = geometryName;
     m_primaryActor = actor;
+    m_primaryActorUsesGeometryEdges = true;
     m_renderer->RemoveAllViewProps();
     m_renderer->AddActor(m_primaryActor);
     resetCamera();
@@ -300,9 +302,29 @@ void VtkRenderCanvas::showResultGrid(
     requestRender();
 }
 
+void VtkRenderCanvas::setGeometryEdgesVisible(bool visible)
+{
+    if (m_geometryEdgesVisible == visible) {
+        return;
+    }
+
+    m_geometryEdgesVisible = visible;
+    applyPrimaryGeometryEdgeVisibility();
+}
+
+bool VtkRenderCanvas::geometryEdgesVisible() const
+{
+    return m_geometryEdgesVisible;
+}
+
 void VtkRenderCanvas::setPickMode(PickMode mode)
 {
+    if (m_pickMode == mode) {
+        return;
+    }
+
     m_pickMode = mode;
+    applyPrimaryGeometryEdgeVisibility();
 }
 
 void VtkRenderCanvas::clearHighlight()
@@ -486,9 +508,25 @@ void VtkRenderCanvas::resetSceneState()
     m_currentPolyData = nullptr;
     m_currentResultGrid = nullptr;
     m_primaryActor = nullptr;
+    m_primaryActorUsesGeometryEdges = false;
     m_highlightActors.clear();
     m_scalarBarActor = nullptr;
     m_activeGeometryName.clear();
+}
+
+bool VtkRenderCanvas::effectiveGeometryEdgesVisible() const
+{
+    return m_geometryEdgesVisible || m_pickMode == PickMode::Face;
+}
+
+void VtkRenderCanvas::applyPrimaryGeometryEdgeVisibility()
+{
+    if (!m_primaryActor || !m_primaryActorUsesGeometryEdges) {
+        return;
+    }
+
+    m_primaryActor->GetProperty()->SetEdgeVisibility(effectiveGeometryEdgesVisible());
+    requestRender();
 }
 
 void VtkRenderCanvas::handlePickAtRenderWindowPosition(int x, int y)

@@ -141,6 +141,8 @@ qt_add_executable(MyCAE
     src/commands/AppCommand.h
     src/commands/CommandUtilities.cpp
     src/commands/CommandUtilities.h
+    src/commands/DisplayModeCommands.cpp
+    src/commands/DisplayModeCommands.h
     src/commands/GeometryCommands.cpp
     src/commands/GeometryCommands.h
     src/commands/FaceGroupCommandUtilities.cpp

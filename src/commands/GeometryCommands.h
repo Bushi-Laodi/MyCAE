@@ -7,3 +7,4 @@
 #include <memory>
 
 std::unique_ptr<AppCommand> makeGeometryCreateCommand(WorkflowCommandContext context, GeometryCreateType type);
+std::unique_ptr<AppCommand> makeGeometryBooleanCommand(WorkflowCommandContext context);

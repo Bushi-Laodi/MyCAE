@@ -31,6 +31,7 @@ public:
     );
 
     GeometryWorkflowResult createGeometry(GeometryCreateType type) const;
+    GeometryWorkflowResult createBooleanGeometry() const;
 
 private:
     GeometryManager &m_geometryManager;
