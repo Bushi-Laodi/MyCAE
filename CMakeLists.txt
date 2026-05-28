@@ -302,6 +302,8 @@ qt_add_executable(MyCAE
     src/solver/calculix/CalculiXResultGridBuilder.cpp
     src/solver/calculix/CalculiXResultGridBuilder.h
     src/solver/calculix/CalculiXResultMath.h
+    src/solver/calculix/CalculiXRunDiagnostics.cpp
+    src/solver/calculix/CalculiXRunDiagnostics.h
     src/solver/calculix/CalculiXRunner.cpp
     src/solver/calculix/CalculiXRunner.h
     src/solver/calculix/CalculiXSurfaceMapper.cpp

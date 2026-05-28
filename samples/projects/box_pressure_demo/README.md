@@ -22,6 +22,8 @@ This is the formal MyCAE acceptance demo project for the current CalculiX workfl
 - The simulation case loads with 1 material, 2 boundary conditions, and 1 load.
 - The CalculiX result is available without running the solver again.
 - Available fields include `Displacement Magnitude` and `Von Mises Stress`.
+- Result export should create node displacement CSV, element stress CSV, summary CSV, and metadata JSON.
+- Markdown report export should include solver health, display state, extrema, completeness, result files, and screenshot reference.
 - The result scalar range should include:
   - min: `0`
   - max displacement magnitude: about `1.08369064627412e-05`
@@ -33,3 +35,7 @@ If CalculiX is configured, re-run the case from MyCAE. A successful run should c
 `solver/calculix/`
 
 The solver log should end with a completed result and the result index should contain the new run.
+
+## Stability Checks
+
+The sample validator also checks that the stored result can be read, exported, and reported without re-running CalculiX. This makes the demo useful for UI, post-processing, and result-export regression checks.

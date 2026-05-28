@@ -79,6 +79,62 @@ QString completenessText(const ResultObject &resultObject)
     }
     return lines.join('\n');
 }
+
+QString fileListText(const Project &project, const ResultObject &resultObject)
+{
+    QStringList lines;
+    lines.append("- Log: " + relativeProjectPath(project, resultObject.logFile));
+    lines.append("- DAT: " + relativeProjectPath(project, resultObject.datFile));
+    lines.append("- FRD: " + relativeProjectPath(project, resultObject.frdFile));
+    lines.append("- STA: " + relativeProjectPath(project, resultObject.staFile));
+    if (!resultObject.resultFiles.isEmpty()) {
+        for (const QString &filePath : resultObject.resultFiles) {
+            lines.append("- Result file: " + relativeProjectPath(project, filePath));
+        }
+    }
+    return lines.join('\n');
+}
+
+QString solverHealthText(const ResultObject &resultObject)
+{
+    QStringList lines;
+    lines.append(QString("- Success flag: %1").arg(resultObject.success ? "yes" : "no"));
+    lines.append(QString("- Result files complete: %1").arg(resultObject.resultFilesComplete ? "yes" : "no"));
+    lines.append(QString("- Matched nodes: %1/%2")
+        .arg(resultObject.matchedNodeCount)
+        .arg(resultObject.meshNodeCount));
+    lines.append(QString("- Matched elements: %1/%2")
+        .arg(resultObject.matchedElementCount)
+        .arg(resultObject.meshElementCount));
+    if (resultObject.checkMessages.isEmpty()) {
+        lines.append("- Diagnostics: no result consistency issues recorded");
+    } else {
+        for (const QString &message : resultObject.checkMessages) {
+            lines.append("- Diagnostic: " + message);
+        }
+    }
+    return lines.join('\n');
+}
+
+QString displaySettingsText(const ResultObject &resultObject)
+{
+    QStringList lines;
+    lines.append(QString("- Current field: %1").arg(currentFieldName(resultObject)));
+    lines.append(QString("- Deformation scale: %1").arg(resultObject.deformationScale));
+    lines.append(QString("- Mesh edges: %1").arg(resultObject.showMeshEdges ? "visible" : "hidden"));
+    lines.append(QString("- Undeformed overlay: %1").arg(resultObject.showUndeformedOverlay ? "visible" : "hidden"));
+    lines.append(QString("- Scalar range mode: %1").arg(resultObject.scalarRangeLocked ? "locked" : "automatic"));
+    if (resultObject.scalarRangeLocked) {
+        lines.append(QString("- Locked scalar range: [%1, %2]")
+            .arg(resultObject.lockedScalarMin)
+            .arg(resultObject.lockedScalarMax));
+    } else {
+        lines.append(QString("- Automatic scalar range: [%1, %2]")
+            .arg(resultObject.scalarMin)
+            .arg(resultObject.scalarMax));
+    }
+    return lines.join('\n');
+}
 }
 
 ResultReportExportResult ResultReportExporter::exportMarkdown(
@@ -117,11 +173,11 @@ ResultReportExportResult ResultReportExporter::exportMarkdown(
     stream << "- Mesh: " << resultObject.meshName << '\n';
     stream << "- Result: " << resultObject.name << "\n\n";
 
+    stream << "## Solver Health\n\n";
+    stream << solverHealthText(resultObject) << "\n\n";
+
     stream << "## Display State\n\n";
-    stream << "- Current field: " << currentFieldName(resultObject) << '\n';
-    stream << "- Scalar min: " << resultObject.scalarMin << '\n';
-    stream << "- Scalar max: " << resultObject.scalarMax << '\n';
-    stream << "- Deformation scale: " << resultObject.deformationScale << "\n\n";
+    stream << displaySettingsText(resultObject) << "\n\n";
 
     stream << "## Extrema\n\n";
     stream << "- Maximum displacement: " << nodeExtremeText(resultObject.extrema.maxDisplacementMagnitude) << '\n';
@@ -129,6 +185,9 @@ ResultReportExportResult ResultReportExporter::exportMarkdown(
 
     stream << "## Completeness\n\n";
     stream << completenessText(resultObject) << "\n\n";
+
+    stream << "## Result Files\n\n";
+    stream << fileListText(project, resultObject) << "\n\n";
 
     stream << "## Screenshot\n\n";
     if (screenshotPath.isEmpty()) {

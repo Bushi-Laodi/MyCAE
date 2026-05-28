@@ -11,6 +11,8 @@ struct ResultCsvExportResult
     bool success = false;
     QString nodeDisplacementCsvPath;
     QString elementStressCsvPath;
+    QString summaryCsvPath;
+    QString metadataJsonPath;
     QStringList warnings;
     QString errorMessage;
 };

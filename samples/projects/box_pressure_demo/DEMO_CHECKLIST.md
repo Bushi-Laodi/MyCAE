@@ -32,8 +32,8 @@ Use this checklist when showing the current MyCAE CalculiX workflow.
 - [ ] Toggle mesh edges.
 - [ ] Toggle undeformed overlay.
 - [ ] Change deformation scale and confirm the view updates.
-- [ ] Export CSV result data.
-- [ ] Export Markdown result report.
+- [ ] Export CSV result data and confirm node, element, summary, and metadata files are created.
+- [ ] Export Markdown result report and confirm solver health, completeness, extrema, and result file sections are present.
 - [ ] Save a render screenshot.
 
 ## Solver Re-run

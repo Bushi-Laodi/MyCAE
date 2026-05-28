@@ -2,6 +2,7 @@
 
 #include "solver/calculix/CalculiXCasePaths.h"
 #include "solver/calculix/CalculiXEnvironment.h"
+#include "solver/calculix/CalculiXRunDiagnostics.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -49,6 +50,22 @@ QStringList existingResultFiles(const CalculiXCasePaths &paths)
         }
     }
     return files;
+}
+
+void appendDiagnosticReport(SolverRunResult &result, const CalculiXCasePaths &paths)
+{
+    const CalculiXRunDiagnosticReport report = CalculiXRunDiagnostics().analyze(paths, result);
+    for (const QString &warning : report.warnings) {
+        result.logMessages.append(warning);
+    }
+    for (const QString &hint : report.hints) {
+        result.logMessages.append(hint);
+    }
+    for (const QString &error : report.errors) {
+        if (!result.errors.contains(error)) {
+            result.errors.append(error);
+        }
+    }
 }
 }
 
@@ -107,6 +124,7 @@ SolverRunResult CalculiXRunner::run(const SolverCaseContext &context) const
     result.standardOutput = QString::fromLocal8Bit(process.readAllStandardOutput()).trimmed();
     result.standardError = QString::fromLocal8Bit(process.readAllStandardError()).trimmed();
     tryWriteLog(result);
+    appendDiagnosticReport(result, paths);
 
     result.logMessages.append("CalculiX command: " + result.command);
     result.logMessages.append("CalculiX log: " + result.logFile);

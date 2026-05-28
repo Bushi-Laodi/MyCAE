@@ -281,6 +281,8 @@ QStringList ResultWorkflowController::exportSelectedCsv()
 
     logMessages.append(zh(u8"节点位移 CSV 已导出：") + exportResult.nodeDisplacementCsvPath);
     logMessages.append(zh(u8"单元 Von Mises CSV 已导出：") + exportResult.elementStressCsvPath);
+    logMessages.append(zh(u8"结果汇总 CSV 已导出：") + exportResult.summaryCsvPath);
+    logMessages.append(zh(u8"结果导出元数据已导出：") + exportResult.metadataJsonPath);
     return logMessages;
 }
 

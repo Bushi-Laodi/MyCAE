@@ -6,12 +6,15 @@
 #include "project/ProjectModelLoader.h"
 #include "project/ProjectResourceManager.h"
 #include "project/ResultRepository.h"
+#include "result/ResultCsvExporter.h"
 #include "result/ResultDataLoader.h"
 #include "result/ResultObject.h"
+#include "result/ResultReportExporter.h"
 #include "validation/SampleProjectValidator.h"
 
 #include <QDir>
 #include <QFileInfo>
+#include <QStandardPaths>
 
 #include <memory>
 #include <utility>
@@ -112,6 +115,50 @@ void validateResultData(const ProjectModel &projectModel, SampleValidationReport
     );
     loadedResult.release();
 }
+
+QString demoExportRoot()
+{
+    return QDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation))
+        .filePath("MyCAE/sample_validation/demo_exports");
+}
+
+void validateResultExports(const ProjectModel &projectModel, SampleValidationReport &report)
+{
+    if (projectModel.resultRepository().results().empty()) {
+        return;
+    }
+
+    const ResultObject &resultObject = projectModel.resultRepository().results().front();
+    const QString exportRoot = demoExportRoot();
+    QDir(exportRoot).removeRecursively();
+    if (!QDir().mkpath(exportRoot)) {
+        report.addStep(SampleValidationStatus::Fail, DemoStepPrefix + QString("export directory created"), exportRoot);
+        return;
+    }
+
+    const QString csvPath = QDir(exportRoot).filePath("box_pressure_result.csv");
+    const ResultCsvExportResult csvResult = ResultCsvExporter().exportResult(projectModel, resultObject, csvPath);
+    addStep(
+        report,
+        csvResult.success
+            && QFileInfo::exists(csvResult.nodeDisplacementCsvPath)
+            && QFileInfo::exists(csvResult.elementStressCsvPath)
+            && QFileInfo::exists(csvResult.summaryCsvPath)
+            && QFileInfo::exists(csvResult.metadataJsonPath),
+        DemoStepPrefix + QString("result CSV export works"),
+        csvResult.success ? exportRoot : csvResult.errorMessage
+    );
+
+    const QString reportPath = QDir(exportRoot).filePath("box_pressure_report.md");
+    const ResultReportExportResult reportResult =
+        ResultReportExporter().exportMarkdown(projectModel.project(), resultObject, reportPath, QString());
+    addStep(
+        report,
+        reportResult.success && QFileInfo::exists(reportResult.reportPath),
+        DemoStepPrefix + QString("result report export works"),
+        reportResult.success ? reportResult.reportPath : reportResult.errorMessage
+    );
+}
 }
 
 DemoProjectValidator::DemoProjectValidator(QString samplesRoot)
@@ -146,4 +193,5 @@ void DemoProjectValidator::validate(SampleValidationReport &report) const
     validateProjectModel(projectModel, report);
     validateResources(projectModel, report);
     validateResultData(projectModel, report);
+    validateResultExports(projectModel, report);
 }

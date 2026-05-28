@@ -17,7 +17,7 @@ DiagnosticSeverity severityForMessage(const QString &lower)
     if (containsAny(lower, {"[fail]", " fail", "failed", "error", "cannot ", "does not exist", "not found", "invalid"})) {
         return DiagnosticSeverity::Error;
     }
-    if (containsAny(lower, {" warning", "warning:", "skipped", "incomplete", "missing"})) {
+    if (containsAny(lower, {" warning", "warning:", "skipped", "incomplete", "missing", "diagnostic hint"})) {
         return DiagnosticSeverity::Warning;
     }
     return DiagnosticSeverity::Info;
@@ -34,7 +34,7 @@ DiagnosticCategory categoryForMessage(const QString &lower)
     if (containsAny(lower, {"result", ".dat", ".frd", "displacement", "stress", "von mises", "coverage"})) {
         return DiagnosticCategory::Result;
     }
-    if (containsAny(lower, {"solver", "solved", "calculix", "openfoam", "analysis", ".sta", ".log", "converge", "ccx"})) {
+    if (containsAny(lower, {"solver", "solved", "calculix", "openfoam", "analysis", ".sta", ".log", "converge", "ccx", "zero pivot", "singular", "cutbacks"})) {
         return DiagnosticCategory::Solver;
     }
     if (containsAny(lower, {"material", "boundary", "load", "case data", "no enabled", "no material"})) {
@@ -94,7 +94,12 @@ bool shouldCollect(const QString &lower)
         "no enabled",
         "no material",
         "no load",
-        "no boundary"
+        "no boundary",
+        "diagnostic",
+        "zero pivot",
+        "singular",
+        "negative jacobian",
+        "too many cutbacks"
     });
 }
 }
