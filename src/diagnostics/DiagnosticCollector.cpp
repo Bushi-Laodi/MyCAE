@@ -34,7 +34,7 @@ DiagnosticCategory categoryForMessage(const QString &lower)
     if (containsAny(lower, {"result", ".dat", ".frd", "displacement", "stress", "von mises", "coverage"})) {
         return DiagnosticCategory::Result;
     }
-    if (containsAny(lower, {"solver", "solved", "calculix", "openfoam", "analysis", ".sta", ".log", "converge", "ccx", "zero pivot", "singular", "cutbacks"})) {
+    if (containsAny(lower, {"solver", "solved", "calculix", "openfoam", "analysis", ".sta", ".log", "converge", "ccx", "zero pivot", "singular", "cutbacks", "求解器", "求解"})) {
         return DiagnosticCategory::Solver;
     }
     if (containsAny(lower, {"material", "boundary", "load", "case data", "no enabled", "no material", "材料", "边界", "载荷", "工况", "面组"})) {

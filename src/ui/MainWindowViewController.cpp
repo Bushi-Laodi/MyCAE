@@ -20,6 +20,9 @@ void MainWindowViewController::refreshDiagnosticsPanel() const
     if (m_context.docks.diagnosticPanel) {
         m_context.docks.diagnosticPanel->setDiagnostics(m_context.diagnosticCollector.diagnostics());
     }
+    if (m_callbacks.updateActionStates) {
+        m_callbacks.updateActionStates();
+    }
 }
 
 void MainWindowViewController::refreshResultViews() const

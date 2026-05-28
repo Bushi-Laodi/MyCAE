@@ -41,7 +41,7 @@ public:
             break;
         }
 
-        writeLogMessages(m_context.logPanel, result.logMessages);
+        writeLogMessages(m_context, result.logMessages);
     }
 
 private:
@@ -63,7 +63,7 @@ public:
         ProjectWorkflowController projectWorkflow = makeProjectWorkflow(m_context);
         const SolverWorkflowResult result =
             makeSolverWorkflow(m_context, projectWorkflow).runSolverPlugin(m_pluginId);
-        writeLogMessages(m_context.logPanel, result.logMessages);
+        writeLogMessages(m_context, result.logMessages);
     }
 
 private:

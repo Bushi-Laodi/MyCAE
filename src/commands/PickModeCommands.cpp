@@ -16,21 +16,21 @@ public:
     void execute() override
     {
         if (!m_context.pickController) {
-            writeLogMessages(m_context.logPanel, {"Pick command failed: pick controller is not available."});
+            writeLogMessages(m_context, {"Pick command failed: pick controller is not available."});
             return;
         }
 
         if (m_context.pickController->mode() == PickMode::Face) {
             writeLogMessages(
-                m_context.logPanel,
+                m_context,
                 m_context.pickController->setMode(PickMode::None, m_context.renderView).logMessages
             );
-            writeLogMessages(m_context.logPanel, m_context.pickController->clear(m_context.renderView).logMessages);
+            writeLogMessages(m_context, m_context.pickController->clear(m_context.renderView).logMessages);
             return;
         }
 
         writeLogMessages(
-            m_context.logPanel,
+            m_context,
             m_context.pickController->setMode(PickMode::Face, m_context.renderView).logMessages
         );
     }
@@ -50,10 +50,10 @@ public:
     void execute() override
     {
         if (!m_context.pickController) {
-            writeLogMessages(m_context.logPanel, {"Clear pick failed: pick controller is not available."});
+            writeLogMessages(m_context, {"Clear pick failed: pick controller is not available."});
             return;
         }
-        writeLogMessages(m_context.logPanel, m_context.pickController->clear(m_context.renderView).logMessages);
+        writeLogMessages(m_context, m_context.pickController->clear(m_context.renderView).logMessages);
     }
 
 private:

@@ -43,6 +43,7 @@ CalculiXInputDeckBuildResult CalculiXInputDeckBuilder::build(const CalculiXCaseD
     }
 
     const CalculiXBoundaryMapResult boundaryMapResult = CalculiXBoundaryMapper().map(caseData);
+    result.warnings.append(boundaryMapResult.warnings);
     result.errors.append(boundaryMapResult.errors);
     if (!boundaryMapResult.success) {
         return result;

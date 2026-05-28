@@ -23,7 +23,7 @@ public:
         if (result.success && m_context.pickController) {
             m_context.pickController->clear(m_context.renderView);
         }
-        writeLogMessages(m_context.logPanel, result.logMessages);
+        writeLogMessages(m_context, result.logMessages);
     }
 
 private:
@@ -46,7 +46,7 @@ public:
         if (result.success && m_context.pickController) {
             m_context.pickController->clear(m_context.renderView);
         }
-        writeLogMessages(m_context.logPanel, result.logMessages);
+        writeLogMessages(m_context, result.logMessages);
     }
 
 private:
@@ -68,7 +68,7 @@ public:
         if (result.success && m_context.pickController) {
             m_context.pickController->clear(m_context.renderView);
         }
-        writeLogMessages(m_context.logPanel, result.logMessages);
+        writeLogMessages(m_context, result.logMessages);
     }
 
 private:
@@ -90,7 +90,7 @@ public:
         if (result.success && m_context.pickController) {
             m_context.pickController->clear(m_context.renderView);
         }
-        writeLogMessages(m_context.logPanel, result.logMessages);
+        writeLogMessages(m_context, result.logMessages);
     }
 
 private:

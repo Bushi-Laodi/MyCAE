@@ -9,6 +9,7 @@ class ProjectWorkflowController;
 class SolverWorkflowController;
 
 void writeLogMessages(LogPanel *logPanel, const QStringList &messages);
+void writeLogMessages(const WorkflowCommandContext &context, const QStringList &messages);
 ProjectWorkflowController makeProjectWorkflow(const WorkflowCommandContext &context);
 GeometryWorkflowController makeGeometryWorkflow(
     const WorkflowCommandContext &context,

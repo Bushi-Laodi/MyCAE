@@ -12,6 +12,9 @@ class RenderView;
 class SolverPluginManager;
 class UndoStackController;
 
+#include <functional>
+#include <QStringList>
+
 struct WorkflowCommandContext
 {
     ProjectManager &projectManager;
@@ -25,4 +28,5 @@ struct WorkflowCommandContext
     QMainWindow *window = nullptr;
     PickController *pickController = nullptr;
     UndoStackController *undoStackController = nullptr;
+    std::function<void(const QStringList &)> writeLogMessages;
 };

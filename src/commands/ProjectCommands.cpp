@@ -27,7 +27,7 @@ public:
             m_context.pickController->setMode(PickMode::None, m_context.renderView);
             m_context.pickController->clear(m_context.renderView);
         }
-        writeLogMessages(m_context.logPanel, result.logMessages);
+        writeLogMessages(m_context, result.logMessages);
     }
 
 private:

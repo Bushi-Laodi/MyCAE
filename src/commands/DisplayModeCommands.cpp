@@ -16,14 +16,14 @@ public:
     void execute() override
     {
         if (!m_context.renderView) {
-            writeLogMessages(m_context.logPanel, {"Display mode command failed: render view is not available."});
+            writeLogMessages(m_context, {"Display mode command failed: render view is not available."});
             return;
         }
 
         const bool enabled = !m_context.renderView->geometryEdgesVisible();
         m_context.renderView->setGeometryEdgesVisible(enabled);
         writeLogMessages(
-            m_context.logPanel,
+            m_context,
             {enabled ? "Geometry edge display enabled." : "Geometry edge display disabled."}
         );
     }

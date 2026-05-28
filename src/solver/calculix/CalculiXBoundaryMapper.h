@@ -11,6 +11,7 @@ struct CalculiXBoundaryMapResult
 {
     bool success = false;
     std::vector<CalculiXBoundaryExport> boundaries;
+    QStringList warnings;
     QStringList errors;
 };
 

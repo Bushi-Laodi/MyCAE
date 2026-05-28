@@ -55,7 +55,7 @@ public:
             break;
         }
 
-        writeLogMessages(m_context.logPanel, result.logMessages);
+        writeLogMessages(m_context, result.logMessages);
 
         ProjectWorkflowController projectWorkflow = makeProjectWorkflow(m_context);
         if (result.meshTreeChanged) {
@@ -65,7 +65,7 @@ public:
             result.simulationCaseChanged = true;
         }
         if (result.simulationCaseChanged) {
-            writeLogMessages(m_context.logPanel, projectWorkflow.saveSimulationCase().logMessages);
+            writeLogMessages(m_context, projectWorkflow.saveSimulationCase().logMessages);
         }
     }
 

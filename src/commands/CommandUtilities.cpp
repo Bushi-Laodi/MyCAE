@@ -18,6 +18,15 @@ void writeLogMessages(LogPanel *logPanel, const QStringList &messages)
     }
 }
 
+void writeLogMessages(const WorkflowCommandContext &context, const QStringList &messages)
+{
+    if (context.writeLogMessages) {
+        context.writeLogMessages(messages);
+        return;
+    }
+    writeLogMessages(context.logPanel, messages);
+}
+
 ProjectWorkflowController makeProjectWorkflow(const WorkflowCommandContext &context)
 {
     return ProjectWorkflowController(

@@ -346,7 +346,8 @@ WorkflowCommandContext MainWindow::workflowCommandContext()
         m_docks.logPanel,
         this,
         &m_pickController,
-        &m_undoStackController
+        &m_undoStackController,
+        [this](const QStringList &messages) { writeLogMessages(messages); }
     };
 }
 

@@ -127,14 +127,16 @@ std::optional<CalculiXBoundaryExport> mapBoundary(
     const CalculiXCaseData &caseData,
     const CalculiXSurfaceMapper &surfaceMapper,
     const CalculiXBoundaryData &boundary,
+    QStringList &warnings,
     QStringList &errors
 )
 {
     const bool isLoadBoundary = hasLoadTarget(caseData, boundary.id);
     const bool isFixedBoundary = writesFixedConstraint(caseData, boundary);
-    if (!isLoadBoundary && !isFixedBoundary && boundary.type != BoundaryConditionType::Unknown) {
-        errors.append("CalculiX export failed: boundary '" + boundary.name
-            + "' is neither a load target nor a supported fixed constraint.");
+    if (!isLoadBoundary && !isFixedBoundary) {
+        warnings.append("CalculiX export warning: boundary '" + boundary.name
+            + "' is ignored by the structural solver because type '" + toString(boundary.type)
+            + "' is neither a load target nor a fixed constraint.");
         return std::nullopt;
     }
 
@@ -185,7 +187,7 @@ CalculiXBoundaryMapResult CalculiXBoundaryMapper::map(const CalculiXCaseData &ca
     const CalculiXSurfaceMapper surfaceMapper(caseData.meshData);
     for (const CalculiXBoundaryData &boundary : caseData.boundaries) {
         std::optional<CalculiXBoundaryExport> boundaryExport =
-            mapBoundary(caseData, surfaceMapper, boundary, result.errors);
+            mapBoundary(caseData, surfaceMapper, boundary, result.warnings, result.errors);
         if (boundaryExport.has_value()) {
             result.boundaries.push_back(std::move(*boundaryExport));
         }

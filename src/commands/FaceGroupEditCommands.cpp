@@ -27,7 +27,7 @@ public:
     void execute() override
     {
         if (!m_context.pickController) {
-            writeLogMessages(m_context.logPanel, {"Face group command failed: pick controller is not available."});
+            writeLogMessages(m_context, {"Face group command failed: pick controller is not available."});
             return;
         }
 
@@ -74,7 +74,7 @@ private:
             &accepted
         );
         if (!accepted) {
-            writeLogMessages(m_context.logPanel, {"Create face group canceled."});
+            writeLogMessages(m_context, {"Create face group canceled."});
             return;
         }
 
@@ -85,7 +85,7 @@ private:
             m_context.pickController->selections()
         );
         pushUndoSnapshot(before, result, "Create Face Group");
-        writeLogMessages(m_context.logPanel, result.logMessages);
+        writeLogMessages(m_context, result.logMessages);
     }
 
     void updateSelectedFaceGroup(
@@ -95,7 +95,7 @@ private:
     {
         const QString faceGroupId = selectedFaceGroupId(m_context);
         if (faceGroupId.isEmpty()) {
-            writeLogMessages(m_context.logPanel, {"Face group operation failed: select a face group first."});
+            writeLogMessages(m_context, {"Face group operation failed: select a face group first."});
             return;
         }
 
@@ -112,7 +112,7 @@ private:
         case FaceGroupEditCommandType::ClearFaces:
             if (QMessageBox::question(m_context.window, "Clear Face Group", "Clear all faces in \"" + faceGroupId + "\"?")
                 != QMessageBox::Yes) {
-                writeLogMessages(m_context.logPanel, {"Clear face group canceled."});
+                writeLogMessages(m_context, {"Clear face group canceled."});
                 return;
             }
             result = workflow.clearFaces(faceGroupId);
@@ -134,7 +134,7 @@ private:
         }
 
         pushUndoSnapshot(before, beforeSelectionId, result, undoText(type));
-        writeLogMessages(m_context.logPanel, result.logMessages);
+        writeLogMessages(m_context, result.logMessages);
     }
 
     void pushUndoSnapshot(
