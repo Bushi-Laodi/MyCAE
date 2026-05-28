@@ -4,7 +4,15 @@
 #include "occ/OCCGeometryFactory.h"
 #include "occ/OCCShapeIO.h"
 
+#include <Bnd_Box.hxx>
+#include <BRepBndLib.hxx>
+#include <BRepBuilderAPI_Transform.hxx>
 #include <TopoDS_Shape.hxx>
+#include <gp_Ax1.hxx>
+#include <gp_Dir.hxx>
+#include <gp_Pnt.hxx>
+#include <gp_Trsf.hxx>
+#include <gp_Vec.hxx>
 
 #include <QDateTime>
 #include <QDir>
@@ -18,9 +26,12 @@
 #include <QStringList>
 
 #include <exception>
+#include <cmath>
 
 namespace
 {
+constexpr double DegreesToRadians = 3.14159265358979323846 / 180.0;
+
 QString absoluteProjectFilePath(const Project &project, const QString &filePath)
 {
     return QFileInfo(filePath).isAbsolute()
@@ -156,6 +167,93 @@ void readCenterObject(const QJsonObject &object, double *x, double *y, double *z
     if (z) {
         *z = center.value("z").toDouble(0.0);
     }
+}
+
+bool shapeCenter(const TopoDS_Shape &shape, GeometryCenter *center, QString *errorMessage)
+{
+    if (!center) {
+        if (errorMessage) {
+            *errorMessage = "Internal error: center output is null.";
+        }
+        return false;
+    }
+
+    Bnd_Box bounds;
+    BRepBndLib::Add(shape, bounds);
+    if (bounds.IsVoid()) {
+        if (errorMessage) {
+            *errorMessage = "Cannot calculate geometry center: empty shape bounds.";
+        }
+        return false;
+    }
+
+    Standard_Real xmin = 0.0;
+    Standard_Real ymin = 0.0;
+    Standard_Real zmin = 0.0;
+    Standard_Real xmax = 0.0;
+    Standard_Real ymax = 0.0;
+    Standard_Real zmax = 0.0;
+    bounds.Get(xmin, ymin, zmin, xmax, ymax, zmax);
+    center->x = 0.5 * (xmin + xmax);
+    center->y = 0.5 * (ymin + ymax);
+    center->z = 0.5 * (zmin + zmax);
+    return true;
+}
+
+gp_Trsf rotationTransform(const gp_Pnt &center, double degrees, const gp_Dir &axis)
+{
+    gp_Trsf transform;
+    transform.SetRotation(gp_Ax1(center, axis), degrees * DegreesToRadians);
+    return transform;
+}
+
+bool updateGenericGeometryTransformJson(
+    const Project &project,
+    const GeometryObject &geometry,
+    const GeometryTransformParameters &parameters,
+    const GeometryCenter &newCenter,
+    QString *errorMessage
+)
+{
+    const QString jsonPath = absoluteProjectFilePath(project, geometry.jsonFile);
+    QFile file(jsonPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to open geometry JSON: " + file.errorString();
+        }
+        return false;
+    }
+    QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+    file.close();
+    if (!document.isObject()) {
+        if (errorMessage) {
+            *errorMessage = "Invalid geometry JSON: root is not an object.";
+        }
+        return false;
+    }
+
+    QJsonObject transform;
+    transform.insert("center", centerObject(newCenter.x, newCenter.y, newCenter.z));
+    transform.insert("translate", centerObject(parameters.translateX, parameters.translateY, parameters.translateZ));
+    transform.insert("rotationDegrees", centerObject(
+        parameters.rotateXDegrees,
+        parameters.rotateYDegrees,
+        parameters.rotateZDegrees
+    ));
+    transform.insert("uniformScale", parameters.uniformScale);
+    transform.insert("transformedAt", QDateTime::currentDateTime().toString(Qt::ISODate));
+
+    QJsonObject object = document.object();
+    object.insert("lastTransform", transform);
+
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to write geometry JSON: " + file.errorString();
+        }
+        return false;
+    }
+    file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
+    return true;
 }
 }
 
@@ -611,6 +709,160 @@ bool GeometryManager::deleteGeometry(
         return false;
     }
 
+    return true;
+}
+
+bool GeometryManager::geometryCenter(
+    const Project &project,
+    const GeometryObject &geometry,
+    GeometryCenter *center,
+    QString *errorMessage
+) const
+{
+    TopoDS_Shape shape;
+    if (!loadGeometryShape(project, geometry, &shape, errorMessage)) {
+        return false;
+    }
+    return shapeCenter(shape, center, errorMessage);
+}
+
+bool GeometryManager::transformGeometry(
+    const Project &project,
+    const GeometryObject &geometry,
+    const GeometryTransformParameters &parameters,
+    GeometryObject *transformedGeometry,
+    QStringList *logMessages,
+    QString *errorMessage
+) const
+{
+    if (!transformedGeometry) {
+        if (errorMessage) {
+            *errorMessage = "Internal error: transformed geometry output object is null.";
+        }
+        return false;
+    }
+    if (project.rootPath.isEmpty()) {
+        if (errorMessage) {
+            *errorMessage = "Please create or open a project before transforming geometry.";
+        }
+        return false;
+    }
+    if (geometry.name.trimmed().isEmpty()) {
+        if (errorMessage) {
+            *errorMessage = "Geometry name is empty.";
+        }
+        return false;
+    }
+    if (parameters.uniformScale <= 0.0) {
+        if (errorMessage) {
+            *errorMessage = "Uniform scale must be greater than 0.";
+        }
+        return false;
+    }
+
+    TopoDS_Shape shape;
+    if (!loadGeometryShape(project, geometry, &shape, errorMessage)) {
+        return false;
+    }
+
+    GeometryCenter originalCenter;
+    if (!shapeCenter(shape, &originalCenter, errorMessage)) {
+        return false;
+    }
+
+    double dx = parameters.translateX;
+    double dy = parameters.translateY;
+    double dz = parameters.translateZ;
+    if (parameters.setAbsoluteCenter) {
+        dx += parameters.targetCenterX - originalCenter.x;
+        dy += parameters.targetCenterY - originalCenter.y;
+        dz += parameters.targetCenterZ - originalCenter.z;
+    }
+
+    const gp_Pnt centerPoint(originalCenter.x, originalCenter.y, originalCenter.z);
+    gp_Trsf scale;
+    scale.SetScale(centerPoint, parameters.uniformScale);
+    const gp_Trsf rotateX = rotationTransform(centerPoint, parameters.rotateXDegrees, gp_Dir(1.0, 0.0, 0.0));
+    const gp_Trsf rotateY = rotationTransform(centerPoint, parameters.rotateYDegrees, gp_Dir(0.0, 1.0, 0.0));
+    const gp_Trsf rotateZ = rotationTransform(centerPoint, parameters.rotateZDegrees, gp_Dir(0.0, 0.0, 1.0));
+    gp_Trsf translate;
+    translate.SetTranslation(gp_Vec(dx, dy, dz));
+
+    gp_Trsf transform;
+    transform.SetIdentity();
+    transform.Multiply(translate);
+    transform.Multiply(rotateZ);
+    transform.Multiply(rotateY);
+    transform.Multiply(rotateX);
+    transform.Multiply(scale);
+
+    BRepBuilderAPI_Transform transformer(shape, transform, true);
+    const TopoDS_Shape transformedShape = transformer.Shape();
+
+    OCCShapeIO shapeIO;
+    if (!shapeIO.saveBREP(transformedShape, absoluteProjectFilePath(project, geometry.brepFile), errorMessage)) {
+        return false;
+    }
+    if (!shapeIO.saveSTEP(transformedShape, absoluteProjectFilePath(project, geometry.stepFile), errorMessage)) {
+        return false;
+    }
+
+    GeometryCenter newCenter;
+    if (!shapeCenter(transformedShape, &newCenter, errorMessage)) {
+        return false;
+    }
+
+    if (geometry.type == "box") {
+        BoxGeometry box;
+        if (!readBoxFile(absoluteProjectFilePath(project, geometry.jsonFile), &box, errorMessage)) {
+            return false;
+        }
+        box.centerX = newCenter.x;
+        box.centerY = newCenter.y;
+        box.centerZ = newCenter.z;
+        box.length *= parameters.uniformScale;
+        box.width *= parameters.uniformScale;
+        box.height *= parameters.uniformScale;
+        if (!writeBoxFile(box, errorMessage)) {
+            return false;
+        }
+    } else if (geometry.type == "cylinder") {
+        CylinderGeometry cylinder;
+        if (!readCylinderFile(absoluteProjectFilePath(project, geometry.jsonFile), &cylinder, errorMessage)) {
+            return false;
+        }
+        cylinder.centerX = newCenter.x;
+        cylinder.centerY = newCenter.y;
+        cylinder.centerZ = newCenter.z;
+        cylinder.radius *= parameters.uniformScale;
+        cylinder.height *= parameters.uniformScale;
+        if (!writeCylinderFile(cylinder, errorMessage)) {
+            return false;
+        }
+    } else if (geometry.type == "sphere") {
+        SphereGeometry sphere;
+        if (!readSphereFile(absoluteProjectFilePath(project, geometry.jsonFile), &sphere, errorMessage)) {
+            return false;
+        }
+        sphere.centerX = newCenter.x;
+        sphere.centerY = newCenter.y;
+        sphere.centerZ = newCenter.z;
+        sphere.radius *= parameters.uniformScale;
+        if (!writeSphereFile(sphere, errorMessage)) {
+            return false;
+        }
+    } else if (!updateGenericGeometryTransformJson(project, geometry, parameters, newCenter, errorMessage)) {
+        return false;
+    }
+
+    *transformedGeometry = geometry;
+    if (logMessages) {
+        logMessages->append(QString("Geometry transformed: %1").arg(geometry.name));
+        logMessages->append(QString("New center: (%1, %2, %3).")
+            .arg(newCenter.x, 0, 'g', 8)
+            .arg(newCenter.y, 0, 'g', 8)
+            .arg(newCenter.z, 0, 'g', 8));
+    }
     return true;
 }
 

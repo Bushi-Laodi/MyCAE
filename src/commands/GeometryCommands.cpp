@@ -75,6 +75,29 @@ private:
     WorkflowCommandContext m_context;
 };
 
+class GeometryTransformSelectedCommand final : public AppCommand
+{
+public:
+    explicit GeometryTransformSelectedCommand(WorkflowCommandContext context)
+        : m_context(context)
+    {
+    }
+
+    void execute() override
+    {
+        ProjectWorkflowController projectWorkflow = makeProjectWorkflow(m_context);
+        const GeometryWorkflowResult result =
+            makeGeometryWorkflow(m_context, projectWorkflow).transformSelectedGeometry();
+        if (result.success && m_context.pickController) {
+            m_context.pickController->clear(m_context.renderView);
+        }
+        writeLogMessages(m_context, result.logMessages);
+    }
+
+private:
+    WorkflowCommandContext m_context;
+};
+
 class GeometryDeleteSelectedCommand final : public AppCommand
 {
 public:
@@ -111,6 +134,11 @@ std::unique_ptr<AppCommand> makeGeometryBooleanCommand(WorkflowCommandContext co
 std::unique_ptr<AppCommand> makeGeometryImportStepCommand(WorkflowCommandContext context)
 {
     return std::make_unique<GeometryImportStepCommand>(context);
+}
+
+std::unique_ptr<AppCommand> makeGeometryTransformSelectedCommand(WorkflowCommandContext context)
+{
+    return std::make_unique<GeometryTransformSelectedCommand>(context);
 }
 
 std::unique_ptr<AppCommand> makeGeometryDeleteSelectedCommand(WorkflowCommandContext context)

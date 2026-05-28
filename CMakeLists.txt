@@ -140,6 +140,7 @@ qt_add_executable(MyCAE
     src/geometry/GeometryObject.h
     src/geometry/GeometryPropertyController.cpp
     src/geometry/GeometryPropertyController.h
+    src/geometry/GeometryTransform.h
     src/geometry/SphereGeometry.h
     src/commands/AppCommand.h
     src/commands/CommandUtilities.cpp
@@ -383,6 +384,8 @@ qt_add_executable(MyCAE
     src/ui/MainWindowViewController.h
     src/ui/MaterialDialog.cpp
     src/ui/MaterialDialog.h
+    src/ui/GeometryTransformDialog.cpp
+    src/ui/GeometryTransformDialog.h
     src/ui/MeshSetupDialog.cpp
     src/ui/MeshSetupDialog.h
     src/ui/ProjectResourceDialog.cpp

@@ -43,6 +43,9 @@ void MainWindowStateController::update(
     if (actions.createBoolean) {
         actions.createBoolean->setEnabled(hasProject && projectModel.geometryRepository().geometryObjects().size() >= 2);
     }
+    if (actions.transformGeometry) {
+        actions.transformGeometry->setEnabled(hasProject && projectModel.selection().kind == SelectionKind::Geometry);
+    }
     if (actions.deleteGeometry) {
         actions.deleteGeometry->setEnabled(hasProject && projectModel.selection().kind == SelectionKind::Geometry);
     }
