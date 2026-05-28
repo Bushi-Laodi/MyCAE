@@ -302,12 +302,12 @@ void SolverPropertyView::populateSolverCategory(QWidget *parent, const Simulatio
     form->addRow(zh(u8"时间步长:"), new QLabel(QString::number(simulationCase.runControl.timeStep), parent));
     form->addRow(zh(u8"写出间隔:"), new QLabel(QString::number(simulationCase.runControl.writeInterval), parent));
     form->addRow(zh(u8"后处理工具:"), new QLabel(simulationCase.postProcessingTool, parent));
-    form->addRow(zh(u8"材料数:"), new QLabel(QString::number(simulationCase.materials.size()), parent));
-    form->addRow(
-        zh(u8"边界条件数:"),
-        new QLabel(QString::number(simulationCase.boundaryConditions.size()), parent)
-    );
-    form->addRow(zh(u8"载荷数:"), new QLabel(QString::number(simulationCase.loads.size()), parent));
+    form->addRow(zh(u8"结构材料:"), new QLabel(QString::number(simulationCase.structuralCase.materials.size()), parent));
+    form->addRow(zh(u8"结构约束/目标:"), new QLabel(QString::number(simulationCase.structuralCase.constraints.size()), parent));
+    form->addRow(zh(u8"结构载荷:"), new QLabel(QString::number(simulationCase.structuralCase.loads.size()), parent));
+    form->addRow(zh(u8"流体材料:"), new QLabel(QString::number(simulationCase.cfdCase.materials.size()), parent));
+    form->addRow(zh(u8"CFD 边界:"), new QLabel(QString::number(simulationCase.cfdCase.boundaries.size()), parent));
+    form->addRow(zh(u8"CFD 场值:"), new QLabel(QString::number(simulationCase.cfdCase.fieldValues.size()), parent));
     dynamicLayout->addLayout(form);
 
     dynamicLayout->addWidget(new QLabel(zh(u8"<i>仿真导出会使用当前工程模型。</i>"), parent));

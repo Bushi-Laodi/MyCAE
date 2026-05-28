@@ -5,6 +5,7 @@
 #include "solver/BoundaryCondition.h"
 #include "solver/Load.h"
 #include "solver/Material.h"
+#include "solver/SimulationCase.h"
 #include "ui/UiIconFactory.h"
 
 #include <QBrush>
@@ -130,6 +131,17 @@ void clearChildren(QTreeWidgetItem *root)
         delete root->takeChild(0);
     }
 }
+
+QTreeWidgetItem *createDomainGroup(QTreeWidgetItem *root, const QString &text, const QIcon &icon)
+{
+    auto *item = new QTreeWidgetItem(QStringList{text});
+    applyCategoryStyle(item, icon);
+    if (root) {
+        root->addChild(item);
+    }
+    return item;
+}
+
 }
 
 ProjectTreePanel::ProjectTreePanel(QWidget *parent)
@@ -212,12 +224,23 @@ void ProjectTreePanel::setMaterialItems(const std::vector<Material> &materials)
     }
 
     clearChildren(m_materialRoot);
+    QTreeWidgetItem *structuralRoot = createDomainGroup(
+        m_materialRoot,
+        zh(u8"结构材料"),
+        UiIconFactory::treeBadge("S", QColor("#475569"))
+    );
+    QTreeWidgetItem *cfdRoot = createDomainGroup(
+        m_materialRoot,
+        zh(u8"流体材料"),
+        UiIconFactory::treeBadge("F", QColor("#0891b2"))
+    );
     for (const Material &material : materials) {
         auto *item = new QTreeWidgetItem(QStringList{material.name});
         setItemSelection(item, Selection::item(SelectionKind::Material, material.id, material.name));
         item->setToolTip(0, material.id);
-        applyLeafStyle(item, UiIconFactory::treeBadge("Mt", QColor("#16a34a")));
-        m_materialRoot->addChild(item);
+        const bool structural = isStructuralMaterial(material);
+        applyLeafStyle(item, UiIconFactory::treeBadge(structural ? "SM" : "FM", structural ? QColor("#475569") : QColor("#0891b2")));
+        (structural ? structuralRoot : cfdRoot)->addChild(item);
     }
 
     m_tree->expandAll();
@@ -230,6 +253,16 @@ void ProjectTreePanel::setBoundaryConditionItems(const std::vector<BoundaryCondi
     }
 
     clearChildren(m_boundaryConditionRoot);
+    QTreeWidgetItem *structuralRoot = createDomainGroup(
+        m_boundaryConditionRoot,
+        zh(u8"结构约束 / 载荷目标"),
+        UiIconFactory::treeBadge("S", QColor("#475569"))
+    );
+    QTreeWidgetItem *cfdRoot = createDomainGroup(
+        m_boundaryConditionRoot,
+        zh(u8"CFD 边界"),
+        UiIconFactory::treeBadge("CFD", QColor("#0891b2"))
+    );
     for (const BoundaryCondition &boundaryCondition : boundaryConditions) {
         auto *item = new QTreeWidgetItem(QStringList{boundaryCondition.name});
         setItemSelection(
@@ -237,8 +270,9 @@ void ProjectTreePanel::setBoundaryConditionItems(const std::vector<BoundaryCondi
             Selection::item(SelectionKind::BoundaryCondition, boundaryCondition.id, boundaryCondition.name)
         );
         item->setToolTip(0, boundaryCondition.id);
-        applyLeafStyle(item, UiIconFactory::treeBadge("BC", QColor("#ca8a04")));
-        m_boundaryConditionRoot->addChild(item);
+        const bool structural = isStructuralConstraint(boundaryCondition, {});
+        applyLeafStyle(item, UiIconFactory::treeBadge(structural ? "SB" : "CB", structural ? QColor("#ca8a04") : QColor("#0891b2")));
+        (structural ? structuralRoot : cfdRoot)->addChild(item);
     }
 
     m_tree->expandAll();
@@ -251,12 +285,23 @@ void ProjectTreePanel::setLoadItems(const std::vector<Load> &loads)
     }
 
     clearChildren(m_loadRoot);
+    QTreeWidgetItem *structuralRoot = createDomainGroup(
+        m_loadRoot,
+        zh(u8"结构载荷"),
+        UiIconFactory::treeBadge("SL", QColor("#dc2626"))
+    );
+    QTreeWidgetItem *cfdRoot = createDomainGroup(
+        m_loadRoot,
+        zh(u8"CFD 场值"),
+        UiIconFactory::treeBadge("CF", QColor("#0891b2"))
+    );
     for (const Load &load : loads) {
         auto *item = new QTreeWidgetItem(QStringList{load.name});
         setItemSelection(item, Selection::item(SelectionKind::Load, load.id, load.name));
         item->setToolTip(0, load.id);
-        applyLeafStyle(item, UiIconFactory::treeBadge("L", QColor("#dc2626")));
-        m_loadRoot->addChild(item);
+        const bool cfd = isCfdFieldValueType(load.type) && load.type == LoadType::Velocity;
+        applyLeafStyle(item, UiIconFactory::treeBadge(cfd ? "CF" : "SL", cfd ? QColor("#0891b2") : QColor("#dc2626")));
+        (cfd ? cfdRoot : structuralRoot)->addChild(item);
     }
 
     m_tree->expandAll();

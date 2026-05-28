@@ -47,6 +47,7 @@ SolverCaseWriterResult OpenFoamCaseWriter::write(const SolverCaseContext &contex
     }
 
     const SimulationCase &simulationCase = *context.simulationCase;
+    const CfdCase &cfdCase = simulationCase.cfdCase;
     const MeshObject *mesh = caseMesh(context);
 
     QJsonObject manifest;
@@ -55,12 +56,12 @@ SolverCaseWriterResult OpenFoamCaseWriter::write(const SolverCaseContext &contex
     manifest.insert("caseName", context.caseName);
     manifest.insert("caseDirectory", QDir::toNativeSeparators(context.caseDirectory));
     manifest.insert("serviceUrl", OpenFoamServiceClient::defaultBaseUrl().toString(QUrl::StripTrailingSlash));
-    manifest.insert("meshName", simulationCase.meshName);
+    manifest.insert("meshName", cfdCase.meshName.trimmed().isEmpty() ? simulationCase.meshName : cfdCase.meshName);
     manifest.insert("meshNodeCount", mesh ? mesh->nodeCount : 0);
     manifest.insert("meshCellCount", mesh ? mesh->tetraCount : 0);
-    manifest.insert("materialCount", static_cast<int>(simulationCase.materials.size()));
-    manifest.insert("boundaryConditionCount", static_cast<int>(simulationCase.boundaryConditions.size()));
-    manifest.insert("loadCount", static_cast<int>(simulationCase.loads.size()));
+    manifest.insert("materialCount", static_cast<int>(cfdCase.materials.size()));
+    manifest.insert("boundaryConditionCount", static_cast<int>(cfdCase.boundaries.size()));
+    manifest.insert("loadCount", static_cast<int>(cfdCase.fieldValues.size()));
 
     const QString manifestPath = OpenFoamServiceClient::requestManifestPath(context.caseDirectory);
     if (!writeManifest(manifestPath, manifest, result.errors)) {

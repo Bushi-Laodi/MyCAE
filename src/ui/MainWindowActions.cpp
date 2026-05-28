@@ -50,8 +50,14 @@ constexpr auto CommandDeleteFaceGroup = "picking.faceGroup.delete";
 constexpr auto CommandSetFaceGroupLocalMeshSize = "picking.faceGroup.localMeshSize";
 constexpr auto CommandToggleFaceGroupPhysicalGroup = "picking.faceGroup.togglePhysicalGroup";
 constexpr auto CommandCreateMaterial = "solverData.create.material";
+constexpr auto CommandCreateStructuralMaterial = "solverData.create.structuralMaterial";
+constexpr auto CommandCreateFluidMaterial = "solverData.create.fluidMaterial";
 constexpr auto CommandCreateBoundaryCondition = "solverData.create.boundaryCondition";
+constexpr auto CommandCreateStructuralBoundaryCondition = "solverData.create.structuralBoundaryCondition";
+constexpr auto CommandCreateCfdBoundaryCondition = "solverData.create.cfdBoundaryCondition";
 constexpr auto CommandCreateLoad = "solverData.create.load";
+constexpr auto CommandCreateStructuralLoad = "solverData.create.structuralLoad";
+constexpr auto CommandCreateCfdFieldValue = "solverData.create.cfdFieldValue";
 constexpr auto CommandEditSolverData = "solverData.editSelected";
 constexpr auto CommandDeleteSolverData = "solverData.deleteSelected";
 }
@@ -300,6 +306,22 @@ MainWindowActions MainWindowActionBuilder::build(
         makeSolverDataCommand(context, SolverDataCommandType::CreateMaterial)
     );
 
+    actions.createStructuralMaterial = new QAction(zh(u8"创建结构材料"), window);
+    actionRegistry.registerActionCommand(
+        CommandCreateStructuralMaterial,
+        actions.createStructuralMaterial,
+        window,
+        makeSolverDataCommand(context, SolverDataCommandType::CreateStructuralMaterial)
+    );
+
+    actions.createFluidMaterial = new QAction(zh(u8"创建流体材料"), window);
+    actionRegistry.registerActionCommand(
+        CommandCreateFluidMaterial,
+        actions.createFluidMaterial,
+        window,
+        makeSolverDataCommand(context, SolverDataCommandType::CreateFluidMaterial)
+    );
+
     actions.createBoundaryCondition = new QAction(zh(u8"创建边界条件"), window);
     actions.createBoundaryCondition->setStatusTip(zh(u8"创建新的边界条件"));
     actionRegistry.registerActionCommand(
@@ -309,6 +331,22 @@ MainWindowActions MainWindowActionBuilder::build(
         makeSolverDataCommand(context, SolverDataCommandType::CreateBoundaryCondition)
     );
 
+    actions.createStructuralBoundaryCondition = new QAction(zh(u8"创建结构约束"), window);
+    actionRegistry.registerActionCommand(
+        CommandCreateStructuralBoundaryCondition,
+        actions.createStructuralBoundaryCondition,
+        window,
+        makeSolverDataCommand(context, SolverDataCommandType::CreateStructuralBoundaryCondition)
+    );
+
+    actions.createCfdBoundaryCondition = new QAction(zh(u8"创建 CFD 边界"), window);
+    actionRegistry.registerActionCommand(
+        CommandCreateCfdBoundaryCondition,
+        actions.createCfdBoundaryCondition,
+        window,
+        makeSolverDataCommand(context, SolverDataCommandType::CreateCfdBoundaryCondition)
+    );
+
     actions.createLoad = new QAction(zh(u8"创建载荷"), window);
     actions.createLoad->setStatusTip(zh(u8"创建新载荷"));
     actionRegistry.registerActionCommand(
@@ -316,6 +354,22 @@ MainWindowActions MainWindowActionBuilder::build(
         actions.createLoad,
         window,
         makeSolverDataCommand(context, SolverDataCommandType::CreateLoad)
+    );
+
+    actions.createStructuralLoad = new QAction(zh(u8"创建结构载荷"), window);
+    actionRegistry.registerActionCommand(
+        CommandCreateStructuralLoad,
+        actions.createStructuralLoad,
+        window,
+        makeSolverDataCommand(context, SolverDataCommandType::CreateStructuralLoad)
+    );
+
+    actions.createCfdFieldValue = new QAction(zh(u8"创建 CFD 场值"), window);
+    actionRegistry.registerActionCommand(
+        CommandCreateCfdFieldValue,
+        actions.createCfdFieldValue,
+        window,
+        makeSolverDataCommand(context, SolverDataCommandType::CreateCfdFieldValue)
     );
 
     actions.editSolverData = new QAction(zh(u8"编辑选中求解数据"), window);

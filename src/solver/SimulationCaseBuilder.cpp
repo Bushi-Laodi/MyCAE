@@ -46,6 +46,61 @@ QString selectedOrFirstMeshName(const ProjectModel &projectModel)
     return {};
 }
 
+StructuralCase buildStructuralCase(const SimulationCase &simulationCase)
+{
+    StructuralCase structuralCase;
+    structuralCase.id = simulationCase.id + "_structural";
+    structuralCase.name = simulationCase.name + " - Structural";
+    structuralCase.sourceGeometryName = simulationCase.sourceGeometryName;
+    structuralCase.meshName = simulationCase.meshName;
+
+    for (const Material &material : simulationCase.materials) {
+        if (isStructuralMaterial(material)) {
+            structuralCase.materials.push_back(material);
+        }
+    }
+    for (const BoundaryCondition &boundaryCondition : simulationCase.boundaryConditions) {
+        if (isStructuralConstraint(boundaryCondition, simulationCase.loads)) {
+            structuralCase.constraints.push_back(boundaryCondition);
+        }
+    }
+    for (const Load &load : simulationCase.loads) {
+        if (load.enabled && isStructuralLoadType(load.type)) {
+            structuralCase.loads.push_back(load);
+        }
+    }
+    return structuralCase;
+}
+
+CfdCase buildCfdCase(const SimulationCase &simulationCase)
+{
+    CfdCase cfdCase;
+    cfdCase.id = simulationCase.id + "_cfd";
+    cfdCase.name = simulationCase.name + " - CFD";
+    cfdCase.sourceGeometryName = simulationCase.sourceGeometryName;
+    cfdCase.meshName = simulationCase.meshName;
+    cfdCase.solverType = simulationCase.solverType;
+    cfdCase.turbulenceModel = simulationCase.turbulenceModel;
+    cfdCase.runControl = simulationCase.runControl;
+
+    for (const Material &material : simulationCase.materials) {
+        if (isCfdMaterial(material)) {
+            cfdCase.materials.push_back(material);
+        }
+    }
+    for (const BoundaryCondition &boundaryCondition : simulationCase.boundaryConditions) {
+        if (isCfdBoundary(boundaryCondition)) {
+            cfdCase.boundaries.push_back(boundaryCondition);
+        }
+    }
+    for (const Load &load : simulationCase.loads) {
+        if (load.enabled && isCfdFieldValueType(load.type)) {
+            cfdCase.fieldValues.push_back(load);
+        }
+    }
+    return cfdCase;
+}
+
 }
 
 SimulationCase SimulationCaseBuilder::fromProjectModel(const ProjectModel &projectModel)
@@ -64,5 +119,7 @@ SimulationCase SimulationCaseBuilder::fromProjectModel(const ProjectModel &proje
     simulationCase.boundaryConditions = solverRepository.boundaryConditions();
     simulationCase.loads = solverRepository.loads();
     simulationCase.geometrySetup.faceGroups = solverRepository.faceGroups();
+    simulationCase.structuralCase = buildStructuralCase(simulationCase);
+    simulationCase.cfdCase = buildCfdCase(simulationCase);
     return simulationCase;
 }

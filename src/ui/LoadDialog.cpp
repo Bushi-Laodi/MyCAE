@@ -62,6 +62,26 @@ LoadType selectedLoadType(const QComboBox *combo)
 {
     return static_cast<LoadType>(combo->currentData().toInt());
 }
+
+QString loadTypeLabel(LoadType type)
+{
+    switch (type) {
+    case LoadType::Velocity:
+        return zh(u8"速度");
+    case LoadType::Pressure:
+        return zh(u8"压力");
+    case LoadType::BodyForce:
+        return zh(u8"体力");
+    case LoadType::Unknown:
+        return zh(u8"未知");
+    }
+    return zh(u8"未知");
+}
+
+std::vector<LoadType> defaultLoadTypes()
+{
+    return {LoadType::Velocity, LoadType::Pressure, LoadType::BodyForce};
+}
 }
 
 LoadDialog::LoadDialog(
@@ -85,9 +105,12 @@ void LoadDialog::setupUi()
     form->addRow(zh(u8"名称:"), m_nameEdit);
 
     m_typeCombo = new QComboBox(this);
-    m_typeCombo->addItem(zh(u8"速度"), static_cast<int>(LoadType::Velocity));
-    m_typeCombo->addItem(zh(u8"压力"), static_cast<int>(LoadType::Pressure));
-    m_typeCombo->addItem(zh(u8"体力"), static_cast<int>(LoadType::BodyForce));
+    const std::vector<LoadType> loadTypes =
+        m_options.allowedTypes.empty() ? defaultLoadTypes() : m_options.allowedTypes;
+    for (const LoadType type : loadTypes) {
+        m_typeCombo->addItem(loadTypeLabel(type), static_cast<int>(type));
+    }
+    m_typeCombo->setEnabled(loadTypes.size() > 1);
     form->addRow(zh(u8"类型:"), m_typeCombo);
 
     m_boundaryConditionIdCombo = new QComboBox(this);

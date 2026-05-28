@@ -77,9 +77,14 @@ void MainWindowMenuBuilder::build(
     faceGroupMenu->addAction(actions.toggleFaceGroupPhysicalGroup);
 
     auto *caseMenu = window->menuBar()->addMenu(zh(u8"工况"));
-    caseMenu->addAction(actions.createMaterial);
-    caseMenu->addAction(actions.createBoundaryCondition);
-    caseMenu->addAction(actions.createLoad);
+    auto *structuralCaseMenu = caseMenu->addMenu(zh(u8"结构工况"));
+    structuralCaseMenu->addAction(actions.createStructuralMaterial);
+    structuralCaseMenu->addAction(actions.createStructuralBoundaryCondition);
+    structuralCaseMenu->addAction(actions.createStructuralLoad);
+    auto *cfdCaseMenu = caseMenu->addMenu(zh(u8"CFD 工况"));
+    cfdCaseMenu->addAction(actions.createFluidMaterial);
+    cfdCaseMenu->addAction(actions.createCfdBoundaryCondition);
+    cfdCaseMenu->addAction(actions.createCfdFieldValue);
     caseMenu->addSeparator();
     caseMenu->addAction(actions.editSolverData);
     caseMenu->addAction(actions.deleteSolverData);

@@ -106,7 +106,11 @@ ResultObject makeResultObject(
     resultObject.id = resultId(pluginId);
     resultObject.name = descriptor.name + " Result";
     resultObject.solverName = descriptor.name;
-    resultObject.meshName = simulationCase.meshName;
+    resultObject.meshName = descriptor.id == "openfoam" && !simulationCase.cfdCase.meshName.trimmed().isEmpty()
+        ? simulationCase.cfdCase.meshName
+        : (descriptor.id == "calculix" && !simulationCase.structuralCase.meshName.trimmed().isEmpty()
+            ? simulationCase.structuralCase.meshName
+            : simulationCase.meshName);
     resultObject.casePath = caseDirectory;
     resultObject.logFile = runResult.logFile;
     resultObject.resultFiles = readResult.resultFiles;
@@ -186,10 +190,22 @@ SolverCaseWorkflowResult SolverCaseWorkflowController::runPlugin(const QString &
     result.logMessages.append(zh(u8"求解器插件：") + descriptor->name + " (" + descriptor->id + ")");
     result.logMessages.append(zh(u8"求解器类型：") + descriptor->solverFamily);
     result.logMessages.append(zh(u8"求解算例目录：") + caseDirectory);
-    result.logMessages.append(zh(u8"求解算例数据：%1 个材料，%2 个边界条件，%3 个载荷。")
-        .arg(simulationCase.materials.size())
-        .arg(simulationCase.boundaryConditions.size())
-        .arg(simulationCase.loads.size()));
+    if (pluginId == "calculix") {
+        result.logMessages.append(QString("Structural case data: %1 material(s), %2 constraint/load target(s), %3 load(s).")
+            .arg(simulationCase.structuralCase.materials.size())
+            .arg(simulationCase.structuralCase.constraints.size())
+            .arg(simulationCase.structuralCase.loads.size()));
+    } else if (pluginId == "openfoam") {
+        result.logMessages.append(QString("CFD case data: %1 fluid material(s), %2 boundary condition(s), %3 field value(s).")
+            .arg(simulationCase.cfdCase.materials.size())
+            .arg(simulationCase.cfdCase.boundaries.size())
+            .arg(simulationCase.cfdCase.fieldValues.size()));
+    } else {
+        result.logMessages.append(zh(u8"求解算例数据：%1 个材料，%2 个边界条件，%3 个载荷。")
+            .arg(simulationCase.materials.size())
+            .arg(simulationCase.boundaryConditions.size())
+            .arg(simulationCase.loads.size()));
+    }
 
     if (!descriptor->isUsable()) {
         result.logMessages.append(zh(u8"运行求解器失败：插件为预留状态或不可用。"));

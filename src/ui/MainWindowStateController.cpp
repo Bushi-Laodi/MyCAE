@@ -93,11 +93,29 @@ void MainWindowStateController::update(
     if (actions.createMaterial) {
         actions.createMaterial->setEnabled(hasProject);
     }
+    if (actions.createStructuralMaterial) {
+        actions.createStructuralMaterial->setEnabled(hasProject);
+    }
+    if (actions.createFluidMaterial) {
+        actions.createFluidMaterial->setEnabled(hasProject);
+    }
     if (actions.createBoundaryCondition) {
         actions.createBoundaryCondition->setEnabled(hasProject);
     }
+    if (actions.createStructuralBoundaryCondition) {
+        actions.createStructuralBoundaryCondition->setEnabled(hasProject);
+    }
+    if (actions.createCfdBoundaryCondition) {
+        actions.createCfdBoundaryCondition->setEnabled(hasProject);
+    }
     if (actions.createLoad) {
         actions.createLoad->setEnabled(hasProject);
+    }
+    if (actions.createStructuralLoad) {
+        actions.createStructuralLoad->setEnabled(hasProject);
+    }
+    if (actions.createCfdFieldValue) {
+        actions.createCfdFieldValue->setEnabled(hasProject);
     }
     if (actions.editSolverData) {
         actions.editSolverData->setEnabled(hasProject && capabilities.canEditSolverData);

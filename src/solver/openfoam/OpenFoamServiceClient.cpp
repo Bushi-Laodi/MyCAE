@@ -77,7 +77,10 @@ const MeshObject *caseMesh(const SolverCaseContext &context)
     if (!context.projectModel || !context.simulationCase) {
         return nullptr;
     }
-    return context.projectModel->findMeshByName(context.simulationCase->meshName);
+    const QString meshName = context.simulationCase->cfdCase.meshName.trimmed().isEmpty()
+        ? context.simulationCase->meshName
+        : context.simulationCase->cfdCase.meshName;
+    return context.projectModel->findMeshByName(meshName);
 }
 }
 
@@ -190,6 +193,7 @@ QJsonObject OpenFoamServiceClient::buildRequest(const SolverCaseContext &context
 {
     const MeshObject *mesh = caseMesh(context);
     const SimulationCase *simulationCase = context.simulationCase;
+    const CfdCase *cfdCase = simulationCase ? &simulationCase->cfdCase : nullptr;
 
     QJsonObject metadata;
     metadata.insert("solver", "openfoam-demo");
@@ -199,16 +203,18 @@ QJsonObject OpenFoamServiceClient::buildRequest(const SolverCaseContext &context
     payload.insert("caseName", context.caseName);
     payload.insert("caseDirectory", QDir::toNativeSeparators(context.caseDirectory));
     payload.insert("projectName", projectName(context));
-    payload.insert("meshName", simulationCase ? simulationCase->meshName : QString());
+    payload.insert("meshName", cfdCase && !cfdCase->meshName.trimmed().isEmpty()
+        ? cfdCase->meshName
+        : (simulationCase ? simulationCase->meshName : QString()));
     payload.insert("geometryCount", context.projectModel ? static_cast<int>(context.projectModel->geometryObjects().size()) : 0);
     payload.insert("meshNodeCount", mesh ? mesh->nodeCount : 0);
     payload.insert("meshCellCount", mesh ? mesh->tetraCount : 0);
-    payload.insert("materialCount", simulationCase ? static_cast<int>(simulationCase->materials.size()) : 0);
+    payload.insert("materialCount", cfdCase ? static_cast<int>(cfdCase->materials.size()) : 0);
     payload.insert(
         "boundaryConditionCount",
-        simulationCase ? static_cast<int>(simulationCase->boundaryConditions.size()) : 0
+        cfdCase ? static_cast<int>(cfdCase->boundaries.size()) : 0
     );
-    payload.insert("loadCount", simulationCase ? static_cast<int>(simulationCase->loads.size()) : 0);
+    payload.insert("loadCount", cfdCase ? static_cast<int>(cfdCase->fieldValues.size()) : 0);
     payload.insert("metadata", metadata);
     return payload;
 }

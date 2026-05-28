@@ -7,6 +7,7 @@
 #include "project/ProjectModel.h"
 #include "PropertyPanel.h"
 #include "solver/SolverDataService.h"
+#include "solver/SimulationCase.h"
 
 #include <QMessageBox>
 
@@ -50,6 +51,26 @@ BoundaryConditionDialogOptions boundaryConditionDialogOptions(const ProjectModel
     return options;
 }
 
+BoundaryConditionDialogOptions structuralBoundaryConditionDialogOptions(const ProjectModel &projectModel)
+{
+    BoundaryConditionDialogOptions options = boundaryConditionDialogOptions(projectModel);
+    options.allowedTypes = {BoundaryConditionType::Wall, BoundaryConditionType::Symmetry};
+    return options;
+}
+
+BoundaryConditionDialogOptions cfdBoundaryConditionDialogOptions(const ProjectModel &projectModel)
+{
+    BoundaryConditionDialogOptions options = boundaryConditionDialogOptions(projectModel);
+    options.allowedTypes = {
+        BoundaryConditionType::Wall,
+        BoundaryConditionType::VelocityInlet,
+        BoundaryConditionType::PressureInlet,
+        BoundaryConditionType::PressureOutlet,
+        BoundaryConditionType::Symmetry
+    };
+    return options;
+}
+
 LoadDialogOptions loadDialogOptions(const ProjectModel &projectModel)
 {
     LoadDialogOptions options;
@@ -70,6 +91,20 @@ LoadDialogOptions loadDialogOptions(const ProjectModel &projectModel)
         options.defaultBoundaryConditionId = options.boundaryConditions.front().id;
     }
 
+    return options;
+}
+
+LoadDialogOptions structuralLoadDialogOptions(const ProjectModel &projectModel)
+{
+    LoadDialogOptions options = loadDialogOptions(projectModel);
+    options.allowedTypes = {LoadType::Pressure, LoadType::BodyForce};
+    return options;
+}
+
+LoadDialogOptions cfdFieldValueDialogOptions(const ProjectModel &projectModel)
+{
+    LoadDialogOptions options = loadDialogOptions(projectModel);
+    options.allowedTypes = {LoadType::Velocity, LoadType::Pressure};
     return options;
 }
 }
@@ -189,6 +224,40 @@ SolverDataControllerResult SolverDataController::createMaterial(QWidget *parent,
     return SolverDataService::createMaterial(projectModel, *newMaterial);
 }
 
+SolverDataControllerResult SolverDataController::createStructuralMaterial(QWidget *parent, ProjectModel &projectModel)
+{
+    if (!projectModel.hasProject()) {
+        return noProjectResult(zh(u8"创建结构材料"));
+    }
+
+    MaterialDialogOptions options;
+    options.fixedDomain = MaterialDomain::Solid;
+    const std::optional<Material> newMaterial = MaterialDialog::createMaterial(parent, options);
+    if (!newMaterial) {
+        SolverDataControllerResult result;
+        result.logMessages.append(zh(u8"已取消创建结构材料。"));
+        return result;
+    }
+    return SolverDataService::createMaterial(projectModel, *newMaterial);
+}
+
+SolverDataControllerResult SolverDataController::createFluidMaterial(QWidget *parent, ProjectModel &projectModel)
+{
+    if (!projectModel.hasProject()) {
+        return noProjectResult(zh(u8"创建流体材料"));
+    }
+
+    MaterialDialogOptions options;
+    options.fixedDomain = MaterialDomain::Fluid;
+    const std::optional<Material> newMaterial = MaterialDialog::createMaterial(parent, options);
+    if (!newMaterial) {
+        SolverDataControllerResult result;
+        result.logMessages.append(zh(u8"已取消创建流体材料。"));
+        return result;
+    }
+    return SolverDataService::createMaterial(projectModel, *newMaterial);
+}
+
 SolverDataControllerResult SolverDataController::createBoundaryCondition(QWidget *parent, ProjectModel &projectModel)
 {
     if (!projectModel.hasProject()) {
@@ -205,6 +274,38 @@ SolverDataControllerResult SolverDataController::createBoundaryCondition(QWidget
     return SolverDataService::createBoundaryCondition(projectModel, *newBoundaryCondition);
 }
 
+SolverDataControllerResult SolverDataController::createStructuralBoundaryCondition(QWidget *parent, ProjectModel &projectModel)
+{
+    if (!projectModel.hasProject()) {
+        return noProjectResult(zh(u8"创建结构约束"));
+    }
+
+    const std::optional<BoundaryCondition> newBoundaryCondition =
+        BoundaryConditionDialog::createBoundaryCondition(parent, structuralBoundaryConditionDialogOptions(projectModel));
+    if (!newBoundaryCondition) {
+        SolverDataControllerResult result;
+        result.logMessages.append(zh(u8"已取消创建结构约束。"));
+        return result;
+    }
+    return SolverDataService::createBoundaryCondition(projectModel, *newBoundaryCondition);
+}
+
+SolverDataControllerResult SolverDataController::createCfdBoundaryCondition(QWidget *parent, ProjectModel &projectModel)
+{
+    if (!projectModel.hasProject()) {
+        return noProjectResult(zh(u8"创建 CFD 边界"));
+    }
+
+    const std::optional<BoundaryCondition> newBoundaryCondition =
+        BoundaryConditionDialog::createBoundaryCondition(parent, cfdBoundaryConditionDialogOptions(projectModel));
+    if (!newBoundaryCondition) {
+        SolverDataControllerResult result;
+        result.logMessages.append(zh(u8"已取消创建 CFD 边界。"));
+        return result;
+    }
+    return SolverDataService::createBoundaryCondition(projectModel, *newBoundaryCondition);
+}
+
 SolverDataControllerResult SolverDataController::createLoad(QWidget *parent, ProjectModel &projectModel)
 {
     if (!projectModel.hasProject()) {
@@ -215,6 +316,36 @@ SolverDataControllerResult SolverDataController::createLoad(QWidget *parent, Pro
     const std::optional<Load> newLoad = LoadDialog::createLoad(parent, loadDialogOptions(projectModel));
     if (!newLoad) {
         result.logMessages.append(zh(u8"已取消创建载荷。"));
+        return result;
+    }
+    return SolverDataService::createLoad(projectModel, *newLoad);
+}
+
+SolverDataControllerResult SolverDataController::createStructuralLoad(QWidget *parent, ProjectModel &projectModel)
+{
+    if (!projectModel.hasProject()) {
+        return noProjectResult(zh(u8"创建结构载荷"));
+    }
+
+    const std::optional<Load> newLoad = LoadDialog::createLoad(parent, structuralLoadDialogOptions(projectModel));
+    if (!newLoad) {
+        SolverDataControllerResult result;
+        result.logMessages.append(zh(u8"已取消创建结构载荷。"));
+        return result;
+    }
+    return SolverDataService::createLoad(projectModel, *newLoad);
+}
+
+SolverDataControllerResult SolverDataController::createCfdFieldValue(QWidget *parent, ProjectModel &projectModel)
+{
+    if (!projectModel.hasProject()) {
+        return noProjectResult(zh(u8"创建 CFD 场值"));
+    }
+
+    const std::optional<Load> newLoad = LoadDialog::createLoad(parent, cfdFieldValueDialogOptions(projectModel));
+    if (!newLoad) {
+        SolverDataControllerResult result;
+        result.logMessages.append(zh(u8"已取消创建 CFD 场值。"));
         return result;
     }
     return SolverDataService::createLoad(projectModel, *newLoad);

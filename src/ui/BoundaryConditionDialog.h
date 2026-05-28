@@ -7,6 +7,7 @@
 #include <QStringList>
 
 #include <optional>
+#include <vector>
 
 class QLineEdit;
 class QComboBox;
@@ -16,6 +17,7 @@ struct BoundaryConditionDialogOptions
     QStringList geometryNames;
     QMap<QString, QStringList> faceGroupsByGeometry;
     QStringList materialIds;
+    std::vector<BoundaryConditionType> allowedTypes;
     QString defaultGeometryName;
     QString defaultFaceGroupId;
 };

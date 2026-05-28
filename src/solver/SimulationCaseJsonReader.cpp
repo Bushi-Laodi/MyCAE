@@ -253,6 +253,114 @@ Load loadFromJson(const QJsonObject &object)
     load.enabled = boolValue(object, "enabled", true);
     return load;
 }
+
+StructuralCase deriveStructuralCase(const SimulationCase &simulationCase)
+{
+    StructuralCase structuralCase;
+    structuralCase.id = simulationCase.id + "_structural";
+    structuralCase.name = simulationCase.name + " - Structural";
+    structuralCase.sourceGeometryName = simulationCase.sourceGeometryName;
+    structuralCase.meshName = simulationCase.meshName;
+    for (const Material &material : simulationCase.materials) {
+        if (isStructuralMaterial(material)) {
+            structuralCase.materials.push_back(material);
+        }
+    }
+    for (const BoundaryCondition &boundaryCondition : simulationCase.boundaryConditions) {
+        if (isStructuralConstraint(boundaryCondition, simulationCase.loads)) {
+            structuralCase.constraints.push_back(boundaryCondition);
+        }
+    }
+    for (const Load &load : simulationCase.loads) {
+        if (load.enabled && isStructuralLoadType(load.type)) {
+            structuralCase.loads.push_back(load);
+        }
+    }
+    return structuralCase;
+}
+
+CfdCase deriveCfdCase(const SimulationCase &simulationCase)
+{
+    CfdCase cfdCase;
+    cfdCase.id = simulationCase.id + "_cfd";
+    cfdCase.name = simulationCase.name + " - CFD";
+    cfdCase.sourceGeometryName = simulationCase.sourceGeometryName;
+    cfdCase.meshName = simulationCase.meshName;
+    cfdCase.solverType = simulationCase.solverType;
+    cfdCase.turbulenceModel = simulationCase.turbulenceModel;
+    cfdCase.runControl = simulationCase.runControl;
+    for (const Material &material : simulationCase.materials) {
+        if (isCfdMaterial(material)) {
+            cfdCase.materials.push_back(material);
+        }
+    }
+    for (const BoundaryCondition &boundaryCondition : simulationCase.boundaryConditions) {
+        if (isCfdBoundary(boundaryCondition)) {
+            cfdCase.boundaries.push_back(boundaryCondition);
+        }
+    }
+    for (const Load &load : simulationCase.loads) {
+        if (load.enabled && isCfdFieldValueType(load.type)) {
+            cfdCase.fieldValues.push_back(load);
+        }
+    }
+    return cfdCase;
+}
+
+StructuralCase structuralCaseFromJson(const QJsonObject &object, const SimulationCase &fallback)
+{
+    if (object.isEmpty()) {
+        return deriveStructuralCase(fallback);
+    }
+
+    StructuralCase structuralCase;
+    structuralCase.id = stringValue(object, "id", fallback.id + "_structural");
+    structuralCase.name = stringValue(object, "name", fallback.name + " - Structural");
+    structuralCase.sourceGeometryName = stringValue(object, "sourceGeometryName", fallback.sourceGeometryName);
+    structuralCase.meshName = stringValue(object, "meshName", fallback.meshName);
+    for (const QJsonValue &materialValue : object.value("materials").toArray()) {
+        structuralCase.materials.push_back(materialFromJson(materialValue.toObject()));
+    }
+    for (const QJsonValue &constraintValue : object.value("constraints").toArray()) {
+        structuralCase.constraints.push_back(boundaryConditionFromJson(constraintValue.toObject()));
+    }
+    for (const QJsonValue &loadValue : object.value("loads").toArray()) {
+        structuralCase.loads.push_back(loadFromJson(loadValue.toObject()));
+    }
+    return structuralCase;
+}
+
+CfdCase cfdCaseFromJson(const QJsonObject &object, const SimulationCase &fallback)
+{
+    if (object.isEmpty()) {
+        return deriveCfdCase(fallback);
+    }
+
+    CfdCase cfdCase;
+    cfdCase.id = stringValue(object, "id", fallback.id + "_cfd");
+    cfdCase.name = stringValue(object, "name", fallback.name + " - CFD");
+    cfdCase.sourceGeometryName = stringValue(object, "sourceGeometryName", fallback.sourceGeometryName);
+    cfdCase.meshName = stringValue(object, "meshName", fallback.meshName);
+    cfdCase.solverType = flowSolverTypeFromString(stringValue(object, "solverType"));
+    cfdCase.turbulenceModel = turbulenceModelFromString(stringValue(object, "turbulenceModel"));
+
+    const QJsonObject runControl = object.value("runControl").toObject();
+    cfdCase.runControl.endTime = numberValue(runControl, "endTime", fallback.runControl.endTime);
+    cfdCase.runControl.timeStep = numberValue(runControl, "timeStep", fallback.runControl.timeStep);
+    cfdCase.runControl.writeInterval = numberValue(runControl, "writeInterval", fallback.runControl.writeInterval);
+    cfdCase.runControl.cleanPreviousResult = boolValue(runControl, "cleanPreviousResult", fallback.runControl.cleanPreviousResult);
+
+    for (const QJsonValue &materialValue : object.value("materials").toArray()) {
+        cfdCase.materials.push_back(materialFromJson(materialValue.toObject()));
+    }
+    for (const QJsonValue &boundaryValue : object.value("boundaries").toArray()) {
+        cfdCase.boundaries.push_back(boundaryConditionFromJson(boundaryValue.toObject()));
+    }
+    for (const QJsonValue &fieldValue : object.value("fieldValues").toArray()) {
+        cfdCase.fieldValues.push_back(loadFromJson(fieldValue.toObject()));
+    }
+    return cfdCase;
+}
 }
 
 bool SimulationCaseJsonReader::fromJson(
@@ -323,6 +431,9 @@ bool SimulationCaseJsonReader::fromJson(
     for (const QJsonValue &loadValue : root.value("loads").toArray()) {
         loadedCase.loads.push_back(loadFromJson(loadValue.toObject()));
     }
+
+    loadedCase.structuralCase = structuralCaseFromJson(root.value("structuralCase").toObject(), loadedCase);
+    loadedCase.cfdCase = cfdCaseFromJson(root.value("cfdCase").toObject(), loadedCase);
 
     simulationCase = loadedCase;
     return true;

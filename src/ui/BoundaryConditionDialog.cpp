@@ -18,6 +18,36 @@ QString zh(const char *text)
 {
     return QString::fromUtf8(text);
 }
+
+QString boundaryTypeLabel(BoundaryConditionType type)
+{
+    switch (type) {
+    case BoundaryConditionType::Wall:
+        return zh(u8"壁面 / 固定支撑");
+    case BoundaryConditionType::VelocityInlet:
+        return zh(u8"速度入口");
+    case BoundaryConditionType::PressureInlet:
+        return zh(u8"压力入口");
+    case BoundaryConditionType::PressureOutlet:
+        return zh(u8"压力出口");
+    case BoundaryConditionType::Symmetry:
+        return zh(u8"对称");
+    case BoundaryConditionType::Unknown:
+        return zh(u8"未知");
+    }
+    return zh(u8"未知");
+}
+
+std::vector<BoundaryConditionType> defaultBoundaryTypes()
+{
+    return {
+        BoundaryConditionType::Wall,
+        BoundaryConditionType::VelocityInlet,
+        BoundaryConditionType::PressureInlet,
+        BoundaryConditionType::PressureOutlet,
+        BoundaryConditionType::Symmetry
+    };
+}
 }
 
 BoundaryConditionDialog::BoundaryConditionDialog(
@@ -48,11 +78,12 @@ void BoundaryConditionDialog::setupUi()
     form->addRow(zh(u8"名称:"), m_nameEdit);
 
     m_typeCombo = new QComboBox(this);
-    m_typeCombo->addItem(zh(u8"壁面"), static_cast<int>(BoundaryConditionType::Wall));
-    m_typeCombo->addItem(zh(u8"速度入口"), static_cast<int>(BoundaryConditionType::VelocityInlet));
-    m_typeCombo->addItem(zh(u8"压力入口"), static_cast<int>(BoundaryConditionType::PressureInlet));
-    m_typeCombo->addItem(zh(u8"压力出口"), static_cast<int>(BoundaryConditionType::PressureOutlet));
-    m_typeCombo->addItem(zh(u8"对称"), static_cast<int>(BoundaryConditionType::Symmetry));
+    const std::vector<BoundaryConditionType> types =
+        m_options.allowedTypes.empty() ? defaultBoundaryTypes() : m_options.allowedTypes;
+    for (const BoundaryConditionType type : types) {
+        m_typeCombo->addItem(boundaryTypeLabel(type), static_cast<int>(type));
+    }
+    m_typeCombo->setEnabled(types.size() > 1);
     form->addRow(zh(u8"类型:"), m_typeCombo);
 
     m_geometryNameCombo = new QComboBox(this);

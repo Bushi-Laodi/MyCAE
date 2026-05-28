@@ -124,14 +124,19 @@ CalculiXCaseDataBuildResult CalculiXCaseDataBuilder::build(const SolverCaseConte
     const SimulationCase &simulationCase = *context.simulationCase;
     result.caseData.caseName = simulationCase.name;
 
-    if (simulationCase.meshName.trimmed().isEmpty()) {
+    const StructuralCase &structuralCase = simulationCase.structuralCase;
+    const QString meshName = structuralCase.meshName.trimmed().isEmpty()
+        ? simulationCase.meshName
+        : structuralCase.meshName;
+
+    if (meshName.trimmed().isEmpty()) {
         result.errors.append("CalculiX case data build failed: simulation case has no mesh.");
         return result;
     }
 
-    const MeshObject *meshObject = projectModel.meshRepository().findMeshByName(simulationCase.meshName);
+    const MeshObject *meshObject = projectModel.meshRepository().findMeshByName(meshName);
     if (!meshObject) {
-        result.errors.append("CalculiX case data build failed: mesh not found: " + simulationCase.meshName);
+        result.errors.append("CalculiX case data build failed: mesh not found: " + meshName);
         return result;
     }
 
@@ -164,25 +169,25 @@ CalculiXCaseDataBuildResult CalculiXCaseDataBuilder::build(const SolverCaseConte
         }
     }
 
-    for (const Material &material : simulationCase.materials) {
+    for (const Material &material : structuralCase.materials) {
         CalculiXMaterialData materialData = toCalculiXMaterial(material);
         validateMaterial(materialData, result);
         result.caseData.materials.push_back(materialData);
     }
     if (result.caseData.materials.empty()) {
-        result.errors.append("CalculiX case data build failed: no material is defined.");
+        result.errors.append("CalculiX case data build failed: no structural material is defined.");
     }
 
-    for (const BoundaryCondition &boundaryCondition : simulationCase.boundaryConditions) {
+    for (const BoundaryCondition &boundaryCondition : structuralCase.constraints) {
         if (boundaryCondition.enabled) {
             result.caseData.boundaries.push_back(toCalculiXBoundary(boundaryCondition));
         }
     }
     if (result.caseData.boundaries.empty()) {
-        result.warnings.append("CalculiX case has no enabled boundary conditions.");
+        result.warnings.append("CalculiX structural case has no enabled constraints or load targets.");
     }
 
-    for (const Load &load : simulationCase.loads) {
+    for (const Load &load : structuralCase.loads) {
         if (load.enabled) {
             result.caseData.loads.push_back(toCalculiXLoad(load));
         }

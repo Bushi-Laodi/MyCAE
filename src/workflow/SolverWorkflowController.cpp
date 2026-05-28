@@ -31,14 +31,44 @@ SolverWorkflowResult SolverWorkflowController::createMaterial() const
     return handleSolverDataResult(SolverDataController::createMaterial(m_parent, m_projectModel));
 }
 
+SolverWorkflowResult SolverWorkflowController::createStructuralMaterial() const
+{
+    return handleSolverDataResult(SolverDataController::createStructuralMaterial(m_parent, m_projectModel));
+}
+
+SolverWorkflowResult SolverWorkflowController::createFluidMaterial() const
+{
+    return handleSolverDataResult(SolverDataController::createFluidMaterial(m_parent, m_projectModel));
+}
+
 SolverWorkflowResult SolverWorkflowController::createBoundaryCondition() const
 {
     return handleSolverDataResult(SolverDataController::createBoundaryCondition(m_parent, m_projectModel));
 }
 
+SolverWorkflowResult SolverWorkflowController::createStructuralBoundaryCondition() const
+{
+    return handleSolverDataResult(SolverDataController::createStructuralBoundaryCondition(m_parent, m_projectModel));
+}
+
+SolverWorkflowResult SolverWorkflowController::createCfdBoundaryCondition() const
+{
+    return handleSolverDataResult(SolverDataController::createCfdBoundaryCondition(m_parent, m_projectModel));
+}
+
 SolverWorkflowResult SolverWorkflowController::createLoad() const
 {
     return handleSolverDataResult(SolverDataController::createLoad(m_parent, m_projectModel));
+}
+
+SolverWorkflowResult SolverWorkflowController::createStructuralLoad() const
+{
+    return handleSolverDataResult(SolverDataController::createStructuralLoad(m_parent, m_projectModel));
+}
+
+SolverWorkflowResult SolverWorkflowController::createCfdFieldValue() const
+{
+    return handleSolverDataResult(SolverDataController::createCfdFieldValue(m_parent, m_projectModel));
 }
 
 SolverWorkflowResult SolverWorkflowController::editSelectedData() const

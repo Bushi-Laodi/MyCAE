@@ -22,6 +22,7 @@ struct LoadDialogOptions
 {
     std::vector<LoadBoundaryConditionOption> boundaryConditions;
     QString defaultBoundaryConditionId;
+    std::vector<LoadType> allowedTypes;
 };
 
 class LoadDialog final : public QDialog

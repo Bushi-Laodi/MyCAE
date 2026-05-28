@@ -31,8 +31,14 @@ public:
     );
 
     SolverWorkflowResult createMaterial() const;
+    SolverWorkflowResult createStructuralMaterial() const;
+    SolverWorkflowResult createFluidMaterial() const;
     SolverWorkflowResult createBoundaryCondition() const;
+    SolverWorkflowResult createStructuralBoundaryCondition() const;
+    SolverWorkflowResult createCfdBoundaryCondition() const;
     SolverWorkflowResult createLoad() const;
+    SolverWorkflowResult createStructuralLoad() const;
+    SolverWorkflowResult createCfdFieldValue() const;
     SolverWorkflowResult editSelectedData() const;
     SolverWorkflowResult deleteSelectedData() const;
     SolverWorkflowResult runSolverPlugin(const QString &pluginId) const;

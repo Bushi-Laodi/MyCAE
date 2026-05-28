@@ -143,6 +143,67 @@ QJsonObject loadToJson(const Load &load)
     object.insert("enabled", load.enabled);
     return object;
 }
+
+QJsonObject structuralCaseToJson(const StructuralCase &structuralCase)
+{
+    QJsonArray materials;
+    for (const Material &material : structuralCase.materials) {
+        materials.append(materialToJson(material));
+    }
+    QJsonArray constraints;
+    for (const BoundaryCondition &constraint : structuralCase.constraints) {
+        constraints.append(boundaryConditionToJson(constraint));
+    }
+    QJsonArray loads;
+    for (const Load &load : structuralCase.loads) {
+        loads.append(loadToJson(load));
+    }
+
+    QJsonObject object;
+    object.insert("id", structuralCase.id);
+    object.insert("name", structuralCase.name);
+    object.insert("sourceGeometryName", structuralCase.sourceGeometryName);
+    object.insert("meshName", structuralCase.meshName);
+    object.insert("materials", materials);
+    object.insert("constraints", constraints);
+    object.insert("loads", loads);
+    return object;
+}
+
+QJsonObject cfdCaseToJson(const CfdCase &cfdCase)
+{
+    QJsonArray materials;
+    for (const Material &material : cfdCase.materials) {
+        materials.append(materialToJson(material));
+    }
+    QJsonArray boundaries;
+    for (const BoundaryCondition &boundary : cfdCase.boundaries) {
+        boundaries.append(boundaryConditionToJson(boundary));
+    }
+    QJsonArray fieldValues;
+    for (const Load &fieldValue : cfdCase.fieldValues) {
+        fieldValues.append(loadToJson(fieldValue));
+    }
+
+    QJsonObject runControl;
+    runControl.insert("endTime", cfdCase.runControl.endTime);
+    runControl.insert("timeStep", cfdCase.runControl.timeStep);
+    runControl.insert("writeInterval", cfdCase.runControl.writeInterval);
+    runControl.insert("cleanPreviousResult", cfdCase.runControl.cleanPreviousResult);
+
+    QJsonObject object;
+    object.insert("id", cfdCase.id);
+    object.insert("name", cfdCase.name);
+    object.insert("sourceGeometryName", cfdCase.sourceGeometryName);
+    object.insert("meshName", cfdCase.meshName);
+    object.insert("solverType", toString(cfdCase.solverType));
+    object.insert("turbulenceModel", toString(cfdCase.turbulenceModel));
+    object.insert("runControl", runControl);
+    object.insert("materials", materials);
+    object.insert("boundaries", boundaries);
+    object.insert("fieldValues", fieldValues);
+    return object;
+}
 }
 
 QJsonDocument SimulationCaseJsonWriter::toJson(const SimulationCase &simulationCase)
@@ -217,6 +278,8 @@ QJsonDocument SimulationCaseJsonWriter::toJson(const SimulationCase &simulationC
     root.insert("materials", materials);
     root.insert("boundaryConditions", boundaryConditions);
     root.insert("loads", loads);
+    root.insert("structuralCase", structuralCaseToJson(simulationCase.structuralCase));
+    root.insert("cfdCase", cfdCaseToJson(simulationCase.cfdCase));
     return QJsonDocument(root);
 }
 

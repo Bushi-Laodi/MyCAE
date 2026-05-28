@@ -27,11 +27,29 @@ public:
         case SolverDataCommandType::CreateMaterial:
             result = solverWorkflow.createMaterial();
             break;
+        case SolverDataCommandType::CreateStructuralMaterial:
+            result = solverWorkflow.createStructuralMaterial();
+            break;
+        case SolverDataCommandType::CreateFluidMaterial:
+            result = solverWorkflow.createFluidMaterial();
+            break;
         case SolverDataCommandType::CreateBoundaryCondition:
             result = solverWorkflow.createBoundaryCondition();
             break;
+        case SolverDataCommandType::CreateStructuralBoundaryCondition:
+            result = solverWorkflow.createStructuralBoundaryCondition();
+            break;
+        case SolverDataCommandType::CreateCfdBoundaryCondition:
+            result = solverWorkflow.createCfdBoundaryCondition();
+            break;
         case SolverDataCommandType::CreateLoad:
             result = solverWorkflow.createLoad();
+            break;
+        case SolverDataCommandType::CreateStructuralLoad:
+            result = solverWorkflow.createStructuralLoad();
+            break;
+        case SolverDataCommandType::CreateCfdFieldValue:
+            result = solverWorkflow.createCfdFieldValue();
             break;
         case SolverDataCommandType::EditSelected:
             result = solverWorkflow.editSelectedData();

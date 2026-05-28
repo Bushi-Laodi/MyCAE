@@ -11,6 +11,8 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
+#include <utility>
+
 namespace
 {
 QString zh(const char *text)
@@ -29,8 +31,9 @@ double materialPropertyValue(const Material &material, const QString &propertyNa
 }
 }
 
-MaterialDialog::MaterialDialog(QWidget *parent)
+MaterialDialog::MaterialDialog(MaterialDialogOptions options, QWidget *parent)
     : QDialog(parent)
+    , m_options(std::move(options))
 {
     setWindowTitle(zh(u8"创建材料"));
     setupUi();
@@ -49,6 +52,15 @@ void MaterialDialog::setupUi()
     m_domainCombo = new QComboBox(this);
     m_domainCombo->addItem(zh(u8"流体"), static_cast<int>(MaterialDomain::Fluid));
     m_domainCombo->addItem(zh(u8"固体"), static_cast<int>(MaterialDomain::Solid));
+    if (m_options.fixedDomain) {
+        for (int i = 0; i < m_domainCombo->count(); ++i) {
+            if (m_domainCombo->itemData(i).toInt() == static_cast<int>(*m_options.fixedDomain)) {
+                m_domainCombo->setCurrentIndex(i);
+                break;
+            }
+        }
+        m_domainCombo->setEnabled(false);
+    }
     form->addRow(zh(u8"物理域:"), m_domainCombo);
     connect(m_domainCombo, &QComboBox::currentIndexChanged, this, &MaterialDialog::onDomainChanged);
 
@@ -193,9 +205,9 @@ void MaterialDialog::setMaterial(const Material &mat)
     onDomainChanged(m_domainCombo->currentIndex());
 }
 
-std::optional<Material> MaterialDialog::createMaterial(QWidget *parent)
+std::optional<Material> MaterialDialog::createMaterial(QWidget *parent, MaterialDialogOptions options)
 {
-    MaterialDialog dlg(parent);
+    MaterialDialog dlg(std::move(options), parent);
     dlg.setWindowTitle(zh(u8"创建材料"));
     if (dlg.exec() == QDialog::Accepted) {
         return dlg.material();
@@ -205,7 +217,7 @@ std::optional<Material> MaterialDialog::createMaterial(QWidget *parent)
 
 std::optional<Material> MaterialDialog::editMaterial(QWidget *parent, const Material &existing)
 {
-    MaterialDialog dlg(parent);
+    MaterialDialog dlg({}, parent);
     dlg.setWindowTitle(zh(u8"编辑材料"));
     dlg.setMaterial(existing);
     if (dlg.exec() == QDialog::Accepted) {

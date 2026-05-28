@@ -10,8 +10,14 @@
 enum class SolverDataCommandType
 {
     CreateMaterial,
+    CreateStructuralMaterial,
+    CreateFluidMaterial,
     CreateBoundaryCondition,
+    CreateStructuralBoundaryCondition,
+    CreateCfdBoundaryCondition,
     CreateLoad,
+    CreateStructuralLoad,
+    CreateCfdFieldValue,
     EditSelected,
     DeleteSelected
 };

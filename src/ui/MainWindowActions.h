@@ -47,8 +47,14 @@ struct MainWindowActions
     QVector<QAction *> runSolvers;
 
     QAction *createMaterial = nullptr;
+    QAction *createStructuralMaterial = nullptr;
+    QAction *createFluidMaterial = nullptr;
     QAction *createBoundaryCondition = nullptr;
+    QAction *createStructuralBoundaryCondition = nullptr;
+    QAction *createCfdBoundaryCondition = nullptr;
     QAction *createLoad = nullptr;
+    QAction *createStructuralLoad = nullptr;
+    QAction *createCfdFieldValue = nullptr;
     QAction *editSolverData = nullptr;
     QAction *deleteSolverData = nullptr;
     QVector<QAction *> resultFields;
