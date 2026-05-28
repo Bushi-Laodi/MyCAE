@@ -4,6 +4,7 @@
 #include "geometry/CylinderGeometry.h"
 #include "geometry/GeometryBooleanOperation.h"
 #include "geometry/GeometryObject.h"
+#include "geometry/GeometryTransform.h"
 #include "geometry/SphereGeometry.h"
 #include "project/Project.h"
 
@@ -39,6 +40,20 @@ public:
         const Project &project,
         const GeometryObject &geometry,
         QStringList *deletedFiles,
+        QString *errorMessage
+    ) const;
+    bool geometryCenter(
+        const Project &project,
+        const GeometryObject &geometry,
+        GeometryCenter *center,
+        QString *errorMessage
+    ) const;
+    bool transformGeometry(
+        const Project &project,
+        const GeometryObject &geometry,
+        const GeometryTransformParameters &parameters,
+        GeometryObject *transformedGeometry,
+        QStringList *logMessages,
         QString *errorMessage
     ) const;
     bool loadBoxGeometries(const Project &project, QVector<BoxGeometry> *boxes, QString *errorMessage) const;

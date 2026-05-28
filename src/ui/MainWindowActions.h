@@ -27,6 +27,7 @@ struct MainWindowActions
     QAction *createSphere = nullptr;
     QAction *importStep = nullptr;
     QAction *createBoolean = nullptr;
+    QAction *transformGeometry = nullptr;
     QAction *deleteGeometry = nullptr;
     QAction *showGeometryEdges = nullptr;
     QAction *showOrientationMarker = nullptr;

@@ -59,6 +59,7 @@ void MainWindowMenuBuilder::build(
     geometryMenu->addAction(actions.createSphere);
     geometryMenu->addAction(actions.importStep);
     geometryMenu->addAction(actions.createBoolean);
+    geometryMenu->addAction(actions.transformGeometry);
     geometryMenu->addAction(actions.deleteGeometry);
     geometryMenu->addSeparator();
     geometryMenu->addAction(actions.showGeometryEdges);

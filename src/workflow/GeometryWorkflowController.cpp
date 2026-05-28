@@ -9,6 +9,7 @@
 #include "ui/PropertyPanel.h"
 #include "ui/RenderView.h"
 #include "workflow/SelectionController.h"
+#include "ui/GeometryTransformDialog.h"
 
 #include <algorithm>
 
@@ -183,6 +184,59 @@ GeometryWorkflowResult GeometryWorkflowController::importStepGeometry() const
         workflowResult.logMessages.append(zh(u8"STEP 已导入，但无法选中：") + importedGeometryName);
     }
 
+    workflowResult.logMessages.append(m_projectWorkflow.saveSimulationCase().logMessages);
+    workflowResult.success = true;
+    return workflowResult;
+}
+
+GeometryWorkflowResult GeometryWorkflowController::transformSelectedGeometry() const
+{
+    GeometryWorkflowResult workflowResult;
+    const GeometryObject *selectedGeometry = m_projectModel.geometryForSelection();
+    if (!selectedGeometry) {
+        workflowResult.logMessages.append(zh(u8"未变换几何：当前未选择几何体。"));
+        return workflowResult;
+    }
+
+    GeometryCenter center;
+    QString errorMessage;
+    if (!m_geometryManager.geometryCenter(m_projectModel.project(), *selectedGeometry, &center, &errorMessage)) {
+        QMessageBox::warning(m_parent, zh(u8"读取几何中心失败"), errorMessage);
+        workflowResult.logMessages.append("Geometry transform failed: " + errorMessage);
+        return workflowResult;
+    }
+
+    GeometryTransformDialog dialog(center, m_parent);
+    if (dialog.exec() != QDialog::Accepted) {
+        workflowResult.canceled = true;
+        workflowResult.logMessages.append(zh(u8"已取消几何变换：") + selectedGeometry->name);
+        return workflowResult;
+    }
+
+    const QString geometryName = selectedGeometry->name;
+    GeometryObject transformedGeometry;
+    QStringList transformMessages;
+    if (!m_geometryManager.transformGeometry(
+            m_projectModel.project(),
+            *selectedGeometry,
+            dialog.parameters(),
+            &transformedGeometry,
+            &transformMessages,
+            &errorMessage
+        )) {
+        QMessageBox::warning(m_parent, zh(u8"几何变换失败"), errorMessage);
+        workflowResult.logMessages.append("Geometry transform failed: " + errorMessage);
+        return workflowResult;
+    }
+    workflowResult.logMessages.append(transformMessages);
+    workflowResult.logMessages.append(zh(u8"提示：几何变换后，关联网格和求解结果可能不再匹配，请重新生成网格后再求解。"));
+    workflowResult.logMessages.append(m_projectWorkflow.loadGeometries().logMessages);
+    m_projectWorkflow.refreshProjectTree();
+
+    const SelectionController selectionController(m_projectModel, m_propertyPanel, m_renderView);
+    workflowResult.logMessages.append(selectionController.apply(
+        Selection::item(SelectionKind::Geometry, geometryName, geometryName)
+    ).logMessages);
     workflowResult.logMessages.append(m_projectWorkflow.saveSimulationCase().logMessages);
     workflowResult.success = true;
     return workflowResult;

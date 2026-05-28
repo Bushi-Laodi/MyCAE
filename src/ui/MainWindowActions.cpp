@@ -33,6 +33,7 @@ constexpr auto CommandCreateCylinder = "geometry.create.cylinder";
 constexpr auto CommandCreateSphere = "geometry.create.sphere";
 constexpr auto CommandImportStep = "geometry.import.step";
 constexpr auto CommandCreateBoolean = "geometry.create.boolean";
+constexpr auto CommandTransformGeometry = "geometry.transformSelected";
 constexpr auto CommandDeleteGeometry = "geometry.deleteSelected";
 constexpr auto CommandToggleGeometryEdges = "display.geometryEdges.toggle";
 constexpr auto CommandToggleOrientationMarker = "display.orientationMarker.toggle";
@@ -154,6 +155,15 @@ MainWindowActions MainWindowActionBuilder::build(
         actions.createBoolean,
         window,
         makeGeometryBooleanCommand(context)
+    );
+
+    actions.transformGeometry = new QAction(zh(u8"变换选中几何体"), window);
+    actions.transformGeometry->setStatusTip(zh(u8"精确设置中心点、平移、旋转或统一缩放选中的几何体"));
+    actionRegistry.registerActionCommand(
+        CommandTransformGeometry,
+        actions.transformGeometry,
+        window,
+        makeGeometryTransformSelectedCommand(context)
     );
 
     actions.deleteGeometry = new QAction(zh(u8"删除选中几何体"), window);
