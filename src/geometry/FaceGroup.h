@@ -31,6 +31,8 @@ struct FaceGroup
     bool physicalGroupEnabled = true;
     bool localMeshEnabled = false;
     double localMeshSize = 0.0;
+    bool needsReview = false;
+    QString reviewReason;
 };
 
 namespace FaceGroups

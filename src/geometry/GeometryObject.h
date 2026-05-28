@@ -9,4 +9,5 @@ struct GeometryObject
     QString jsonFile;
     QString brepFile;
     QString stepFile;
+    bool visible = true;
 };

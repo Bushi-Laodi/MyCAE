@@ -4,6 +4,7 @@
 #include "result/ResultHistoryNormalizer.h"
 #include "result/ResultObject.h"
 #include "result/ResultManager.h"
+#include "mesh/MeshObject.h"
 #include "solver/calculix/CalculiXResultGridBuilder.h"
 #include "solver/SimulationCase.h"
 #include "solver/SimulationCaseBuilder.h"
@@ -86,6 +87,17 @@ QString solverCaseDirectory(
         .arg(simulationCaseStem(simulationCase))
         .arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss_zzz"));
     return QDir(projectModel.project().rootPath).filePath("solver/" + safePluginId + "/" + runName);
+}
+
+QString simulationMeshName(const QString &pluginId, const SimulationCase &simulationCase)
+{
+    if (pluginId == "calculix" && !simulationCase.structuralCase.meshName.trimmed().isEmpty()) {
+        return simulationCase.structuralCase.meshName;
+    }
+    if (pluginId == "openfoam" && !simulationCase.cfdCase.meshName.trimmed().isEmpty()) {
+        return simulationCase.cfdCase.meshName;
+    }
+    return simulationCase.meshName;
 }
 
 ResultObject makeResultObject(
@@ -182,6 +194,16 @@ SolverCaseWorkflowResult SolverCaseWorkflowController::runPlugin(const QString &
     }
 
     const SimulationCase simulationCase = SimulationCaseBuilder::fromProjectModel(m_projectModel);
+    const QString meshName = simulationMeshName(pluginId, simulationCase);
+    if (const MeshObject *meshObject = m_projectModel.findMeshByName(meshName)) {
+        if (meshObject->stale) {
+            result.logMessages.append(zh(u8"运行求解器失败：网格已过期，请重新生成网格后再求解。"));
+            if (!meshObject->staleReason.isEmpty()) {
+                result.logMessages.append(zh(u8"网格过期原因：") + meshObject->staleReason);
+            }
+            return result;
+        }
+    }
     const QString caseDirectory = solverCaseDirectory(m_projectModel, pluginId, simulationCase);
     if (!QDir().mkpath(caseDirectory)) {
         result.logMessages.append(zh(u8"运行求解器失败：无法创建算例目录：") + caseDirectory);

@@ -1,6 +1,7 @@
 #include "ProjectTreePanel.h"
 
 #include "geometry/FaceGroup.h"
+#include "geometry/GeometryObject.h"
 #include "result/ResultObject.h"
 #include "solver/BoundaryCondition.h"
 #include "solver/Load.h"
@@ -165,17 +166,19 @@ void ProjectTreePanel::showProject(const QString &projectName, const QString &pr
     buildProjectTree(projectName, projectPath);
 }
 
-void ProjectTreePanel::setGeometryItems(const QStringList &geometryNames)
+void ProjectTreePanel::setGeometryItems(const QVector<GeometryObject> &geometries)
 {
     if (!m_geometryRoot) {
         return;
     }
 
     clearChildren(m_geometryRoot);
-    for (const QString &geometryName : geometryNames) {
-        auto *item = new QTreeWidgetItem(QStringList{geometryName});
-        setItemSelection(item, Selection::item(SelectionKind::Geometry, geometryName, geometryName));
-        applyLeafStyle(item, UiIconFactory::treeBadge("G", QColor("#2563eb")));
+    for (const GeometryObject &geometry : geometries) {
+        const QString text = geometry.visible ? geometry.name : geometry.name + zh(u8" (隐藏)");
+        auto *item = new QTreeWidgetItem(QStringList{text});
+        setItemSelection(item, Selection::item(SelectionKind::Geometry, geometry.name, geometry.name));
+        item->setToolTip(0, geometry.visible ? geometry.type : geometry.type + zh(u8"\n布尔输入几何已隐藏，选中后仍可单独显示。"));
+        applyLeafStyle(item, UiIconFactory::treeBadge("G", geometry.visible ? QColor("#2563eb") : QColor("#94a3b8")));
         m_geometryRoot->addChild(item);
     }
 

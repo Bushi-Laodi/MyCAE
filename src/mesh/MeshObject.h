@@ -14,6 +14,8 @@ struct MeshObject
     int nodeCount = 0;
     int tetraCount = 0;
     QString createdAt;
+    bool stale = false;
+    QString staleReason;
     bool meshAutoSize = true;
     double meshMinimumSize = 0.0;
     double meshMaximumSize = 0.0;

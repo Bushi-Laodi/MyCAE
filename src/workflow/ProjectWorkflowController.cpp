@@ -253,11 +253,7 @@ void ProjectWorkflowController::refreshGeometryTree() const
         return;
     }
 
-    QStringList geometryNames;
-    for (const GeometryObject &geometry : m_projectModel.geometryRepository().geometryObjects()) {
-        geometryNames.append(geometry.name);
-    }
-    m_projectTreePanel->setGeometryItems(geometryNames);
+    m_projectTreePanel->setGeometryItems(m_projectModel.geometryRepository().geometryObjects());
 }
 
 void ProjectWorkflowController::refreshMeshTree() const

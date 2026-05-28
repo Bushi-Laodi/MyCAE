@@ -76,6 +76,10 @@ void MeshPropertyView::populate(QWidget *parent, const MeshObject &meshObject)
     auto *dynamicLayout = new QVBoxLayout(parent);
 
     QFormLayout *sizeForm = addSection(dynamicLayout, parent, zh(u8"尺寸参数"));
+    sizeForm->addRow(zh(u8"状态:"), valueLabel(meshObject.stale ? zh(u8"已过期，需要重新生成") : zh(u8"有效"), parent));
+    if (meshObject.stale && !meshObject.staleReason.isEmpty()) {
+        sizeForm->addRow(zh(u8"过期原因:"), valueLabel(meshObject.staleReason, parent));
+    }
     sizeForm->addRow(zh(u8"单元类型:"), valueLabel(meshObject.type, parent));
     sizeForm->addRow(zh(u8"全局尺寸:"), valueLabel(globalSizeText(meshObject), parent));
     sizeForm->addRow(zh(u8"局部尺寸:"), valueLabel(localControlText(meshObject), parent));

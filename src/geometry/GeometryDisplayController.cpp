@@ -137,6 +137,9 @@ GeometryDisplayResult GeometryDisplayController::displayGeometry(
     std::vector<RenderGeometryItem> sceneItems;
     bool selectedGeometryLoaded = false;
     for (const GeometryObject &sceneGeometry : projectModel.geometryObjects()) {
+        if (!sceneGeometry.visible && sceneGeometry.name != geometry.name) {
+            continue;
+        }
         TopoDS_Shape shape;
         QString rebuildError;
         if (!loadShapeFromGeometryFiles(project, sceneGeometry, &shape, &result.logMessages)

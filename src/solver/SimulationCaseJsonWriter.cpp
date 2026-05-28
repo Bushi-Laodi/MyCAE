@@ -73,6 +73,8 @@ QJsonObject faceGroupToJson(const FaceGroup &faceGroup)
     object.insert("physicalGroupEnabled", faceGroup.physicalGroupEnabled);
     object.insert("localMeshEnabled", faceGroup.localMeshEnabled);
     object.insert("localMeshSize", faceGroup.localMeshSize);
+    object.insert("needsReview", faceGroup.needsReview);
+    object.insert("reviewReason", faceGroup.reviewReason);
     return object;
 }
 

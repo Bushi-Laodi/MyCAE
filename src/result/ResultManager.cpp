@@ -85,6 +85,8 @@ QJsonObject toJsonObject(const ResultObject &result)
     object.insert("lockedScalarMax", result.lockedScalarMax);
     object.insert("checkMessages", toJsonArray(result.checkMessages));
     object.insert("createdAt", result.createdAt);
+    object.insert("stale", result.stale);
+    object.insert("staleReason", result.staleReason);
     object.insert("success", result.success);
     object.insert("summary", result.summary);
     return object;
@@ -121,6 +123,8 @@ ResultObject fromJsonObject(const QJsonObject &object)
     result.lockedScalarMax = object.value("lockedScalarMax").toDouble(0.0);
     result.checkMessages = toStringList(object.value("checkMessages").toArray());
     result.createdAt = object.value("createdAt").toString();
+    result.stale = object.value("stale").toBool(false);
+    result.staleReason = object.value("staleReason").toString();
     result.success = object.value("success").toBool(false);
     result.summary = object.value("summary").toString();
     return result;

@@ -9,6 +9,7 @@
 #include <optional>
 
 class QComboBox;
+class QCheckBox;
 class QLineEdit;
 class QWidget;
 
@@ -18,6 +19,7 @@ struct BooleanOperationDialogResult
     QString rightGeometryName;
     GeometryBooleanOperationType operationType = GeometryBooleanOperationType::Union;
     QString resultName;
+    bool keepInputGeometriesVisible = true;
 };
 
 class BooleanOperationDialog final : public QDialog
@@ -46,4 +48,5 @@ private:
     QComboBox *m_rightGeometryCombo = nullptr;
     QComboBox *m_operationCombo = nullptr;
     QLineEdit *m_resultNameEdit = nullptr;
+    QCheckBox *m_keepInputsVisibleCheck = nullptr;
 };

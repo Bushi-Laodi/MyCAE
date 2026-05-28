@@ -32,6 +32,10 @@ void ResultPropertyView::populate(QWidget *parent, const ResultObject &resultObj
     auto *dynamicLayout = new QVBoxLayout(parent);
     auto *form = new QFormLayout;
     form->addRow("ID:", valueLabel(resultObject.id, parent));
+    form->addRow(zh(u8"状态:"), valueLabel(resultObject.stale ? zh(u8"已过期，需要重新求解") : zh(u8"有效"), parent));
+    if (resultObject.stale && !resultObject.staleReason.isEmpty()) {
+        form->addRow(zh(u8"过期原因:"), valueLabel(resultObject.staleReason, parent));
+    }
     form->addRow(zh(u8"求解器:"), valueLabel(resultObject.solverName, parent));
     if (!resultObject.meshName.isEmpty()) {
         form->addRow(zh(u8"网格:"), valueLabel(resultObject.meshName, parent));

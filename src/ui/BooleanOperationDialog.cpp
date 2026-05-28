@@ -1,5 +1,6 @@
 #include "BooleanOperationDialog.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFormLayout>
@@ -54,10 +55,15 @@ void BooleanOperationDialog::setupUi(
     m_resultNameEdit = new QLineEdit(this);
     m_resultNameEdit->setPlaceholderText(zh(u8"留空则自动生成名称"));
 
-    form->addRow(zh(u8"左侧几何:"), m_leftGeometryCombo);
-    form->addRow(zh(u8"右侧几何:"), m_rightGeometryCombo);
+    m_keepInputsVisibleCheck = new QCheckBox(zh(u8"保留并显示输入几何"), this);
+    m_keepInputsVisibleCheck->setChecked(true);
+    m_keepInputsVisibleCheck->setToolTip(zh(u8"取消勾选后，布尔成功会隐藏 Base 和 Tool，只显示布尔结果；输入几何仍保留在工程中。"));
+
+    form->addRow(zh(u8"Base 基准几何:"), m_leftGeometryCombo);
+    form->addRow(zh(u8"Tool 工具几何:"), m_rightGeometryCombo);
     form->addRow(zh(u8"运算:"), m_operationCombo);
     form->addRow(zh(u8"结果名称:"), m_resultNameEdit);
+    form->addRow("", m_keepInputsVisibleCheck);
     mainLayout->addLayout(form);
 
     auto *buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
@@ -79,6 +85,7 @@ BooleanOperationDialogResult BooleanOperationDialog::operation() const
     result.rightGeometryName = m_rightGeometryCombo->currentText().trimmed();
     result.operationType = static_cast<GeometryBooleanOperationType>(m_operationCombo->currentData().toInt());
     result.resultName = m_resultNameEdit->text().trimmed();
+    result.keepInputGeometriesVisible = m_keepInputsVisibleCheck->isChecked();
     return result;
 }
 

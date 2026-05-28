@@ -139,6 +139,8 @@ qt_add_executable(MyCAE
     src/geometry/GeometryBooleanOperation.h
     src/geometry/GeometryCreationController.cpp
     src/geometry/GeometryCreationController.h
+    src/geometry/GeometryDependencyInvalidator.cpp
+    src/geometry/GeometryDependencyInvalidator.h
     src/geometry/GeometryDisplayController.cpp
     src/geometry/GeometryDisplayController.h
     src/geometry/GeometryManager.cpp

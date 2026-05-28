@@ -36,6 +36,8 @@ struct ResultObject
     ResultExtrema extrema;
     QStringList checkMessages;
     QString createdAt;
+    bool stale = false;
+    QString staleReason;
     QString summary;
     bool success = false;
 };

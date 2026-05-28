@@ -310,8 +310,16 @@ ResultDisplayResult ResultDisplayController::displayResult(
 ) const
 {
     ResultDisplayResult displayResult;
-    resultObject.checkMessages = fileCompletenessMessages(resultObject);
-    resultObject.resultFilesComplete = resultObject.checkMessages.isEmpty();
+    const QStringList completenessMessages = fileCompletenessMessages(resultObject);
+    resultObject.checkMessages = completenessMessages;
+    resultObject.resultFilesComplete = completenessMessages.isEmpty();
+    if (resultObject.stale) {
+        resultObject.checkMessages.append(
+            resultObject.staleReason.isEmpty()
+                ? QString("Result is stale. Re-run the solver after remeshing.")
+                : QString("Result is stale: ") + resultObject.staleReason
+        );
+    }
     if (!renderView) {
         displayResult.logMessages.append("Result display skipped: render view is not available.");
         return displayResult;

@@ -5,6 +5,7 @@
 #include "solver/Material.h"
 #include "solver/SimulationCase.h"
 #include "picking/PickMode.h"
+#include "ui/property/GeometryPropertyView.h"
 
 #include <QWidget>
 #include <QString>
@@ -28,9 +29,13 @@ public:
 
     void showEmptySelection();
     void showBoxGeometry(const BoxGeometry &box);
+    void showBoxGeometry(const BoxGeometry &box, const GeometryObject &geometry, const GeometryPropertyDetails &details);
     void showCylinderGeometry(const CylinderGeometry &cylinder);
+    void showCylinderGeometry(const CylinderGeometry &cylinder, const GeometryObject &geometry, const GeometryPropertyDetails &details);
     void showSphereGeometry(const SphereGeometry &sphere);
+    void showSphereGeometry(const SphereGeometry &sphere, const GeometryObject &geometry, const GeometryPropertyDetails &details);
     void showGeometryObject(const GeometryObject &geometry);
+    void showGeometryObject(const GeometryObject &geometry, const GeometryPropertyDetails &details);
     void showMeshObject(const MeshObject &meshObject);
     void showFaceGroup(const FaceGroup &faceGroup);
     void showFaceGroup(

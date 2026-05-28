@@ -42,6 +42,12 @@ public:
         QStringList *deletedFiles,
         QString *errorMessage
     ) const;
+    bool setGeometryVisible(
+        const Project &project,
+        const GeometryObject &geometry,
+        bool visible,
+        QString *errorMessage
+    ) const;
     bool geometryCenter(
         const Project &project,
         const GeometryObject &geometry,

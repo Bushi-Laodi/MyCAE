@@ -42,8 +42,9 @@ GeometryBooleanResult GeometryBooleanController::createBooleanGeometry(
     const GeometryObject *leftGeometry = geometryRepository.findGeometryByName(dialogResult->leftGeometryName);
     const GeometryObject *rightGeometry = geometryRepository.findGeometryByName(dialogResult->rightGeometryName);
     if (!leftGeometry || !rightGeometry) {
-        result.errorMessage = "Selected boolean input geometry was not found.";
-        result.logMessages.append("Boolean operation failed: input geometry was not found.");
+        result.errorMessage = QString("Selected boolean input geometry was not found. Base=%1, Tool=%2.")
+            .arg(dialogResult->leftGeometryName, dialogResult->rightGeometryName);
+        result.logMessages.append("Boolean operation failed: " + result.errorMessage);
         return result;
     }
 
@@ -57,9 +58,21 @@ GeometryBooleanResult GeometryBooleanController::createBooleanGeometry(
             dialogResult->resultName,
             &createdGeometry,
             &errorMessage)) {
-        result.errorMessage = errorMessage;
-        result.logMessages.append("Boolean operation failed: " + errorMessage);
+        result.errorMessage = QString("Boolean %1 failed. Base=%2, Tool=%3. Reason: %4")
+            .arg(toDisplayString(dialogResult->operationType), leftGeometry->name, rightGeometry->name, errorMessage);
+        result.logMessages.append("Boolean operation failed: " + result.errorMessage);
         return result;
+    }
+
+    if (!dialogResult->keepInputGeometriesVisible) {
+        QString visibilityError;
+        if (!m_geometryManager.setGeometryVisible(projectModel.project(), *leftGeometry, false, &visibilityError)
+                || !m_geometryManager.setGeometryVisible(projectModel.project(), *rightGeometry, false, &visibilityError)) {
+            result.logMessages.append("Boolean input hide warning: " + visibilityError);
+        } else {
+            result.inputVisibilityChanged = true;
+            result.logMessages.append("Boolean input geometries hidden: " + leftGeometry->name + ", " + rightGeometry->name);
+        }
     }
 
     result.success = true;

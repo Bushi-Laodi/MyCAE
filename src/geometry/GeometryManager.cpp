@@ -255,6 +255,45 @@ bool updateGenericGeometryTransformJson(
     file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
     return true;
 }
+
+bool updateGeometryJsonValue(
+    const Project &project,
+    const GeometryObject &geometry,
+    const QString &key,
+    const QJsonValue &value,
+    QString *errorMessage
+)
+{
+    const QString jsonPath = absoluteProjectFilePath(project, geometry.jsonFile);
+    QFile file(jsonPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to open geometry JSON: " + file.errorString();
+        }
+        return false;
+    }
+
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+    file.close();
+    if (!document.isObject()) {
+        if (errorMessage) {
+            *errorMessage = "Invalid geometry JSON: root is not an object.";
+        }
+        return false;
+    }
+
+    QJsonObject object = document.object();
+    object.insert(key, value);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to write geometry JSON: " + file.errorString();
+        }
+        return false;
+    }
+
+    file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
+    return true;
+}
 }
 
 bool GeometryManager::createDefaultBox(const Project &project, BoxGeometry *box, QString *errorMessage) const
@@ -712,6 +751,16 @@ bool GeometryManager::deleteGeometry(
     return true;
 }
 
+bool GeometryManager::setGeometryVisible(
+    const Project &project,
+    const GeometryObject &geometry,
+    bool visible,
+    QString *errorMessage
+) const
+{
+    return updateGeometryJsonValue(project, geometry, "visible", visible, errorMessage);
+}
+
 bool GeometryManager::geometryCenter(
     const Project &project,
     const GeometryObject &geometry,
@@ -961,6 +1010,7 @@ bool GeometryManager::loadGeometryObjects(const Project &project, std::vector<Ge
         geometry.jsonFile = QDir(project.rootPath).relativeFilePath(fileInfo.absoluteFilePath());
         geometry.brepFile = occ.value("brepFile").toString();
         geometry.stepFile = occ.value("stepFile").toString();
+        geometry.visible = object.value("visible").toBool(true);
         if (geometry.brepFile.isEmpty()) {
             geometry.brepFile = QDir("geometry").filePath(fileInfo.completeBaseName() + ".brep");
         }
@@ -1037,6 +1087,7 @@ bool GeometryManager::writeBoxFile(const BoxGeometry &box, QString *errorMessage
     QJsonObject object;
     object.insert("type", "box");
     object.insert("name", box.name);
+    object.insert("visible", true);
     object.insert("center", centerObject(box.centerX, box.centerY, box.centerZ));
     object.insert("dimensions", dimensions);
     object.insert("occ", occ);
@@ -1124,6 +1175,7 @@ bool GeometryManager::writeCylinderFile(const CylinderGeometry &cylinder, QStrin
     QJsonObject object;
     object.insert("type", "cylinder");
     object.insert("name", cylinder.name);
+    object.insert("visible", true);
     object.insert("center", centerObject(cylinder.centerX, cylinder.centerY, cylinder.centerZ));
     object.insert("dimensions", dimensions);
     object.insert("occ", occ);
@@ -1209,6 +1261,7 @@ bool GeometryManager::writeSphereFile(const SphereGeometry &sphere, QString *err
     QJsonObject object;
     object.insert("type", "sphere");
     object.insert("name", sphere.name);
+    object.insert("visible", true);
     object.insert("center", centerObject(sphere.centerX, sphere.centerY, sphere.centerZ));
     object.insert("dimensions", dimensions);
     object.insert("occ", occ);
@@ -1300,6 +1353,7 @@ bool GeometryManager::writeBooleanGeometryFile(
     QJsonObject object;
     object.insert("type", geometry.type);
     object.insert("name", geometry.name);
+    object.insert("visible", geometry.visible);
     object.insert("operation", operation);
     object.insert("occ", occ);
     object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
@@ -1333,6 +1387,7 @@ bool GeometryManager::writeImportedStepGeometryFile(
     QJsonObject object;
     object.insert("type", geometry.type);
     object.insert("name", geometry.name);
+    object.insert("visible", geometry.visible);
     object.insert("source", source);
     object.insert("occ", occ);
     object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));

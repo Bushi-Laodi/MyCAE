@@ -1,6 +1,7 @@
 #include "workflow/GeometryWorkflowController.h"
 
 #include "geometry/GeometryBooleanController.h"
+#include "geometry/GeometryDependencyInvalidator.h"
 #include "geometry/GeometryManager.h"
 #include "mesh/MeshManager.h"
 #include "project/ProjectModel.h"
@@ -229,7 +230,11 @@ GeometryWorkflowResult GeometryWorkflowController::transformSelectedGeometry() c
         return workflowResult;
     }
     workflowResult.logMessages.append(transformMessages);
-    workflowResult.logMessages.append(zh(u8"提示：几何变换后，关联网格和求解结果可能不再匹配，请重新生成网格后再求解。"));
+    workflowResult.logMessages.append(GeometryDependencyInvalidator().markGeometryChanged(
+        m_projectModel,
+        geometryName,
+        zh(u8"几何体已变换，请复查面组并重新生成网格后再求解。")
+    ));
     workflowResult.logMessages.append(m_projectWorkflow.loadGeometries().logMessages);
     m_projectWorkflow.refreshProjectTree();
 

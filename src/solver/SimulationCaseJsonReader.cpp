@@ -174,6 +174,8 @@ FaceGroup faceGroupFromJson(const QJsonObject &object)
     faceGroup.physicalGroupEnabled = boolValue(object, "physicalGroupEnabled", true);
     faceGroup.localMeshEnabled = boolValue(object, "localMeshEnabled");
     faceGroup.localMeshSize = numberValue(object, "localMeshSize");
+    faceGroup.needsReview = boolValue(object, "needsReview");
+    faceGroup.reviewReason = stringValue(object, "reviewReason");
     for (const QJsonValue &faceIndexValue : object.value("faceIndices").toArray()) {
         if (faceIndexValue.isDouble()) {
             faceGroup.faceIndices.push_back(faceIndexValue.toInt());

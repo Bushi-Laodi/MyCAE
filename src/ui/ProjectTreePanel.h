@@ -4,6 +4,7 @@
 
 #include <QString>
 #include <QStringList>
+#include <QVector>
 #include <QWidget>
 
 #include <vector>
@@ -12,6 +13,7 @@ class QTreeWidget;
 class QTreeWidgetItem;
 struct BoundaryCondition;
 struct FaceGroup;
+struct GeometryObject;
 struct Load;
 struct Material;
 struct ResultObject;
@@ -24,7 +26,7 @@ public:
     explicit ProjectTreePanel(QWidget *parent = nullptr);
 
     void showProject(const QString &projectName, const QString &projectPath);
-    void setGeometryItems(const QStringList &geometryNames);
+    void setGeometryItems(const QVector<GeometryObject> &geometries);
     void setMeshItems(const QStringList &meshNames);
     void setFaceGroupItems(const std::vector<FaceGroup> &faceGroups);
     void setMaterialItems(const std::vector<Material> &materials);

@@ -162,6 +162,15 @@ void PropertyPanel::showEmptySelection()
 
 void PropertyPanel::showBoxGeometry(const BoxGeometry &box)
 {
+    showBoxGeometry(box, GeometryObject{}, GeometryPropertyDetails{});
+}
+
+void PropertyPanel::showBoxGeometry(
+    const BoxGeometry &box,
+    const GeometryObject &geometry,
+    const GeometryPropertyDetails &details
+)
+{
     const QString suffix = " " + box.unit;
     m_selectionValue->setText(box.name);
     m_typeValue->setText(zh(u8"长方体"));
@@ -179,10 +188,24 @@ void PropertyPanel::showBoxGeometry(const BoxGeometry &box)
     m_tetraCountValue->setText("-");
     m_createdAtValue->setText("-");
 
-    resetDynamicArea(false);
+    if (geometry.name.isEmpty()) {
+        resetDynamicArea(false);
+    } else {
+        resetDynamicArea();
+        GeometryPropertyView::populate(m_dynamicArea, geometry, details);
+    }
 }
 
 void PropertyPanel::showCylinderGeometry(const CylinderGeometry &cylinder)
+{
+    showCylinderGeometry(cylinder, GeometryObject{}, GeometryPropertyDetails{});
+}
+
+void PropertyPanel::showCylinderGeometry(
+    const CylinderGeometry &cylinder,
+    const GeometryObject &geometry,
+    const GeometryPropertyDetails &details
+)
 {
     const QString suffix = " " + cylinder.unit;
     m_selectionValue->setText(cylinder.name);
@@ -201,10 +224,24 @@ void PropertyPanel::showCylinderGeometry(const CylinderGeometry &cylinder)
     m_tetraCountValue->setText("-");
     m_createdAtValue->setText("-");
 
-    resetDynamicArea(false);
+    if (geometry.name.isEmpty()) {
+        resetDynamicArea(false);
+    } else {
+        resetDynamicArea();
+        GeometryPropertyView::populate(m_dynamicArea, geometry, details);
+    }
 }
 
 void PropertyPanel::showSphereGeometry(const SphereGeometry &sphere)
+{
+    showSphereGeometry(sphere, GeometryObject{}, GeometryPropertyDetails{});
+}
+
+void PropertyPanel::showSphereGeometry(
+    const SphereGeometry &sphere,
+    const GeometryObject &geometry,
+    const GeometryPropertyDetails &details
+)
 {
     const QString suffix = " " + sphere.unit;
     m_selectionValue->setText(sphere.name);
@@ -223,19 +260,30 @@ void PropertyPanel::showSphereGeometry(const SphereGeometry &sphere)
     m_tetraCountValue->setText("-");
     m_createdAtValue->setText("-");
 
-    resetDynamicArea(false);
+    if (geometry.name.isEmpty()) {
+        resetDynamicArea(false);
+    } else {
+        resetDynamicArea();
+        GeometryPropertyView::populate(m_dynamicArea, geometry, details);
+    }
 }
 
 void PropertyPanel::showGeometryObject(const GeometryObject &geometry)
+{
+    showGeometryObject(geometry, GeometryPropertyDetails{});
+}
+
+void PropertyPanel::showGeometryObject(const GeometryObject &geometry, const GeometryPropertyDetails &details)
 {
     clearAll();
     m_selectionValue->setText(geometry.name);
     m_typeValue->setText(geometry.type);
     m_nameValue->setText(geometry.name);
     m_sourceStepFileValue->setText(geometry.stepFile);
+    m_centerValue->setText(details.center.isEmpty() ? "-" : details.center);
 
     resetDynamicArea();
-    GeometryPropertyView::populate(m_dynamicArea, geometry);
+    GeometryPropertyView::populate(m_dynamicArea, geometry, details);
 }
 
 void PropertyPanel::showMeshObject(const MeshObject &meshObject)

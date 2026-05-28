@@ -77,6 +77,10 @@ void FaceGroupPropertyView::populate(
     form->addRow(zh(u8"物理组:"), new QLabel(enabledText(faceGroup.physicalGroupEnabled), parent));
     form->addRow(zh(u8"局部网格:"), new QLabel(enabledText(faceGroup.localMeshEnabled), parent));
     form->addRow(zh(u8"局部网格尺寸:"), new QLabel(QString::number(faceGroup.localMeshSize), parent));
+    form->addRow(zh(u8"复查状态:"), new QLabel(faceGroup.needsReview ? zh(u8"需要复查") : zh(u8"正常"), parent));
+    if (faceGroup.needsReview && !faceGroup.reviewReason.isEmpty()) {
+        form->addRow(zh(u8"复查原因:"), new QLabel(faceGroup.reviewReason, parent));
+    }
 
     QStringList faceIndexTexts;
     for (const int faceIndex : faceGroup.faceIndices) {

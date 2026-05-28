@@ -74,6 +74,8 @@ bool MeshManager::saveMeshObject(const MeshObject &meshObject, QString *errorMes
     object.insert("nodeCount", meshObject.nodeCount);
     object.insert("tetraCount", meshObject.tetraCount);
     object.insert("createdAt", meshObject.createdAt);
+    object.insert("stale", meshObject.stale);
+    object.insert("staleReason", meshObject.staleReason);
 
     QJsonObject sizeObject;
     sizeObject.insert("autoSize", meshObject.meshAutoSize);
@@ -175,6 +177,8 @@ bool MeshManager::readMeshObject(const QString &filePath, MeshObject &meshObject
     meshObject.nodeCount = object.value("nodeCount").toInt();
     meshObject.tetraCount = object.value("tetraCount").toInt();
     meshObject.createdAt = object.value("createdAt").toString();
+    meshObject.stale = object.value("stale").toBool(false);
+    meshObject.staleReason = object.value("staleReason").toString();
 
     const QJsonObject sizeObject = object.value("meshSize").toObject();
     meshObject.meshAutoSize = sizeObject.value("autoSize").toBool(true);

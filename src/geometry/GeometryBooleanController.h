@@ -16,6 +16,7 @@ struct GeometryBooleanResult
     GeometryObject geometryObject;
     QString errorMessage;
     QStringList logMessages;
+    bool inputVisibilityChanged = false;
 };
 
 class GeometryBooleanController
