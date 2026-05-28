@@ -33,6 +33,11 @@ public:
     void showGeometryObject(const GeometryObject &geometry);
     void showMeshObject(const MeshObject &meshObject);
     void showFaceGroup(const FaceGroup &faceGroup);
+    void showFaceGroup(
+        const FaceGroup &faceGroup,
+        const std::vector<BoundaryCondition> &boundaryConditions,
+        const std::vector<Load> &loads
+    );
     void showPickState(PickMode mode, const QString &geometryName, const std::vector<int> &faceIndices);
 
     void showMaterialCategory(const std::vector<Material> &materials);
@@ -40,6 +45,11 @@ public:
     void showLoadCategory(const std::vector<Load> &loads);
     void showMaterial(const Material &material);
     void showBoundaryCondition(const BoundaryCondition &boundaryCondition);
+    void showBoundaryCondition(
+        const BoundaryCondition &boundaryCondition,
+        const std::vector<FaceGroup> &faceGroups,
+        const std::vector<Load> &loads
+    );
     void showLoad(const Load &load);
     void showSolverCategory(const SimulationCase &simulationCase);
     void showResultCategory(const std::vector<ResultObject> &results);

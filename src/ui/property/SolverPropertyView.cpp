@@ -89,6 +89,34 @@ QString loadValueText(const Load &load)
     return valueText;
 }
 
+QString listText(const QStringList &values)
+{
+    return values.isEmpty() ? "-" : values.join("\n");
+}
+
+QLabel *valueLabel(const QString &text, QWidget *parent)
+{
+    auto *label = new QLabel(text, parent);
+    label->setWordWrap(true);
+    label->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    return label;
+}
+
+QLabel *warningLabel(QWidget *parent, const QString &text)
+{
+    auto *label = valueLabel(text, parent);
+    label->setStyleSheet(
+        "QLabel {"
+        "  color: #92400e;"
+        "  background: #fffbeb;"
+        "  border: 1px solid #fcd34d;"
+        "  border-radius: 4px;"
+        "  padding: 6px 8px;"
+        "}"
+    );
+    return label;
+}
+
 void appendMaterialExtraProperties(QFormLayout *form, QWidget *parent, const Material &material)
 {
     for (const MaterialProperty &property : material.extraProperties) {
@@ -212,7 +240,11 @@ void SolverPropertyView::populateMaterial(QWidget *parent, const Material &mater
     dynamicLayout->addLayout(form);
 }
 
-void SolverPropertyView::populateBoundaryCondition(QWidget *parent, const BoundaryCondition &boundaryCondition)
+void SolverPropertyView::populateBoundaryCondition(
+    QWidget *parent,
+    const BoundaryCondition &boundaryCondition,
+    const BoundaryConditionBindingSummary &bindingSummary
+)
 {
     auto *dynamicLayout = new QVBoxLayout(parent);
     auto *form = new QFormLayout;
@@ -226,6 +258,20 @@ void SolverPropertyView::populateBoundaryCondition(QWidget *parent, const Bounda
     form->addRow(zh(u8"材料 ID:"), new QLabel(boundaryCondition.materialId, parent));
     form->addRow(zh(u8"启用:"), new QLabel(yesNoText(boundaryCondition.enabled), parent));
     dynamicLayout->addLayout(form);
+
+    auto *bindingForm = new QFormLayout;
+    bindingForm->addRow(zh(u8"绑定状态:"), valueLabel(bindingSummary.status, parent));
+    bindingForm->addRow(
+        zh(u8"目标面组:"),
+        valueLabel(bindingSummary.faceGroupDisplayName.trimmed().isEmpty() ? "-" : bindingSummary.faceGroupDisplayName, parent)
+    );
+    bindingForm->addRow(zh(u8"面数量:"), valueLabel(QString::number(bindingSummary.faceCount), parent));
+    bindingForm->addRow(zh(u8"载荷引用:"), valueLabel(listText(bindingSummary.loads), parent));
+    dynamicLayout->addLayout(bindingForm);
+
+    for (const QString &warning : bindingSummary.warnings) {
+        dynamicLayout->addWidget(warningLabel(parent, warning));
+    }
 }
 
 void SolverPropertyView::populateLoad(QWidget *parent, const Load &load)

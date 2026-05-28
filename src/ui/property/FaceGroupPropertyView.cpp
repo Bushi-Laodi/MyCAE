@@ -35,9 +35,37 @@ QLabel *emptyFaceGroupHint(QWidget *parent)
     );
     return label;
 }
+
+QString listText(const QStringList &values)
+{
+    return values.isEmpty() ? "-" : values.join("\n");
 }
 
-void FaceGroupPropertyView::populate(QWidget *parent, const FaceGroup &faceGroup)
+QLabel *hintLabel(QWidget *parent, const QString &text, const QString &color, const QString &background, const QString &border)
+{
+    auto *label = new QLabel(text, parent);
+    label->setWordWrap(true);
+    label->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    label->setStyleSheet(
+        QString(
+            "QLabel {"
+            "  color: %1;"
+            "  background: %2;"
+            "  border: 1px solid %3;"
+            "  border-radius: 4px;"
+            "  padding: 6px 8px;"
+            "}"
+        ).arg(color, background, border)
+    );
+    return label;
+}
+}
+
+void FaceGroupPropertyView::populate(
+    QWidget *parent,
+    const FaceGroup &faceGroup,
+    const FaceGroupBindingSummary &bindingSummary
+)
 {
     auto *dynamicLayout = new QVBoxLayout(parent);
     auto *form = new QFormLayout;
@@ -74,4 +102,14 @@ void FaceGroupPropertyView::populate(QWidget *parent, const FaceGroup &faceGroup
         dynamicLayout->addWidget(emptyFaceGroupHint(parent));
     }
     dynamicLayout->addLayout(form);
+
+    auto *bindingForm = new QFormLayout;
+    bindingForm->addRow(zh(u8"绑定状态:"), new QLabel(bindingSummary.status, parent));
+    bindingForm->addRow(zh(u8"边界条件:"), new QLabel(listText(bindingSummary.boundaryConditions), parent));
+    bindingForm->addRow(zh(u8"载荷:"), new QLabel(listText(bindingSummary.loads), parent));
+    dynamicLayout->addLayout(bindingForm);
+
+    for (const QString &warning : bindingSummary.warnings) {
+        dynamicLayout->addWidget(hintLabel(parent, warning, "#92400e", "#fffbeb", "#fcd34d"));
+    }
 }

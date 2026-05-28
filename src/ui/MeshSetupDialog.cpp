@@ -5,6 +5,7 @@
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
+#include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -41,6 +42,9 @@ void MeshSetupDialog::setupUi()
     m_elementTypeCombo->addItem(zh(u8"Tet4 - 线性四面体"), toString(MeshElementType::Tetra4));
     m_elementTypeCombo->addItem(zh(u8"Tet10 - 二次四面体"), toString(MeshElementType::Tetra10));
     form->addRow(zh(u8"单元类型:"), m_elementTypeCombo);
+    connect(m_elementTypeCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this]() {
+        updateSizePreview();
+    });
 
     m_autoSizeCheckBox = new QCheckBox(this);
     form->addRow(zh(u8"自动尺寸:"), m_autoSizeCheckBox);
@@ -55,9 +59,30 @@ void MeshSetupDialog::setupUi()
 
     connect(m_autoSizeCheckBox, &QCheckBox::toggled, this, [this]() {
         updateSizeControlState();
+        updateSizePreview();
+    });
+    connect(m_minimumSizeSpin, qOverload<double>(&QDoubleSpinBox::valueChanged), this, [this]() {
+        updateSizePreview();
+    });
+    connect(m_maximumSizeSpin, qOverload<double>(&QDoubleSpinBox::valueChanged), this, [this]() {
+        updateSizePreview();
     });
 
     mainLayout->addLayout(form);
+
+    m_sizePreviewLabel = new QLabel(this);
+    m_sizePreviewLabel->setWordWrap(true);
+    m_sizePreviewLabel->setObjectName("mesh.setup.sizePreview");
+    m_sizePreviewLabel->setStyleSheet(
+        "QLabel {"
+        "  color: #1f2937;"
+        "  background: #f8fafc;"
+        "  border: 1px solid #d1d5db;"
+        "  border-radius: 4px;"
+        "  padding: 6px 8px;"
+        "}"
+    );
+    mainLayout->addWidget(m_sizePreviewLabel);
 
     auto *buttonBox = new QDialogButtonBox(
         QDialogButtonBox::Ok | QDialogButtonBox::Cancel,
@@ -101,6 +126,7 @@ void MeshSetupDialog::setMeshSetup(const MeshSetup &meshSetup)
     m_minimumSizeSpin->setValue(meshSetup.minimumSize);
     m_maximumSizeSpin->setValue(meshSetup.maximumSize);
     updateSizeControlState();
+    updateSizePreview();
 }
 
 void MeshSetupDialog::updateSizeControlState()
@@ -110,10 +136,36 @@ void MeshSetupDialog::updateSizeControlState()
     m_maximumSizeSpin->setEnabled(manual);
 }
 
+void MeshSetupDialog::updateSizePreview()
+{
+    if (!m_sizePreviewLabel) {
+        return;
+    }
+
+    const QString elementType = m_elementTypeCombo
+        ? m_elementTypeCombo->currentText()
+        : displayName(MeshElementType::Tetra4);
+    if (m_autoSizeCheckBox->isChecked()) {
+        m_sizePreviewLabel->setText(
+            zh(u8"当前设置：%1，自动尺寸。Gmsh 会根据几何包围盒和曲率估算全局网格尺寸。")
+                .arg(elementType)
+        );
+        return;
+    }
+
+    m_sizePreviewLabel->setText(
+        zh(u8"当前设置：%1，手动尺寸。最小尺寸=%2，最大尺寸=%3。局部面组尺寸会在对应面组属性中覆盖全局尺寸。")
+            .arg(elementType)
+            .arg(m_minimumSizeSpin->value(), 0, 'g', 8)
+            .arg(m_maximumSizeSpin->value(), 0, 'g', 8)
+    );
+}
+
 void MeshSetupDialog::setElementType(MeshElementType elementType)
 {
     const int index = m_elementTypeCombo->findData(toString(elementType));
     m_elementTypeCombo->setCurrentIndex(index >= 0 ? index : 0);
+    updateSizePreview();
 }
 
 MeshElementType MeshSetupDialog::selectedElementType() const

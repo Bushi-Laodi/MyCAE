@@ -14,10 +14,10 @@ bool containsAny(const QString &text, const QStringList &patterns)
 
 DiagnosticSeverity severityForMessage(const QString &lower)
 {
-    if (containsAny(lower, {"[fail]", " fail", "failed", "error", "cannot ", "does not exist", "not found", "invalid"})) {
+    if (containsAny(lower, {"[fail]", " fail", "failed", "error", "cannot ", "does not exist", "not found", "invalid", "失败", "不存在", "无效"})) {
         return DiagnosticSeverity::Error;
     }
-    if (containsAny(lower, {" warning", "warning:", "skipped", "incomplete", "missing", "diagnostic hint"})) {
+    if (containsAny(lower, {" warning", "warning:", "skipped", "incomplete", "missing", "diagnostic hint", "警告", "缺失", "需要检查"})) {
         return DiagnosticSeverity::Warning;
     }
     return DiagnosticSeverity::Info;
@@ -28,7 +28,7 @@ DiagnosticCategory categoryForMessage(const QString &lower)
     if (containsAny(lower, {"calculix path", "gmsh path", "environment", "executable", "dll", "ccx.exe", "gmsh.exe"})) {
         return DiagnosticCategory::Environment;
     }
-    if (containsAny(lower, {"mesh", "msh", "tetra", "node count", "tetra count", "surface triangle"})) {
+    if (containsAny(lower, {"mesh", "msh", "tetra", "node count", "tetra count", "surface triangle", "网格", "四面体", "节点"})) {
         return DiagnosticCategory::Mesh;
     }
     if (containsAny(lower, {"result", ".dat", ".frd", "displacement", "stress", "von mises", "coverage"})) {
@@ -37,7 +37,7 @@ DiagnosticCategory categoryForMessage(const QString &lower)
     if (containsAny(lower, {"solver", "solved", "calculix", "openfoam", "analysis", ".sta", ".log", "converge", "ccx", "zero pivot", "singular", "cutbacks"})) {
         return DiagnosticCategory::Solver;
     }
-    if (containsAny(lower, {"material", "boundary", "load", "case data", "no enabled", "no material"})) {
+    if (containsAny(lower, {"material", "boundary", "load", "case data", "no enabled", "no material", "材料", "边界", "载荷", "工况", "面组"})) {
         return DiagnosticCategory::Input;
     }
     if (containsAny(lower, {"project", "open project", "new project", "save simulation case"})) {
@@ -99,7 +99,13 @@ bool shouldCollect(const QString &lower)
         "zero pivot",
         "singular",
         "negative jacobian",
-        "too many cutbacks"
+        "too many cutbacks",
+        "警告",
+        "失败",
+        "不存在",
+        "无效",
+        "缺失",
+        "需要检查"
     });
 }
 }

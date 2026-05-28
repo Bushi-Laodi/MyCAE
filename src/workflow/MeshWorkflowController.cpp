@@ -1,11 +1,13 @@
 #include "workflow/MeshWorkflowController.h"
 
+#include "geometry/FaceGroup.h"
 #include "geometry/GeometryObject.h"
 #include "mesh/GmshCaseWriter.h"
 #include "mesh/GmshRunner.h"
 #include "mesh/MeshData.h"
 #include "mesh/MeshBoundaryBuilder.h"
 #include "mesh/MeshManager.h"
+#include "mesh/MeshQualityChecker.h"
 #include "mesh/MeshToVtkConverter.h"
 #include "mesh/MshReader.h"
 #include "project/ProjectModel.h"
@@ -117,6 +119,57 @@ QString meshOptionLogSuffix(const MeshSetup &meshSetup)
         }
     }
     return suffix;
+}
+
+QStringList localMeshControlTexts(const ProjectModel &projectModel, const QString &geometryName)
+{
+    QStringList controls;
+    for (const FaceGroup &faceGroup : projectModel.solverRepository().faceGroups()) {
+        if (faceGroup.geometryName != geometryName || !faceGroup.localMeshEnabled || faceGroup.localMeshSize <= 0.0) {
+            continue;
+        }
+        controls.append(
+            QString("%1: size=%2, faces=%3")
+                .arg(FaceGroups::displayName(faceGroup))
+                .arg(faceGroup.localMeshSize, 0, 'g', 12)
+                .arg(static_cast<int>(faceGroup.faceIndices.size()))
+        );
+    }
+    return controls;
+}
+
+void applyQualityReport(MeshObject &meshObject, const MeshQualityReport &qualityReport)
+{
+    meshObject.qualityChecked = qualityReport.checked;
+    meshObject.qualityStatus = qualityReport.status;
+    meshObject.minimumEdgeLength = qualityReport.minimumEdgeLength;
+    meshObject.maximumEdgeLength = qualityReport.maximumEdgeLength;
+    meshObject.averageEdgeLength = qualityReport.averageEdgeLength;
+    meshObject.minimumTetraVolume = qualityReport.minimumTetraVolume;
+    meshObject.maximumTetraVolume = qualityReport.maximumTetraVolume;
+    meshObject.averageTetraVolume = qualityReport.averageTetraVolume;
+    meshObject.maximumAspectRatio = qualityReport.maximumAspectRatio;
+    meshObject.averageAspectRatio = qualityReport.averageAspectRatio;
+    meshObject.invalidTetraCount = qualityReport.invalidTetraCount;
+    meshObject.degenerateTetraCount = qualityReport.degenerateTetraCount;
+    meshObject.highAspectRatioTetraCount = qualityReport.highAspectRatioTetraCount;
+    meshObject.qualityWarnings = qualityReport.warnings;
+}
+
+void appendQualityLog(MeshWorkflowResult &workflowResult, const MeshQualityReport &qualityReport)
+{
+    workflowResult.logMessages.append(zh(u8"网格质量检查：") + qualityReport.status);
+    workflowResult.logMessages.append(
+        zh(u8"网格质量统计：minEdge=%1，maxEdge=%2，avgEdge=%3，minVol=%4，maxAspect=%5")
+            .arg(qualityReport.minimumEdgeLength, 0, 'g', 8)
+            .arg(qualityReport.maximumEdgeLength, 0, 'g', 8)
+            .arg(qualityReport.averageEdgeLength, 0, 'g', 8)
+            .arg(qualityReport.minimumTetraVolume, 0, 'g', 8)
+            .arg(qualityReport.maximumAspectRatio, 0, 'g', 8)
+    );
+    for (const QString &warning : qualityReport.warnings) {
+        workflowResult.logMessages.append(zh(u8"网格质量警告：") + warning);
+    }
 }
 }
 
@@ -231,6 +284,13 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     meshObject.nodeCount = meshData.nodeCount();
     meshObject.tetraCount = meshData.tetraCount();
     meshObject.createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);
+    meshObject.meshAutoSize = meshSetup.autoSize;
+    meshObject.meshMinimumSize = meshSetup.minimumSize;
+    meshObject.meshMaximumSize = meshSetup.maximumSize;
+    meshObject.localMeshControls = localMeshControlTexts(projectModel, geometry.name);
+
+    const MeshQualityReport qualityReport = MeshQualityChecker::check(meshData);
+    applyQualityReport(meshObject, qualityReport);
 
     const QVector<MeshBoundary> meshBoundaries = MeshBoundaryBuilder::build(meshData, meshObject);
 
@@ -258,6 +318,15 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     workflowResult.meshTreeChanged = true;
     workflowResult.simulationCaseChanged = true;
     workflowResult.logMessages.append(zh(u8"网格对象已保存：mesh/") + safeGeometryName + "_mesh.json");
+    workflowResult.logMessages.append(meshObject.meshAutoSize
+        ? zh(u8"网格尺寸参数：自动尺寸")
+        : zh(u8"网格尺寸参数：手动 min=%1，max=%2")
+            .arg(meshObject.meshMinimumSize, 0, 'g', 12)
+            .arg(meshObject.meshMaximumSize, 0, 'g', 12));
+    for (const QString &control : meshObject.localMeshControls) {
+        workflowResult.logMessages.append(zh(u8"局部网格尺寸：") + control);
+    }
+    appendQualityLog(workflowResult, qualityReport);
     workflowResult.logMessages.append(zh(u8"检测到网格边界：%1").arg(meshBoundaries.size()));
     for (const MeshBoundary &meshBoundary : meshBoundaries) {
         workflowResult.logMessages.append(
@@ -290,6 +359,7 @@ MeshWorkflowResult MeshWorkflowController::readMeshInfo(const ProjectModel &proj
     workflowResult.logMessages.append(zh(u8"读取网格成功。"));
     workflowResult.logMessages.append(zh(u8"节点数：%1").arg(meshData.nodeCount()));
     workflowResult.logMessages.append(zh(u8"四面体数：%1").arg(meshData.tetraCount()));
+    appendQualityLog(workflowResult, MeshQualityChecker::check(meshData));
     return workflowResult;
 }
 

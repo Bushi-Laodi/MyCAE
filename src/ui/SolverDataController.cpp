@@ -145,7 +145,12 @@ QStringList SolverDataController::showBoundaryCondition(
         boundaryCondition->name
     ));
     if (propertyPanel) {
-        propertyPanel->showBoundaryCondition(*boundaryCondition);
+        const SolverRepository &solverRepository = projectModel.solverRepository();
+        propertyPanel->showBoundaryCondition(
+            *boundaryCondition,
+            solverRepository.faceGroups(),
+            solverRepository.loads()
+        );
     }
     return {zh(u8"边界条件已选择：") + boundaryCondition->name};
 }

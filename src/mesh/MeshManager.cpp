@@ -4,8 +4,10 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QIODevice>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonValue>
 #include <QStringList>
 
 namespace
@@ -21,6 +23,29 @@ QString geometryFileStem(const QString &geometryName)
         }
     }
     return result.isEmpty() ? QString("geometry") : result;
+}
+
+QJsonArray stringListToJson(const QStringList &values)
+{
+    QJsonArray array;
+    for (const QString &value : values) {
+        array.append(value);
+    }
+    return array;
+}
+
+QStringList stringListFromJson(const QJsonValue &value)
+{
+    QStringList values;
+    if (!value.isArray()) {
+        return values;
+    }
+
+    const QJsonArray array = value.toArray();
+    for (const QJsonValue &item : array) {
+        values.append(item.toString());
+    }
+    return values;
 }
 }
 
@@ -49,6 +74,30 @@ bool MeshManager::saveMeshObject(const MeshObject &meshObject, QString *errorMes
     object.insert("nodeCount", meshObject.nodeCount);
     object.insert("tetraCount", meshObject.tetraCount);
     object.insert("createdAt", meshObject.createdAt);
+
+    QJsonObject sizeObject;
+    sizeObject.insert("autoSize", meshObject.meshAutoSize);
+    sizeObject.insert("minimumSize", meshObject.meshMinimumSize);
+    sizeObject.insert("maximumSize", meshObject.meshMaximumSize);
+    sizeObject.insert("localControls", stringListToJson(meshObject.localMeshControls));
+    object.insert("meshSize", sizeObject);
+
+    QJsonObject qualityObject;
+    qualityObject.insert("checked", meshObject.qualityChecked);
+    qualityObject.insert("status", meshObject.qualityStatus);
+    qualityObject.insert("minimumEdgeLength", meshObject.minimumEdgeLength);
+    qualityObject.insert("maximumEdgeLength", meshObject.maximumEdgeLength);
+    qualityObject.insert("averageEdgeLength", meshObject.averageEdgeLength);
+    qualityObject.insert("minimumTetraVolume", meshObject.minimumTetraVolume);
+    qualityObject.insert("maximumTetraVolume", meshObject.maximumTetraVolume);
+    qualityObject.insert("averageTetraVolume", meshObject.averageTetraVolume);
+    qualityObject.insert("maximumAspectRatio", meshObject.maximumAspectRatio);
+    qualityObject.insert("averageAspectRatio", meshObject.averageAspectRatio);
+    qualityObject.insert("invalidTetraCount", meshObject.invalidTetraCount);
+    qualityObject.insert("degenerateTetraCount", meshObject.degenerateTetraCount);
+    qualityObject.insert("highAspectRatioTetraCount", meshObject.highAspectRatioTetraCount);
+    qualityObject.insert("warnings", stringListToJson(meshObject.qualityWarnings));
+    object.insert("quality", qualityObject);
 
     QFile file(meshJsonPathForGeometry(meshObject.sourceGeometryName));
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
@@ -126,6 +175,28 @@ bool MeshManager::readMeshObject(const QString &filePath, MeshObject &meshObject
     meshObject.nodeCount = object.value("nodeCount").toInt();
     meshObject.tetraCount = object.value("tetraCount").toInt();
     meshObject.createdAt = object.value("createdAt").toString();
+
+    const QJsonObject sizeObject = object.value("meshSize").toObject();
+    meshObject.meshAutoSize = sizeObject.value("autoSize").toBool(true);
+    meshObject.meshMinimumSize = sizeObject.value("minimumSize").toDouble();
+    meshObject.meshMaximumSize = sizeObject.value("maximumSize").toDouble();
+    meshObject.localMeshControls = stringListFromJson(sizeObject.value("localControls"));
+
+    const QJsonObject qualityObject = object.value("quality").toObject();
+    meshObject.qualityChecked = qualityObject.value("checked").toBool(false);
+    meshObject.qualityStatus = qualityObject.value("status").toString();
+    meshObject.minimumEdgeLength = qualityObject.value("minimumEdgeLength").toDouble();
+    meshObject.maximumEdgeLength = qualityObject.value("maximumEdgeLength").toDouble();
+    meshObject.averageEdgeLength = qualityObject.value("averageEdgeLength").toDouble();
+    meshObject.minimumTetraVolume = qualityObject.value("minimumTetraVolume").toDouble();
+    meshObject.maximumTetraVolume = qualityObject.value("maximumTetraVolume").toDouble();
+    meshObject.averageTetraVolume = qualityObject.value("averageTetraVolume").toDouble();
+    meshObject.maximumAspectRatio = qualityObject.value("maximumAspectRatio").toDouble();
+    meshObject.averageAspectRatio = qualityObject.value("averageAspectRatio").toDouble();
+    meshObject.invalidTetraCount = qualityObject.value("invalidTetraCount").toInt();
+    meshObject.degenerateTetraCount = qualityObject.value("degenerateTetraCount").toInt();
+    meshObject.highAspectRatioTetraCount = qualityObject.value("highAspectRatioTetraCount").toInt();
+    meshObject.qualityWarnings = stringListFromJson(qualityObject.value("warnings"));
 
     return true;
 }

@@ -232,7 +232,7 @@ SelectionControllerResult SelectionController::showFaceGroup(const QString &face
     result.logMessages.append(highlightResult.logMessages);
 
     if (m_propertyPanel) {
-        m_propertyPanel->showFaceGroup(*faceGroup);
+        m_propertyPanel->showFaceGroup(*faceGroup, m_projectModel.boundaryConditions(), m_projectModel.loads());
     }
     result.logMessages.append(zh(u8"面组已选择：") + faceGroup->id);
     result.accepted = true;

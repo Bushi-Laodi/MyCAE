@@ -7,8 +7,10 @@
 #include "geometry/SphereGeometry.h"
 #include "mesh/MeshObject.h"
 #include "result/ResultObject.h"
+#include "solver/BoundaryBindingInspector.h"
 #include "ui/property/FaceGroupPropertyView.h"
 #include "ui/property/GeometryPropertyView.h"
+#include "ui/property/MeshPropertyView.h"
 #include "ui/property/PickPropertyView.h"
 #include "ui/property/ResultPropertyView.h"
 #include "ui/property/SolverPropertyView.h"
@@ -254,10 +256,22 @@ void PropertyPanel::showMeshObject(const MeshObject &meshObject)
     m_tetraCountValue->setText(QString::number(meshObject.tetraCount));
     m_createdAtValue->setText(meshObject.createdAt);
 
-    resetDynamicArea(false);
+    resetDynamicArea();
+    MeshPropertyView::populate(m_dynamicArea, meshObject);
 }
 
 void PropertyPanel::showFaceGroup(const FaceGroup &faceGroup)
+{
+    const std::vector<BoundaryCondition> emptyBoundaryConditions;
+    const std::vector<Load> emptyLoads;
+    showFaceGroup(faceGroup, emptyBoundaryConditions, emptyLoads);
+}
+
+void PropertyPanel::showFaceGroup(
+    const FaceGroup &faceGroup,
+    const std::vector<BoundaryCondition> &boundaryConditions,
+    const std::vector<Load> &loads
+)
 {
     clearAll();
     m_selectionValue->setText(faceGroup.id);
@@ -266,7 +280,11 @@ void PropertyPanel::showFaceGroup(const FaceGroup &faceGroup)
     m_sourceGeometryValue->setText(faceGroup.geometryName);
 
     resetDynamicArea();
-    FaceGroupPropertyView::populate(m_dynamicArea, faceGroup);
+    FaceGroupPropertyView::populate(
+        m_dynamicArea,
+        faceGroup,
+        BoundaryBindingInspector::summarizeFaceGroup(faceGroup, boundaryConditions, loads)
+    );
 }
 
 void PropertyPanel::showPickState(PickMode mode, const QString &geometryName, const std::vector<int> &faceIndices)
@@ -321,6 +339,17 @@ void PropertyPanel::showMaterial(const Material &material)
 
 void PropertyPanel::showBoundaryCondition(const BoundaryCondition &boundaryCondition)
 {
+    const std::vector<FaceGroup> emptyFaceGroups;
+    const std::vector<Load> emptyLoads;
+    showBoundaryCondition(boundaryCondition, emptyFaceGroups, emptyLoads);
+}
+
+void PropertyPanel::showBoundaryCondition(
+    const BoundaryCondition &boundaryCondition,
+    const std::vector<FaceGroup> &faceGroups,
+    const std::vector<Load> &loads
+)
+{
     clearAll();
     m_selectionValue->setText(boundaryCondition.name);
     m_typeValue->setText(zh(u8"边界条件"));
@@ -328,7 +357,11 @@ void PropertyPanel::showBoundaryCondition(const BoundaryCondition &boundaryCondi
     m_sourceGeometryValue->setText(boundaryCondition.target.geometryName);
 
     resetDynamicArea();
-    SolverPropertyView::populateBoundaryCondition(m_dynamicArea, boundaryCondition);
+    SolverPropertyView::populateBoundaryCondition(
+        m_dynamicArea,
+        boundaryCondition,
+        BoundaryBindingInspector::summarizeBoundaryCondition(boundaryCondition, faceGroups, loads)
+    );
 }
 
 void PropertyPanel::showLoad(const Load &load)

@@ -9,6 +9,7 @@
 class QCheckBox;
 class QComboBox;
 class QDoubleSpinBox;
+class QLabel;
 
 class MeshSetupDialog final : public QDialog
 {
@@ -28,6 +29,7 @@ public:
 private:
     void setupUi();
     void updateSizeControlState();
+    void updateSizePreview();
     void setElementType(MeshElementType elementType);
     MeshElementType selectedElementType() const;
 
@@ -36,4 +38,5 @@ private:
     QCheckBox *m_autoSizeCheckBox = nullptr;
     QDoubleSpinBox *m_minimumSizeSpin = nullptr;
     QDoubleSpinBox *m_maximumSizeSpin = nullptr;
+    QLabel *m_sizePreviewLabel = nullptr;
 };

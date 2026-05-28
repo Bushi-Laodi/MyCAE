@@ -178,6 +178,8 @@ qt_add_executable(MyCAE
     src/mesh/MeshManager.cpp
     src/mesh/MeshManager.h
     src/mesh/MeshObject.h
+    src/mesh/MeshQualityChecker.cpp
+    src/mesh/MeshQualityChecker.h
     src/mesh/MeshSetup.h
     src/mesh/MeshToVtkConverter.cpp
     src/mesh/MeshToVtkConverter.h
@@ -256,6 +258,8 @@ qt_add_executable(MyCAE
     src/result/ResultReportExporter.cpp
     src/result/ResultReportExporter.h
     src/solver/BoundaryCondition.h
+    src/solver/BoundaryBindingInspector.cpp
+    src/solver/BoundaryBindingInspector.h
     src/solver/Load.h
     src/solver/Material.h
     src/solver/SimulationCase.h
@@ -401,6 +405,8 @@ qt_add_executable(MyCAE
     src/ui/property/FaceGroupPropertyView.h
     src/ui/property/GeometryPropertyView.cpp
     src/ui/property/GeometryPropertyView.h
+    src/ui/property/MeshPropertyView.cpp
+    src/ui/property/MeshPropertyView.h
     src/ui/property/PickPropertyView.cpp
     src/ui/property/PickPropertyView.h
     src/ui/property/ResultPropertyView.cpp
