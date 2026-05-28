@@ -1,18 +1,18 @@
 #include "result/ResultDisplayController.h"
 
-#include "mesh/MeshToVtkConverter.h"
+#include "result/ResultDisplayCache.h"
 #include "result/ResultDataLoader.h"
-#include "result/ResultExtremaCalculator.h"
 #include "result/ResultFieldMetadata.h"
 #include "result/ResultDisplaySummary.h"
-#include "solver/calculix/CalculiXResultGridBuilder.h"
 #include "ui/RenderView.h"
 
 #include <QFileInfo>
+#include <vtkCellData.h>
+#include <vtkDataArray.h>
+#include <vtkPointData.h>
 #include <vtkUnstructuredGrid.h>
 
 #include <algorithm>
-#include <memory>
 
 namespace
 {
@@ -38,6 +38,51 @@ QStringList fileCompletenessMessages(const ResultObject &resultObject)
     }
     return messages;
 }
+
+bool isDisplacementField(const QString &fieldName)
+{
+    return fieldName == CalculiXResultFields::Ux
+        || fieldName == CalculiXResultFields::Uy
+        || fieldName == CalculiXResultFields::Uz
+        || fieldName == CalculiXResultFields::DisplacementMagnitude;
+}
+
+CalculiXResultScalarAssociation associationForField(const QString &fieldName)
+{
+    return fieldName == CalculiXResultFields::VonMisesStress
+        ? CalculiXResultScalarAssociation::Cell
+        : CalculiXResultScalarAssociation::Point;
+}
+
+vtkDataArray *scalarArray(vtkUnstructuredGrid *grid, const QString &fieldName)
+{
+    if (!grid) {
+        return nullptr;
+    }
+    if (associationForField(fieldName) == CalculiXResultScalarAssociation::Cell) {
+        return grid->GetCellData() ? grid->GetCellData()->GetArray(fieldName.toUtf8().constData()) : nullptr;
+    }
+    return grid->GetPointData() ? grid->GetPointData()->GetArray(fieldName.toUtf8().constData()) : nullptr;
+}
+
+bool scalarRange(vtkUnstructuredGrid *grid, const QString &fieldName, double &minimum, double &maximum)
+{
+    vtkDataArray *array = scalarArray(grid, fieldName);
+    if (!array || array->GetNumberOfTuples() <= 0) {
+        return false;
+    }
+
+    double range[2] = {0.0, 0.0};
+    array->GetRange(range);
+    minimum = range[0];
+    maximum = range[1];
+    return true;
+}
+
+QString resultCacheKey(const ResultObject &resultObject)
+{
+    return resultObject.id + "|" + resultObject.name;
+}
 }
 
 ResultDisplayResult ResultDisplayController::displayResult(
@@ -54,9 +99,16 @@ ResultDisplayResult ResultDisplayController::displayResult(
         displayResult.logMessages.append("Result display skipped: render view is not available.");
         return displayResult;
     }
-    auto loaded = std::make_unique<ResultDataLoadResult>(ResultDataLoader().loadCalculiXResult(projectModel, resultObject));
+    ResultDisplayCacheData cachedData = ResultDisplayCache::instance().loadData(projectModel, resultObject);
+    const std::shared_ptr<ResultDataLoadResult> loaded = cachedData.loaded;
+    if (!loaded) {
+        displayResult.logMessages.append("Result display failed: cache did not return result data.");
+        return displayResult;
+    }
     resultObject.checkMessages.append(loaded->warnings);
-    displayResult.logMessages.append(loaded->warnings);
+    if (!cachedData.cacheHit) {
+        displayResult.logMessages.append(loaded->warnings);
+    }
     for (const QString &error : loaded->errors) {
         displayResult.logMessages.append("Result display failed: " + error);
     }
@@ -124,23 +176,37 @@ ResultDisplayResult ResultDisplayController::displayResult(
             .arg(summary.meshElementCount)
             .arg(resultObject.deformationScale, 0, 'g', 6));
         displayResult.success = true;
-        // UI validation runs without a real VTK canvas. In that short-lived mode, keep the
-        // loaded mesh/result buffers alive until process exit to avoid teardown-time crashes
-        // from debug VTK/Qt dependencies while still validating the postprocess controls.
-        loaded.release();
         return displayResult;
     }
 
-    CalculiXResultGridBuildResult gridResult = CalculiXResultGridBuilder().buildResultGrid(
-        loaded->meshData,
-        loaded->datResult,
-        fieldName,
+    if (isDisplacementField(fieldName) && loaded->datResult.displacements.empty()) {
+        displayResult.logMessages.append("Result display failed: displacement field is empty.");
+        return displayResult;
+    }
+    if (fieldName == CalculiXResultFields::VonMisesStress && loaded->datResult.stresses.empty()) {
+        displayResult.logMessages.append("Result display failed: stress field is empty.");
+        return displayResult;
+    }
+
+    ResultDisplayCacheGrid cachedGrid = ResultDisplayCache::instance().buildGrid(
+        *loaded,
+        resultCacheKey(resultObject),
         resultObject.deformationScale
     );
-    displayResult.logMessages.append(gridResult.warnings);
+    CalculiXResultGridBuildResult gridResult = cachedGrid.gridResult;
+    if (!cachedGrid.cacheHit) {
+        displayResult.logMessages.append(gridResult.warnings);
+    }
     displayResult.logMessages.append(gridResult.errors);
     resultObject.checkMessages.append(gridResult.warnings);
     if (!gridResult.success || !gridResult.grid) {
+        return displayResult;
+    }
+
+    gridResult.scalarName = fieldName;
+    gridResult.scalarAssociation = associationForField(fieldName);
+    if (!scalarRange(gridResult.grid, fieldName, gridResult.scalarMin, gridResult.scalarMax)) {
+        displayResult.logMessages.append("Result display failed: scalar array not found: " + fieldName);
         return displayResult;
     }
 
@@ -160,12 +226,12 @@ ResultDisplayResult ResultDisplayController::displayResult(
     if (displayScalarMin > displayScalarMax) {
         std::swap(displayScalarMin, displayScalarMax);
     }
-    resultObject.extrema = ResultExtremaCalculator().calculate(
-        loaded->meshData,
-        loaded->datResult,
+    resultObject.extrema = ResultDisplayCache::instance().calculateExtrema(
+        *loaded,
+        resultCacheKey(resultObject),
         gridResult.scalarName,
         resultObject.deformationScale
-    );
+    ).extrema;
     if (gridResult.matchedNodeCount < gridResult.meshNodeCount) {
         resultObject.checkMessages.append("Node result coverage is incomplete.");
     }
@@ -176,10 +242,12 @@ ResultDisplayResult ResultDisplayController::displayResult(
 
     vtkSmartPointer<vtkUnstructuredGrid> overlayGrid;
     if (resultObject.showUndeformedOverlay && resultObject.deformationScale != 0.0) {
-        QString overlayError;
-        overlayGrid = MeshToVtkConverter::toUnstructuredGrid(loaded->meshData, &overlayError);
-        if (!overlayGrid) {
-            resultObject.checkMessages.append("Cannot build undeformed overlay: " + overlayError);
+        const ResultDisplayCacheOverlay cachedOverlay =
+            ResultDisplayCache::instance().buildOverlay(*loaded, resultCacheKey(resultObject));
+        overlayGrid = cachedOverlay.grid;
+        resultObject.checkMessages.append(cachedOverlay.warnings);
+        if (!cachedOverlay.cacheHit) {
+            displayResult.logMessages.append(cachedOverlay.warnings);
         }
     }
 

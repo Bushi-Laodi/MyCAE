@@ -13,6 +13,8 @@
 #include <vector>
 
 class QVTKOpenGLNativeWidget;
+class QResizeEvent;
+class QShowEvent;
 class TopoDS_Shape;
 class vtkActor;
 class vtkCallbackCommand;
@@ -22,6 +24,7 @@ class vtkPolyData;
 class vtkRenderer;
 class vtkScalarBarActor;
 class vtkUnstructuredGrid;
+struct FaceGroup;
 
 class VtkRenderCanvas final : public QWidget
 {
@@ -50,9 +53,11 @@ public:
     );
     void setPickMode(PickMode mode);
     void clearHighlight();
+    void highlightFaceGroup(const FaceGroup &faceGroup);
     void highlightFaceIndices(const std::vector<int> &faceIndices);
     void highlightResultPosition(double x, double y, double z);
     void highlightResultExtrema(const ResultExtremeMarker &minimum, const ResultExtremeMarker &maximum);
+    QString activeGeometryName() const;
 
 signals:
     void facePicked(const PickSelection &selection);
@@ -61,7 +66,10 @@ signals:
 private:
     static void handleVtkLeftButtonRelease(vtkObject *caller, unsigned long eventId, void *clientData, void *callData);
 
-    void renderIfReady();
+    void showEvent(QShowEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
+    void requestRender();
+    bool renderIfReady();
     void resetCamera();
     void resetSceneState();
     void handlePickAtRenderWindowPosition(int x, int y);
@@ -79,4 +87,5 @@ private:
     vtkSmartPointer<vtkScalarBarActor> m_scalarBarActor;
     QString m_activeGeometryName;
     PickMode m_pickMode = PickMode::None;
+    bool m_renderQueued = false;
 };

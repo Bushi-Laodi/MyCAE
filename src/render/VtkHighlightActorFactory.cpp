@@ -1,5 +1,7 @@
 #include "render/VtkHighlightActorFactory.h"
 
+#include "render/VtkFaceReferenceResolver.h"
+
 #include <set>
 #include <vtkActor.h>
 #include <vtkCellData.h>
@@ -17,7 +19,16 @@ vtkSmartPointer<vtkActor> VtkHighlightActorFactory::createFaceHighlightActor(
     const std::vector<int> &faceIndices
 )
 {
-    if (!polyData || faceIndices.empty()) {
+    return createFaceHighlightActor(polyData, faceIndices, {});
+}
+
+vtkSmartPointer<vtkActor> VtkHighlightActorFactory::createFaceHighlightActor(
+    vtkPolyData *polyData,
+    const std::vector<int> &faceIndices,
+    const std::vector<FaceReference> &faceReferences
+)
+{
+    if (!polyData || (faceIndices.empty() && faceReferences.empty())) {
         return nullptr;
     }
 
@@ -26,7 +37,13 @@ vtkSmartPointer<vtkActor> VtkHighlightActorFactory::createFaceHighlightActor(
         return nullptr;
     }
 
-    const std::set<int> selectedFaces(faceIndices.begin(), faceIndices.end());
+    const std::vector<int> resolvedFaceIndices =
+        VtkFaceReferenceResolver::resolveFaceIndices(polyData, faceIndices, faceReferences);
+    if (resolvedFaceIndices.empty()) {
+        return nullptr;
+    }
+
+    const std::set<int> selectedFaces(resolvedFaceIndices.begin(), resolvedFaceIndices.end());
     vtkNew<vtkIdList> cellIds;
     for (vtkIdType cellId = 0; cellId < polyData->GetNumberOfCells(); ++cellId) {
         if (selectedFaces.find(faceIndexArray->GetValue(cellId)) != selectedFaces.end()) {

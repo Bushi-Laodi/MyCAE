@@ -25,12 +25,12 @@ RenderHighlightResult RenderHighlightController::highlightFaceGroup(
         result.logMessages.append("Face group highlight skipped: render view is not available.");
         return result;
     }
-    if (faceGroup.faceIndices.empty()) {
+    if (faceGroup.faceIndices.empty() && faceGroup.faceReferences.empty()) {
         result.logMessages.append("Face group has no picked face indices: " + faceGroup.id);
         return result;
     }
 
-    renderView->highlightFaceIndices(faceGroup.faceIndices);
+    renderView->highlightFaceGroup(faceGroup);
     result.success = true;
     result.logMessages.append("Face group highlighted: " + faceGroup.id);
     return result;

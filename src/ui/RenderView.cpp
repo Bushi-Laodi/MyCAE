@@ -1,6 +1,7 @@
 #include "RenderView.h"
 
 #include "geometry/BoxGeometry.h"
+#include "geometry/FaceGroup.h"
 #include "VtkRenderCanvas.h"
 
 #include <QCoreApplication>
@@ -181,6 +182,13 @@ void RenderView::clearHighlight()
     }
 }
 
+void RenderView::highlightFaceGroup(const FaceGroup &faceGroup)
+{
+    if (m_canvas) {
+        m_canvas->highlightFaceGroup(faceGroup);
+    }
+}
+
 void RenderView::highlightFaceIndices(const std::vector<int> &faceIndices)
 {
     if (m_canvas) {
@@ -200,4 +208,9 @@ void RenderView::highlightResultExtrema(const ResultExtremeMarker &minimum, cons
     if (m_canvas) {
         m_canvas->highlightResultExtrema(minimum, maximum);
     }
+}
+
+QString RenderView::activeGeometryName() const
+{
+    return m_canvas ? m_canvas->activeGeometryName() : QString();
 }

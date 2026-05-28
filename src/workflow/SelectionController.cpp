@@ -18,6 +18,11 @@ QString zh(const char *text)
 {
     return QString::fromUtf8(text);
 }
+
+bool renderViewAlreadyShowsGeometry(RenderView *renderView, const QString &geometryName)
+{
+    return renderView && renderView->activeGeometryName() == geometryName;
+}
 }
 
 SelectionController::SelectionController(ProjectModel &projectModel, PropertyPanel *propertyPanel, RenderView *renderView)
@@ -57,7 +62,8 @@ SelectionControllerResult SelectionController::apply(const Selection &selection)
             if (!boundaryCondition->target.faceGroupId.isEmpty()) {
                 const FaceGroup *faceGroup = m_projectModel.findFaceGroupById(boundaryCondition->target.faceGroupId);
                 if (faceGroup) {
-                    if (const GeometryObject *geometry = m_projectModel.findGeometryByName(faceGroup->geometryName)) {
+                    if (!renderViewAlreadyShowsGeometry(m_renderView, faceGroup->geometryName)) {
+                        if (const GeometryObject *geometry = m_projectModel.findGeometryByName(faceGroup->geometryName)) {
                         const GeometryDisplayController displayController;
                         const GeometryDisplayResult displayResult = displayController.displayGeometry(
                             m_projectModel,
@@ -65,6 +71,7 @@ SelectionControllerResult SelectionController::apply(const Selection &selection)
                             m_renderView
                         );
                         result.logMessages.append(displayResult.logMessages);
+                        }
                     }
 
                     const RenderHighlightController highlightController;
@@ -194,7 +201,7 @@ SelectionControllerResult SelectionController::showFaceGroup(const QString &face
 
     m_projectModel.setSelection(Selection::item(SelectionKind::FaceGroup, faceGroup->id, FaceGroups::displayName(*faceGroup)));
     const GeometryObject *geometry = m_projectModel.findGeometryByName(faceGroup->geometryName);
-    if (geometry) {
+    if (geometry && !renderViewAlreadyShowsGeometry(m_renderView, faceGroup->geometryName)) {
         const GeometryDisplayController displayController;
         const GeometryDisplayResult displayResult = displayController.displayGeometry(
             m_projectModel,
@@ -202,7 +209,7 @@ SelectionControllerResult SelectionController::showFaceGroup(const QString &face
             m_renderView
         );
         result.logMessages.append(displayResult.logMessages);
-    } else {
+    } else if (!geometry) {
         result.logMessages.append(zh(u8"面组所属几何尚未加载：") + faceGroup->geometryName);
     }
 

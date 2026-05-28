@@ -1,5 +1,6 @@
 #include "VtkRenderCanvas.h"
 
+#include "geometry/FaceGroup.h"
 #include "occ/OCCShapeConverter.h"
 #include "render/VtkHighlightActorFactory.h"
 #include "render/VtkPickAdapter.h"
@@ -7,7 +8,10 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
+#include <QResizeEvent>
+#include <QShowEvent>
 #include <QSizePolicy>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QVTKOpenGLNativeWidget.h>
 #include <vtkActor.h>
@@ -118,7 +122,7 @@ void VtkRenderCanvas::showEmpty()
 {
     resetSceneState();
     m_renderer->RemoveAllViewProps();
-    renderIfReady();
+    requestRender();
 }
 
 void VtkRenderCanvas::showBoxGeometry(const BoxGeometry &box)
@@ -160,7 +164,7 @@ void VtkRenderCanvas::showBoxGeometry(const BoxGeometry &box)
     m_renderer->RemoveAllViewProps();
     m_renderer->AddActor(m_primaryActor);
     resetCamera();
-    renderIfReady();
+    requestRender();
 }
 
 void VtkRenderCanvas::showOccShape(const TopoDS_Shape &shape, const QString &geometryName)
@@ -185,7 +189,7 @@ void VtkRenderCanvas::showOccShape(const TopoDS_Shape &shape, const QString &geo
     m_renderer->RemoveAllViewProps();
     m_renderer->AddActor(m_primaryActor);
     resetCamera();
-    renderIfReady();
+    requestRender();
 }
 
 void VtkRenderCanvas::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid)
@@ -205,7 +209,7 @@ void VtkRenderCanvas::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid)
     m_renderer->RemoveAllViewProps();
     m_renderer->AddActor(actor);
     resetCamera();
-    renderIfReady();
+    requestRender();
 }
 
 void VtkRenderCanvas::showResultGrid(
@@ -293,7 +297,7 @@ void VtkRenderCanvas::showResultGrid(
     if (resetCameraView) {
         resetCamera();
     }
-    renderIfReady();
+    requestRender();
 }
 
 void VtkRenderCanvas::setPickMode(PickMode mode)
@@ -310,8 +314,23 @@ void VtkRenderCanvas::clearHighlight()
             }
         }
         m_highlightActors.clear();
-        renderIfReady();
+        requestRender();
     }
+}
+
+void VtkRenderCanvas::highlightFaceGroup(const FaceGroup &faceGroup)
+{
+    clearHighlight();
+    vtkSmartPointer<vtkActor> actor = VtkHighlightActorFactory::createFaceHighlightActor(
+        m_currentPolyData,
+        faceGroup.faceIndices,
+        faceGroup.faceReferences
+    );
+    if (actor) {
+        m_highlightActors.push_back(actor);
+        m_renderer->AddActor(actor);
+    }
+    requestRender();
 }
 
 void VtkRenderCanvas::highlightFaceIndices(const std::vector<int> &faceIndices)
@@ -322,14 +341,14 @@ void VtkRenderCanvas::highlightFaceIndices(const std::vector<int> &faceIndices)
         m_highlightActors.push_back(actor);
         m_renderer->AddActor(actor);
     }
-    renderIfReady();
+    requestRender();
 }
 
 void VtkRenderCanvas::highlightResultPosition(double x, double y, double z)
 {
     clearHighlight();
     addResultMarker(x, y, z, 1.0, 0.86, 0.18, 0.025);
-    renderIfReady();
+    requestRender();
 }
 
 void VtkRenderCanvas::highlightResultExtrema(const ResultExtremeMarker &minimum, const ResultExtremeMarker &maximum)
@@ -341,7 +360,12 @@ void VtkRenderCanvas::highlightResultExtrema(const ResultExtremeMarker &minimum,
     if (maximum.valid) {
         addResultMarker(maximum.x, maximum.y, maximum.z, 1.0, 0.32, 0.18, 0.026);
     }
-    renderIfReady();
+    requestRender();
+}
+
+QString VtkRenderCanvas::activeGeometryName() const
+{
+    return m_activeGeometryName;
 }
 
 void VtkRenderCanvas::addResultMarker(
@@ -406,12 +430,45 @@ void VtkRenderCanvas::handleVtkLeftButtonRelease(
     canvas->handlePickAtRenderWindowPosition(position[0], position[1]);
 }
 
-void VtkRenderCanvas::renderIfReady()
+void VtkRenderCanvas::showEvent(QShowEvent *event)
 {
-    if (!m_renderWindow || !m_vtkWidget || !m_vtkWidget->isVisible() || !m_vtkWidget->windowHandle()) {
+    QWidget::showEvent(event);
+    requestRender();
+}
+
+void VtkRenderCanvas::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    requestRender();
+}
+
+void VtkRenderCanvas::requestRender()
+{
+    if (m_renderQueued) {
         return;
     }
+
+    renderIfReady();
+    m_renderQueued = true;
+    QTimer::singleShot(0, this, [this]() {
+        m_renderQueued = false;
+        if (!renderIfReady() && m_vtkWidget) {
+            m_vtkWidget->update();
+        }
+    });
+}
+
+bool VtkRenderCanvas::renderIfReady()
+{
+    if (!m_renderWindow || !m_renderer || !m_vtkWidget || !m_vtkWidget->isVisible() || m_vtkWidget->size().isEmpty()) {
+        return false;
+    }
+    m_renderer->Modified();
+    m_renderWindow->Modified();
     m_renderWindow->Render();
+    m_vtkWidget->update();
+    m_vtkWidget->repaint();
+    return true;
 }
 
 void VtkRenderCanvas::resetCamera()
@@ -420,7 +477,7 @@ void VtkRenderCanvas::resetCamera()
     m_renderer->GetActiveCamera()->Azimuth(35.0);
     m_renderer->GetActiveCamera()->Elevation(25.0);
     m_renderer->ResetCameraClippingRange();
-    renderIfReady();
+    requestRender();
 }
 
 void VtkRenderCanvas::resetSceneState()

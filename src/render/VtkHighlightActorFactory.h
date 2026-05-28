@@ -1,5 +1,7 @@
 #pragma once
 
+#include "geometry/FaceGroup.h"
+
 #include <vtkSmartPointer.h>
 
 #include <vector>
@@ -13,5 +15,10 @@ public:
     static vtkSmartPointer<vtkActor> createFaceHighlightActor(
         vtkPolyData *polyData,
         const std::vector<int> &faceIndices
+    );
+    static vtkSmartPointer<vtkActor> createFaceHighlightActor(
+        vtkPolyData *polyData,
+        const std::vector<int> &faceIndices,
+        const std::vector<FaceReference> &faceReferences
     );
 };
