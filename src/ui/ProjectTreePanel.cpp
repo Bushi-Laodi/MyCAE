@@ -28,6 +28,18 @@ QString zh(const char *text)
     return QString::fromUtf8(text);
 }
 
+int faceGroupFaceCount(const FaceGroup &faceGroup)
+{
+    return static_cast<int>(faceGroup.faceIndices.size());
+}
+
+QString faceGroupTreeText(const FaceGroup &faceGroup)
+{
+    return QString("%1 (%2 faces)")
+        .arg(FaceGroups::displayName(faceGroup))
+        .arg(faceGroupFaceCount(faceGroup));
+}
+
 QString projectTreeStyleSheet()
 {
     return QStringLiteral(
@@ -183,9 +195,9 @@ void ProjectTreePanel::setFaceGroupItems(const std::vector<FaceGroup> &faceGroup
 
     clearChildren(m_faceGroupRoot);
     for (const FaceGroup &faceGroup : faceGroups) {
-        auto *item = new QTreeWidgetItem(QStringList{FaceGroups::displayName(faceGroup)});
+        auto *item = new QTreeWidgetItem(QStringList{faceGroupTreeText(faceGroup)});
         setItemSelection(item, Selection::item(SelectionKind::FaceGroup, faceGroup.id, FaceGroups::displayName(faceGroup)));
-        item->setToolTip(0, faceGroup.id);
+        item->setToolTip(0, QString("%1\n%2 faces").arg(faceGroup.id).arg(faceGroupFaceCount(faceGroup)));
         applyLeafStyle(item, UiIconFactory::treeBadge("F", QColor("#7c3aed")));
         m_faceGroupRoot->addChild(item);
     }

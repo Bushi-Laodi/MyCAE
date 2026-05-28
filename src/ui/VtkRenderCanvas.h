@@ -3,6 +3,7 @@
 #include "geometry/BoxGeometry.h"
 #include "picking/PickMode.h"
 #include "picking/PickSelection.h"
+#include "render/VtkHighlightActorFactory.h"
 #include "result/ResultExtrema.h"
 #include "result/ResultProbe.h"
 
@@ -53,7 +54,7 @@ public:
     );
     void setPickMode(PickMode mode);
     void clearHighlight();
-    void highlightFaceGroup(const FaceGroup &faceGroup);
+    void highlightFaceGroup(const FaceGroup &faceGroup, const VtkHighlightStyle &style = VtkHighlightStyle{});
     void highlightFaceIndices(const std::vector<int> &faceIndices);
     void highlightResultPosition(double x, double y, double z);
     void highlightResultExtrema(const ResultExtremeMarker &minimum, const ResultExtremeMarker &maximum);

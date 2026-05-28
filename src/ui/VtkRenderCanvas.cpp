@@ -318,13 +318,14 @@ void VtkRenderCanvas::clearHighlight()
     }
 }
 
-void VtkRenderCanvas::highlightFaceGroup(const FaceGroup &faceGroup)
+void VtkRenderCanvas::highlightFaceGroup(const FaceGroup &faceGroup, const VtkHighlightStyle &style)
 {
     clearHighlight();
     vtkSmartPointer<vtkActor> actor = VtkHighlightActorFactory::createFaceHighlightActor(
         m_currentPolyData,
         faceGroup.faceIndices,
-        faceGroup.faceReferences
+        faceGroup.faceReferences,
+        style
     );
     if (actor) {
         m_highlightActors.push_back(actor);

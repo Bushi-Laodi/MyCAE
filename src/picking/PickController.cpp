@@ -90,14 +90,14 @@ PickControllerResult PickController::setMode(PickMode mode, RenderView *renderVi
     return result;
 }
 
-PickControllerResult PickController::clear(RenderView *renderView)
+PickControllerResult PickController::clear(RenderView *renderView, bool clearRenderHighlight)
 {
     PickControllerResult result;
     m_selection = {};
     m_geometryName.clear();
     m_faceIndices.clear();
     m_selections.clear();
-    if (renderView) {
+    if (renderView && clearRenderHighlight) {
         renderView->clearHighlight();
     }
 

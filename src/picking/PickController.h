@@ -35,7 +35,7 @@ public:
     const QString &targetGeometry() const;
 
     PickControllerResult setMode(PickMode mode, RenderView *renderView);
-    PickControllerResult clear(RenderView *renderView);
+    PickControllerResult clear(RenderView *renderView, bool clearRenderHighlight = true);
     PickControllerResult acceptSelection(const PickSelection &selection, RenderView *renderView);
     PickControllerResult createFaceGroupFromCurrentPick(ProjectModel &projectModel, const QString &faceGroupName);
 

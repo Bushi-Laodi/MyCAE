@@ -28,6 +28,16 @@ vtkSmartPointer<vtkActor> VtkHighlightActorFactory::createFaceHighlightActor(
     const std::vector<FaceReference> &faceReferences
 )
 {
+    return createFaceHighlightActor(polyData, faceIndices, faceReferences, VtkHighlightStyle{});
+}
+
+vtkSmartPointer<vtkActor> VtkHighlightActorFactory::createFaceHighlightActor(
+    vtkPolyData *polyData,
+    const std::vector<int> &faceIndices,
+    const std::vector<FaceReference> &faceReferences,
+    const VtkHighlightStyle &style
+)
+{
     if (!polyData || (faceIndices.empty() && faceReferences.empty())) {
         return nullptr;
     }
@@ -67,11 +77,11 @@ vtkSmartPointer<vtkActor> VtkHighlightActorFactory::createFaceHighlightActor(
 
     auto actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
-    actor->GetProperty()->SetColor(1.0, 0.76, 0.08);
-    actor->GetProperty()->SetOpacity(0.92);
-    actor->GetProperty()->SetEdgeColor(1.0, 0.95, 0.55);
+    actor->GetProperty()->SetColor(style.red, style.green, style.blue);
+    actor->GetProperty()->SetOpacity(style.opacity);
+    actor->GetProperty()->SetEdgeColor(style.edgeRed, style.edgeGreen, style.edgeBlue);
     actor->GetProperty()->EdgeVisibilityOn();
-    actor->GetProperty()->SetLineWidth(3.0);
+    actor->GetProperty()->SetLineWidth(style.lineWidth);
     actor->GetProperty()->SetAmbient(0.35);
     actor->GetProperty()->SetDiffuse(0.75);
     return actor;

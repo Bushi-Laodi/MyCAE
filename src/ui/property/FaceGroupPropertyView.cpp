@@ -19,6 +19,22 @@ QString enabledText(bool enabled)
 {
     return enabled ? zh(u8"启用") : zh(u8"禁用");
 }
+
+QLabel *emptyFaceGroupHint(QWidget *parent)
+{
+    auto *label = new QLabel(zh(u8"该面组还没有包含任何面。请先进入拾取面模式，选择目标面后再创建或追加到面组。"), parent);
+    label->setWordWrap(true);
+    label->setStyleSheet(
+        "QLabel {"
+        "  color: #92400e;"
+        "  background: #fffbeb;"
+        "  border: 1px solid #fcd34d;"
+        "  border-radius: 4px;"
+        "  padding: 6px 8px;"
+        "}"
+    );
+    return label;
+}
 }
 
 void FaceGroupPropertyView::populate(QWidget *parent, const FaceGroup &faceGroup)
@@ -38,7 +54,7 @@ void FaceGroupPropertyView::populate(QWidget *parent, const FaceGroup &faceGroup
     for (const int faceIndex : faceGroup.faceIndices) {
         faceIndexTexts.append(QString::number(faceIndex));
     }
-    form->addRow(zh(u8"面索引:"), new QLabel(faceIndexTexts.join(", "), parent));
+    form->addRow(zh(u8"面索引:"), new QLabel(faceIndexTexts.isEmpty() ? "-" : faceIndexTexts.join(", "), parent));
 
     if (!faceGroup.faceReferences.empty()) {
         const FaceReference &firstReference = faceGroup.faceReferences.front();
@@ -53,6 +69,9 @@ void FaceGroupPropertyView::populate(QWidget *parent, const FaceGroup &faceGroup
                 parent
             )
         );
+    }
+    if (faceGroup.faceIndices.empty() && faceGroup.faceReferences.empty()) {
+        dynamicLayout->addWidget(emptyFaceGroupHint(parent));
     }
     dynamicLayout->addLayout(form);
 }

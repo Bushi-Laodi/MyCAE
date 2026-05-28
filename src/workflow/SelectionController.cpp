@@ -23,6 +23,28 @@ bool renderViewAlreadyShowsGeometry(RenderView *renderView, const QString &geome
 {
     return renderView && renderView->activeGeometryName() == geometryName;
 }
+
+QStringList displayFaceGroupGeometryIfNeeded(
+    const ProjectModel &projectModel,
+    RenderView *renderView,
+    const FaceGroup &faceGroup
+)
+{
+    QStringList logMessages;
+    if (renderViewAlreadyShowsGeometry(renderView, faceGroup.geometryName)) {
+        return logMessages;
+    }
+
+    if (const GeometryObject *geometry = projectModel.findGeometryByName(faceGroup.geometryName)) {
+        const GeometryDisplayController displayController;
+        const GeometryDisplayResult displayResult =
+            displayController.displayGeometry(projectModel, *geometry, renderView);
+        logMessages.append(displayResult.logMessages);
+    } else {
+        logMessages.append(zh(u8"面组所属几何尚未加载：") + faceGroup.geometryName);
+    }
+    return logMessages;
+}
 }
 
 SelectionController::SelectionController(ProjectModel &projectModel, PropertyPanel *propertyPanel, RenderView *renderView)
@@ -62,21 +84,11 @@ SelectionControllerResult SelectionController::apply(const Selection &selection)
             if (!boundaryCondition->target.faceGroupId.isEmpty()) {
                 const FaceGroup *faceGroup = m_projectModel.findFaceGroupById(boundaryCondition->target.faceGroupId);
                 if (faceGroup) {
-                    if (!renderViewAlreadyShowsGeometry(m_renderView, faceGroup->geometryName)) {
-                        if (const GeometryObject *geometry = m_projectModel.findGeometryByName(faceGroup->geometryName)) {
-                        const GeometryDisplayController displayController;
-                        const GeometryDisplayResult displayResult = displayController.displayGeometry(
-                            m_projectModel,
-                            *geometry,
-                            m_renderView
-                        );
-                        result.logMessages.append(displayResult.logMessages);
-                        }
-                    }
+                    result.logMessages.append(displayFaceGroupGeometryIfNeeded(m_projectModel, m_renderView, *faceGroup));
 
                     const RenderHighlightController highlightController;
                     const RenderHighlightResult highlightResult =
-                        highlightController.highlightFaceGroup(*faceGroup, m_renderView);
+                        highlightController.highlightBoundaryConditionFaceGroup(*faceGroup, m_renderView);
                     result.logMessages.append(highlightResult.logMessages);
                 } else {
                     result.logMessages.append(
@@ -91,6 +103,19 @@ SelectionControllerResult SelectionController::apply(const Selection &selection)
         SelectionControllerResult result;
         result.logMessages = SolverDataController::showLoad(m_projectModel, m_propertyPanel, selection.id);
         result.accepted = m_projectModel.selection().kind == SelectionKind::Load;
+        if (const Load *load = m_projectModel.findLoadById(selection.id)) {
+            if (const BoundaryCondition *boundaryCondition =
+                    m_projectModel.findBoundaryConditionById(load->boundaryConditionId)) {
+                if (const FaceGroup *faceGroup =
+                        m_projectModel.findFaceGroupById(boundaryCondition->target.faceGroupId)) {
+                    result.logMessages.append(displayFaceGroupGeometryIfNeeded(m_projectModel, m_renderView, *faceGroup));
+                    const RenderHighlightController highlightController;
+                    result.logMessages.append(
+                        highlightController.highlightLoadFaceGroup(*faceGroup, m_renderView).logMessages
+                    );
+                }
+            }
+        }
         return result;
     }
     case SelectionKind::Result:
@@ -200,18 +225,7 @@ SelectionControllerResult SelectionController::showFaceGroup(const QString &face
     }
 
     m_projectModel.setSelection(Selection::item(SelectionKind::FaceGroup, faceGroup->id, FaceGroups::displayName(*faceGroup)));
-    const GeometryObject *geometry = m_projectModel.findGeometryByName(faceGroup->geometryName);
-    if (geometry && !renderViewAlreadyShowsGeometry(m_renderView, faceGroup->geometryName)) {
-        const GeometryDisplayController displayController;
-        const GeometryDisplayResult displayResult = displayController.displayGeometry(
-            m_projectModel,
-            *geometry,
-            m_renderView
-        );
-        result.logMessages.append(displayResult.logMessages);
-    } else if (!geometry) {
-        result.logMessages.append(zh(u8"面组所属几何尚未加载：") + faceGroup->geometryName);
-    }
+    result.logMessages.append(displayFaceGroupGeometryIfNeeded(m_projectModel, m_renderView, *faceGroup));
 
     const RenderHighlightController highlightController;
     const RenderHighlightResult highlightResult = highlightController.highlightFaceGroup(*faceGroup, m_renderView);

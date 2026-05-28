@@ -11,6 +11,16 @@
 #include "ui/ResultPostprocessPanel.h"
 #include "workflow/SelectionController.h"
 
+namespace
+{
+bool selectionHasReferenceHighlight(SelectionKind kind)
+{
+    return kind == SelectionKind::FaceGroup
+        || kind == SelectionKind::BoundaryCondition
+        || kind == SelectionKind::Load;
+}
+}
+
 SelectionInteractionController::SelectionInteractionController(
     SelectionInteractionContext context,
     SelectionInteractionCallbacks callbacks
@@ -53,7 +63,10 @@ void SelectionInteractionController::applySelection(const Selection &selection) 
         m_context.docks.resultPostprocessPanel->setResult(m_context.projectModel.resultForSelection());
     }
     if (selection.kind != SelectionKind::FaceGroup) {
-        m_context.pickController.clear(m_context.docks.renderView);
+        m_context.pickController.clear(
+            m_context.docks.renderView,
+            !selectionHasReferenceHighlight(selection.kind)
+        );
     }
     if (m_callbacks.updateActionStates) {
         m_callbacks.updateActionStates();

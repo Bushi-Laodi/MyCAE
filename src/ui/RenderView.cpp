@@ -182,10 +182,10 @@ void RenderView::clearHighlight()
     }
 }
 
-void RenderView::highlightFaceGroup(const FaceGroup &faceGroup)
+void RenderView::highlightFaceGroup(const FaceGroup &faceGroup, const VtkHighlightStyle &style)
 {
     if (m_canvas) {
-        m_canvas->highlightFaceGroup(faceGroup);
+        m_canvas->highlightFaceGroup(faceGroup, style);
     }
 }
 
