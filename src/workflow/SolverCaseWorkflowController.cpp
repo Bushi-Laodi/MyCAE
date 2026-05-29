@@ -4,11 +4,14 @@
 #include "result/ResultHistoryNormalizer.h"
 #include "result/ResultObject.h"
 #include "result/ResultManager.h"
+#include "mesh/MeshData.h"
 #include "mesh/MeshObject.h"
 #include "mesh/MeshQualityService.h"
+#include "mesh/MshReader.h"
 #include "solver/BoundaryBindingInspector.h"
 #include "solver/calculix/CalculiXResultGridBuilder.h"
 #include "solver/calculix/CalculiXEnvironment.h"
+#include "solver/calculix/CalculiXSectionAssignmentValidator.h"
 #include "solver/SimulationCase.h"
 #include "solver/SimulationCaseBuilder.h"
 #include "solver/export/SolverCaseWriter.h"
@@ -19,7 +22,6 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
-#include <QSet>
 
 namespace
 {
@@ -121,62 +123,6 @@ void addPreflightWarning(SolverPreflightResult &result, const QString &message)
     result.messages.append("Preflight warning: " + message);
 }
 
-bool hasStructuralMaterialAssignment(const StructuralCase &structuralCase)
-{
-    if (structuralCase.sectionAssignments.empty()) {
-        return false;
-    }
-
-    QSet<QString> materialIds;
-    for (const Material &material : structuralCase.materials) {
-        materialIds.insert(material.id);
-    }
-    for (const SectionAssignment &sectionAssignment : structuralCase.sectionAssignments) {
-        if (!sectionAssignment.enabled) {
-            continue;
-        }
-        if (materialIds.contains(sectionAssignment.materialId)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void validateMaterialAssignments(
-    SolverPreflightResult &preflight,
-    const SimulationCase &simulationCase
-)
-{
-    const StructuralCase &structuralCase = simulationCase.structuralCase;
-    if (structuralCase.materials.empty()) {
-        addPreflightError(preflight, "missing structural material. 请先创建结构材料。");
-        return;
-    }
-    if (structuralCase.materials.size() > 1 && simulationCase.sectionAssignments.empty()) {
-        addPreflightError(preflight, "multiple structural materials exist but no explicit section assignment is defined. 请为多材料模型分配材料分区。");
-        return;
-    }
-
-    QSet<QString> materialIds;
-    for (const Material &material : structuralCase.materials) {
-        materialIds.insert(material.id);
-    }
-    bool hasEnabledAssignment = false;
-    for (const SectionAssignment &sectionAssignment : structuralCase.sectionAssignments) {
-        if (!sectionAssignment.enabled) {
-            continue;
-        }
-        hasEnabledAssignment = true;
-        if (!materialIds.contains(sectionAssignment.materialId)) {
-            addPreflightError(preflight, "section assignment references missing material: "
-                + sectionAssignment.name + ". 请重新选择材料。");
-        }
-    }
-    if (!hasEnabledAssignment || !hasStructuralMaterialAssignment(structuralCase)) {
-        addPreflightError(preflight, "missing material section assignment. 请把材料分配到几何体、体区域或单元集。");
-    }
-}
-
 bool isStructuralConstraintBoundary(const BoundaryCondition &boundaryCondition, const std::vector<Load> &loads)
 {
     if (!boundaryCondition.enabled) {
@@ -243,6 +189,64 @@ void validateMeshPreflight(
     }
 }
 
+QString absoluteProjectPath(const ProjectModel &projectModel, const QString &path)
+{
+    return QFileInfo(path).isAbsolute()
+        ? path
+        : QDir(projectModel.project().rootPath).filePath(path);
+}
+
+bool readMeshDataForPreflight(
+    SolverPreflightResult &preflight,
+    const ProjectModel &projectModel,
+    const MeshObject &meshObject,
+    MeshData &meshData
+)
+{
+    const QString meshPath = absoluteProjectPath(projectModel, meshObject.mshFile);
+    if (meshObject.mshFile.trimmed().isEmpty() || !QFileInfo::exists(meshPath)) {
+        addPreflightError(preflight, "cannot read MSH for CalculiX section assignment validation: mesh file is missing: "
+            + meshPath + ". 请重新生成或导入网格。");
+        return false;
+    }
+
+    QString meshReadError;
+    meshData = MeshData{};
+    meshData.name = meshObject.name;
+    meshData.sourceGeometryName = meshObject.sourceGeometryName;
+    meshData.mshFilePath = meshPath;
+    if (!MshReader::readMsh2(meshPath, meshData, &meshReadError)) {
+        addPreflightError(preflight, "cannot read MSH for CalculiX section assignment validation: "
+            + meshReadError + ". 请重新生成或导入网格。");
+        return false;
+    }
+    meshData.name = meshObject.name;
+    meshData.sourceGeometryName = meshObject.sourceGeometryName;
+    meshData.mshFilePath = meshPath;
+    if (meshData.nodes.empty() || meshData.tetraCount() == 0) {
+        addPreflightError(preflight, "mesh has no tetrahedral elements for CalculiX section assignment validation. 请重新生成三维实体网格。");
+        return false;
+    }
+    return true;
+}
+
+void validateCalculiXSectionAssignments(
+    SolverPreflightResult &preflight,
+    const StructuralCase &structuralCase,
+    const MeshObject &meshObject,
+    const MeshData &meshData
+)
+{
+    const CalculiXSectionValidationResult sectionValidation =
+        CalculiXSectionAssignmentValidator::validate(structuralCase, meshObject, meshData);
+    for (const QString &error : sectionValidation.errors) {
+        addPreflightError(preflight, error);
+    }
+    for (const QString &warning : sectionValidation.warnings) {
+        addPreflightWarning(preflight, warning);
+    }
+}
+
 void validateBoundaryTargets(
     SolverPreflightResult &preflight,
     const ProjectModel &projectModel,
@@ -306,7 +310,12 @@ SolverPreflightResult validateCalculiXPreflight(
     validateMeshPreflight(preflight, projectModel, meshName);
 
     const StructuralCase &structuralCase = simulationCase.structuralCase;
-    validateMaterialAssignments(preflight, simulationCase);
+    if (const MeshObject *meshObject = projectModel.findMeshByName(meshName)) {
+        MeshData meshData;
+        if (readMeshDataForPreflight(preflight, projectModel, *meshObject, meshData)) {
+            validateCalculiXSectionAssignments(preflight, structuralCase, *meshObject, meshData);
+        }
+    }
 
     bool hasConstraint = false;
     for (const BoundaryCondition &boundaryCondition : structuralCase.constraints) {

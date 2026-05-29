@@ -326,6 +326,8 @@ qt_add_executable(MyCAE
     src/solver/calculix/CalculiXRunDiagnostics.h
     src/solver/calculix/CalculiXRunner.cpp
     src/solver/calculix/CalculiXRunner.h
+    src/solver/calculix/CalculiXSectionAssignmentValidator.cpp
+    src/solver/calculix/CalculiXSectionAssignmentValidator.h
     src/solver/calculix/CalculiXSurfaceMapper.cpp
     src/solver/calculix/CalculiXSurfaceMapper.h
     src/solver/export/OpenFoamCaseWriter.cpp

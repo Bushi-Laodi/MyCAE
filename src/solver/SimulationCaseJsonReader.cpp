@@ -309,16 +309,6 @@ StructuralCase deriveStructuralCase(const SimulationCase &simulationCase)
             structuralCase.sectionAssignments.push_back(sectionAssignment);
         }
     }
-    if (structuralCase.sectionAssignments.empty() && !structuralCase.materials.empty()) {
-        SectionAssignment sectionAssignment;
-        sectionAssignment.id = simulationCase.id + "_default_section";
-        sectionAssignment.name = "Default Solid Section";
-        sectionAssignment.materialId = structuralCase.materials.front().id;
-        sectionAssignment.geometryName = simulationCase.sourceGeometryName;
-        sectionAssignment.meshName = simulationCase.meshName;
-        sectionAssignment.elementSetName = "EALL";
-        structuralCase.sectionAssignments.push_back(sectionAssignment);
-    }
     for (const BoundaryCondition &boundaryCondition : simulationCase.boundaryConditions) {
         if (isStructuralConstraint(boundaryCondition, simulationCase.loads)) {
             structuralCase.constraints.push_back(boundaryCondition);
@@ -383,16 +373,6 @@ StructuralCase structuralCaseFromJson(const QJsonObject &object, const Simulatio
                 structuralCase.sectionAssignments.push_back(sectionAssignment);
             }
         }
-    }
-    if (structuralCase.sectionAssignments.empty() && !structuralCase.materials.empty()) {
-        SectionAssignment sectionAssignment;
-        sectionAssignment.id = fallback.id + "_default_section";
-        sectionAssignment.name = "Default Solid Section";
-        sectionAssignment.materialId = structuralCase.materials.front().id;
-        sectionAssignment.geometryName = structuralCase.sourceGeometryName;
-        sectionAssignment.meshName = structuralCase.meshName;
-        sectionAssignment.elementSetName = "EALL";
-        structuralCase.sectionAssignments.push_back(sectionAssignment);
     }
     for (const QJsonValue &constraintValue : object.value("constraints").toArray()) {
         structuralCase.constraints.push_back(boundaryConditionFromJson(constraintValue.toObject()));

@@ -5,11 +5,10 @@
 #include "project/ProjectModel.h"
 #include "solver/SimulationCase.h"
 #include "solver/calculix/CalculiXMeshBoundaryResolver.h"
+#include "solver/calculix/CalculiXSectionAssignmentValidator.h"
 
 #include <QDir>
 #include <QFileInfo>
-
-#include <algorithm>
 
 namespace
 {
@@ -93,208 +92,29 @@ CalculiXLoadData toCalculiXLoad(const Load &load)
     return loadData;
 }
 
-const CalculiXMaterialData *findMaterialById(
-    const std::vector<CalculiXMaterialData> &materials,
-    const QString &materialId
-)
-{
-    for (const CalculiXMaterialData &material : materials) {
-        if (material.id == materialId) {
-            return &material;
-        }
-    }
-    return nullptr;
-}
-
-std::vector<int> allElementIds(const MeshData &meshData)
-{
-    std::vector<int> elementIds;
-    elementIds.reserve(meshData.tetraElements.size() + meshData.tetra10Elements.size());
-    for (const TetraElement &tetra : meshData.tetraElements) {
-        elementIds.push_back(tetra.id);
-    }
-    for (const Tetra10Element &tetra : meshData.tetra10Elements) {
-        elementIds.push_back(tetra.id);
-    }
-    std::sort(elementIds.begin(), elementIds.end());
-    return elementIds;
-}
-
-bool isAllElementSetName(const QString &elementSetName)
-{
-    const QString value = elementSetName.trimmed();
-    return value.isEmpty() || value.compare("EALL", Qt::CaseInsensitive) == 0;
-}
-
-int volumePhysicalGroupTagForElementSet(const MeshData &meshData, const QString &elementSetName)
-{
-    const QString target = elementSetName.trimmed();
-    if (target.isEmpty()) {
-        return -1;
-    }
-
-    bool targetIsNumber = false;
-    const int targetTag = target.toInt(&targetIsNumber);
-    for (const MeshPhysicalGroup &physicalGroup : meshData.physicalGroups) {
-        if (physicalGroup.dimension != 3) {
-            continue;
-        }
-        if ((targetIsNumber && physicalGroup.tag == targetTag)
-                || physicalGroup.name.compare(target, Qt::CaseInsensitive) == 0) {
-            return physicalGroup.tag;
-        }
-    }
-    return targetIsNumber ? targetTag : -1;
-}
-
-std::vector<int> elementIdsForPhysicalGroup(const MeshData &meshData, int physicalGroupTag)
-{
-    std::vector<int> elementIds;
-    for (const TetraElement &tetra : meshData.tetraElements) {
-        if (tetra.physicalGroupTag == physicalGroupTag) {
-            elementIds.push_back(tetra.id);
-        }
-    }
-    for (const Tetra10Element &tetra : meshData.tetra10Elements) {
-        if (tetra.physicalGroupTag == physicalGroupTag) {
-            elementIds.push_back(tetra.id);
-        }
-    }
-    std::sort(elementIds.begin(), elementIds.end());
-    return elementIds;
-}
-
-bool sectionTargetsCurrentMesh(
-    const SectionAssignment &sectionAssignment,
-    const MeshObject &meshObject,
-    const MeshData &meshData
-)
-{
-    if (!sectionAssignment.meshName.trimmed().isEmpty()
-            && sectionAssignment.meshName != meshObject.name
-            && sectionAssignment.meshName != meshData.name) {
-        return false;
-    }
-    if (!sectionAssignment.geometryName.trimmed().isEmpty()
-            && !meshObject.sourceGeometryName.trimmed().isEmpty()
-            && sectionAssignment.geometryName != meshObject.sourceGeometryName) {
-        return false;
-    }
-    return true;
-}
-
 void buildSectionAssignments(
     const StructuralCase &structuralCase,
     const MeshObject &meshObject,
     CalculiXCaseDataBuildResult &result
 )
 {
-    const MeshData &meshData = result.caseData.meshData;
-    const std::vector<int> allIds = allElementIds(meshData);
-    std::vector<int> usedElementIds;
-    int exportedSectionIndex = 0;
-    bool hasFullMeshSection = false;
-    bool hadEnabledSectionAssignment = false;
+    const CalculiXSectionValidationResult validation =
+        CalculiXSectionAssignmentValidator::validate(structuralCase, meshObject, result.caseData.meshData);
+    result.errors.append(validation.errors);
+    result.warnings.append(validation.warnings);
 
-    for (const SectionAssignment &sectionAssignment : structuralCase.sectionAssignments) {
-        if (!sectionAssignment.enabled) {
-            continue;
-        }
-        hadEnabledSectionAssignment = true;
-        if (!sectionTargetsCurrentMesh(sectionAssignment, meshObject, meshData)) {
-            result.warnings.append("CalculiX section assignment skipped because it targets another mesh or geometry: "
-                + sectionAssignment.name);
-            continue;
-        }
-
-        const CalculiXMaterialData *material = findMaterialById(
-            result.caseData.materials,
-            sectionAssignment.materialId
-        );
-        if (!material) {
-            result.errors.append("CalculiX section assignment references missing material: "
-                + sectionAssignment.name);
-            continue;
-        }
-
+    for (const CalculiXSectionValidationItem &item : validation.items) {
         CalculiXSectionAssignmentData sectionData;
-        sectionData.id = sectionAssignment.id;
-        sectionData.name = sectionAssignment.name;
-        sectionData.materialId = material->id;
-        sectionData.materialName = material->id.trimmed().isEmpty() ? material->name : material->id;
-        sectionData.geometryName = sectionAssignment.geometryName;
-        sectionData.meshName = sectionAssignment.meshName;
-        sectionData.enabled = sectionAssignment.enabled;
-
-        if (isAllElementSetName(sectionAssignment.elementSetName)) {
-            if (exportedSectionIndex > 0) {
-                result.errors.append("CalculiX section assignment would overlap the full mesh; set a volume physical group elementSetName: "
-                    + sectionAssignment.name);
-                continue;
-            }
-            hasFullMeshSection = true;
-            sectionData.elementSetName = "EALL";
-            sectionData.elementIds = allIds;
-        } else {
-            if (hasFullMeshSection) {
-                result.errors.append("CalculiX section assignment overlaps an existing full-mesh section: "
-                    + sectionAssignment.name);
-                continue;
-            }
-            sectionData.elementSetName = sectionAssignment.elementSetName.trimmed();
-            const int physicalGroupTag =
-                volumePhysicalGroupTagForElementSet(meshData, sectionAssignment.elementSetName);
-            sectionData.elementIds = elementIdsForPhysicalGroup(meshData, physicalGroupTag);
-            if (sectionData.elementIds.empty()) {
-                result.errors.append("CalculiX section assignment has no matching volume elements: "
-                    + sectionAssignment.name
-                    + " / elementSetName=" + sectionAssignment.elementSetName);
-                continue;
-            }
-        }
-
-        bool overlapsExistingSection = false;
-        for (const int elementId : sectionData.elementIds) {
-            if (std::binary_search(usedElementIds.begin(), usedElementIds.end(), elementId)) {
-                overlapsExistingSection = true;
-                break;
-            }
-        }
-        if (overlapsExistingSection) {
-            result.errors.append("CalculiX section assignment overlaps an existing material section: "
-                + sectionAssignment.name);
-            continue;
-        }
-
+        sectionData.id = item.assignment.id;
+        sectionData.name = item.assignment.name;
+        sectionData.materialId = item.materialId;
+        sectionData.materialName = item.materialName;
+        sectionData.geometryName = item.assignment.geometryName;
+        sectionData.meshName = item.assignment.meshName;
+        sectionData.enabled = item.assignment.enabled;
+        sectionData.elementSetName = item.elementSetName;
+        sectionData.elementIds = item.elementIds;
         result.caseData.sectionAssignments.push_back(sectionData);
-        usedElementIds.insert(usedElementIds.end(), sectionData.elementIds.begin(), sectionData.elementIds.end());
-        std::sort(usedElementIds.begin(), usedElementIds.end());
-        usedElementIds.erase(std::unique(usedElementIds.begin(), usedElementIds.end()), usedElementIds.end());
-        ++exportedSectionIndex;
-    }
-
-    if (!result.caseData.sectionAssignments.empty() && usedElementIds.size() != allIds.size()) {
-        result.errors.append(QString("CalculiX section assignments cover %1 of %2 tetrahedral elements; every structural element must have exactly one material section.")
-            .arg(static_cast<int>(usedElementIds.size()))
-            .arg(static_cast<int>(allIds.size())));
-    }
-
-    if (!hadEnabledSectionAssignment && result.caseData.sectionAssignments.empty() && !result.caseData.materials.empty()) {
-        CalculiXSectionAssignmentData sectionData;
-        sectionData.id = "default_section";
-        sectionData.name = "Default Solid Section";
-        sectionData.materialId = result.caseData.materials.front().id;
-        sectionData.materialName = result.caseData.materials.front().id.trimmed().isEmpty()
-            ? result.caseData.materials.front().name
-            : result.caseData.materials.front().id;
-        sectionData.geometryName = meshObject.sourceGeometryName;
-        sectionData.meshName = meshObject.name;
-        sectionData.elementSetName = "EALL";
-        sectionData.elementIds = allIds;
-        result.caseData.sectionAssignments.push_back(sectionData);
-        if (result.caseData.materials.size() > 1) {
-            result.warnings.append("CalculiX has no enabled section assignment; exported a default full-mesh section with the first structural material.");
-        }
     }
 }
 
@@ -384,10 +204,6 @@ CalculiXCaseDataBuildResult CalculiXCaseDataBuilder::build(const SolverCaseConte
         validateMaterial(materialData, result);
         result.caseData.materials.push_back(materialData);
     }
-    if (result.caseData.materials.empty()) {
-        result.errors.append("CalculiX case data build failed: no structural material is defined.");
-    }
-
     buildSectionAssignments(structuralCase, *meshObject, result);
 
     for (const BoundaryCondition &boundaryCondition : structuralCase.constraints) {
