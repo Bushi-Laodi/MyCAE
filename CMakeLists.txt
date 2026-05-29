@@ -191,6 +191,8 @@ qt_add_executable(MyCAE
     src/mesh/MeshObject.h
     src/mesh/MeshQualityChecker.cpp
     src/mesh/MeshQualityChecker.h
+    src/mesh/MeshQualityService.cpp
+    src/mesh/MeshQualityService.h
     src/mesh/MeshSetup.h
     src/mesh/MeshToVtkConverter.cpp
     src/mesh/MeshToVtkConverter.h

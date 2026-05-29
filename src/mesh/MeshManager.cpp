@@ -73,6 +73,9 @@ bool MeshManager::saveMeshObject(const MeshObject &meshObject, QString *errorMes
     object.insert("mshFile", meshObject.mshFile);
     object.insert("nodeCount", meshObject.nodeCount);
     object.insert("tetraCount", meshObject.tetraCount);
+    object.insert("tetra4Count", meshObject.tetra4Count);
+    object.insert("tetra10Count", meshObject.tetra10Count);
+    object.insert("surfaceTriangleCount", meshObject.surfaceTriangleCount);
     object.insert("createdAt", meshObject.createdAt);
     object.insert("stale", meshObject.stale);
     object.insert("staleReason", meshObject.staleReason);
@@ -176,6 +179,9 @@ bool MeshManager::readMeshObject(const QString &filePath, MeshObject &meshObject
     meshObject.mshFile = object.value("mshFile").toString();
     meshObject.nodeCount = object.value("nodeCount").toInt();
     meshObject.tetraCount = object.value("tetraCount").toInt();
+    meshObject.tetra4Count = object.value("tetra4Count").toInt(0);
+    meshObject.tetra10Count = object.value("tetra10Count").toInt(0);
+    meshObject.surfaceTriangleCount = object.value("surfaceTriangleCount").toInt(0);
     meshObject.createdAt = object.value("createdAt").toString();
     meshObject.stale = object.value("stale").toBool(false);
     meshObject.staleReason = object.value("staleReason").toString();

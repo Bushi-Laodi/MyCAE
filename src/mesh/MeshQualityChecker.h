@@ -12,6 +12,7 @@ struct MeshQualityReport
     int tetraCount = 0;
     int tetra4Count = 0;
     int tetra10Count = 0;
+    int surfaceTriangleCount = 0;
     int invalidTetraCount = 0;
     int degenerateTetraCount = 0;
     int highAspectRatioTetraCount = 0;

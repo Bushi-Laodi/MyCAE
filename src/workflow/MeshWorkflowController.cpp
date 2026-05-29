@@ -8,6 +8,7 @@
 #include "mesh/MeshBoundaryBuilder.h"
 #include "mesh/MeshManager.h"
 #include "mesh/MeshQualityChecker.h"
+#include "mesh/MeshQualityService.h"
 #include "mesh/MeshToVtkConverter.h"
 #include "mesh/MshReader.h"
 #include "project/ProjectModel.h"
@@ -140,36 +141,12 @@ QStringList localMeshControlTexts(const ProjectModel &projectModel, const QStrin
 
 void applyQualityReport(MeshObject &meshObject, const MeshQualityReport &qualityReport)
 {
-    meshObject.qualityChecked = qualityReport.checked;
-    meshObject.qualityStatus = qualityReport.status;
-    meshObject.minimumEdgeLength = qualityReport.minimumEdgeLength;
-    meshObject.maximumEdgeLength = qualityReport.maximumEdgeLength;
-    meshObject.averageEdgeLength = qualityReport.averageEdgeLength;
-    meshObject.minimumTetraVolume = qualityReport.minimumTetraVolume;
-    meshObject.maximumTetraVolume = qualityReport.maximumTetraVolume;
-    meshObject.averageTetraVolume = qualityReport.averageTetraVolume;
-    meshObject.maximumAspectRatio = qualityReport.maximumAspectRatio;
-    meshObject.averageAspectRatio = qualityReport.averageAspectRatio;
-    meshObject.invalidTetraCount = qualityReport.invalidTetraCount;
-    meshObject.degenerateTetraCount = qualityReport.degenerateTetraCount;
-    meshObject.highAspectRatioTetraCount = qualityReport.highAspectRatioTetraCount;
-    meshObject.qualityWarnings = qualityReport.warnings;
+    MeshQualityService::applyReport(meshObject, qualityReport);
 }
 
 void appendQualityLog(MeshWorkflowResult &workflowResult, const MeshQualityReport &qualityReport)
 {
-    workflowResult.logMessages.append(zh(u8"网格质量检查：") + qualityReport.status);
-    workflowResult.logMessages.append(
-        zh(u8"网格质量统计：minEdge=%1，maxEdge=%2，avgEdge=%3，minVol=%4，maxAspect=%5")
-            .arg(qualityReport.minimumEdgeLength, 0, 'g', 8)
-            .arg(qualityReport.maximumEdgeLength, 0, 'g', 8)
-            .arg(qualityReport.averageEdgeLength, 0, 'g', 8)
-            .arg(qualityReport.minimumTetraVolume, 0, 'g', 8)
-            .arg(qualityReport.maximumAspectRatio, 0, 'g', 8)
-    );
-    for (const QString &warning : qualityReport.warnings) {
-        workflowResult.logMessages.append(zh(u8"网格质量警告：") + warning);
-    }
+    workflowResult.logMessages.append(MeshQualityService::logMessages(qualityReport));
 }
 }
 
@@ -283,7 +260,12 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     meshObject.type = toString(meshSetup.elementType);
     meshObject.nodeCount = meshData.nodeCount();
     meshObject.tetraCount = meshData.tetraCount();
+    meshObject.tetra4Count = meshData.tetra4Count();
+    meshObject.tetra10Count = meshData.tetra10Count();
+    meshObject.surfaceTriangleCount = meshData.surfaceTriangleCount();
     meshObject.createdAt = QDateTime::currentDateTime().toString(Qt::ISODate);
+    meshObject.stale = false;
+    meshObject.staleReason.clear();
     meshObject.meshAutoSize = meshSetup.autoSize;
     meshObject.meshMinimumSize = meshSetup.minimumSize;
     meshObject.meshMaximumSize = meshSetup.maximumSize;
@@ -339,7 +321,7 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     return workflowResult;
 }
 
-MeshWorkflowResult MeshWorkflowController::readMeshInfo(const ProjectModel &projectModel) const
+MeshWorkflowResult MeshWorkflowController::readMeshInfo(ProjectModel &projectModel) const
 {
     MeshWorkflowResult workflowResult;
     const GeometryObject *selectedGeometry = selectedGeometryOrLog(projectModel, workflowResult);
@@ -359,7 +341,23 @@ MeshWorkflowResult MeshWorkflowController::readMeshInfo(const ProjectModel &proj
     workflowResult.logMessages.append(zh(u8"读取网格成功。"));
     workflowResult.logMessages.append(zh(u8"节点数：%1").arg(meshData.nodeCount()));
     workflowResult.logMessages.append(zh(u8"四面体数：%1").arg(meshData.tetraCount()));
-    appendQualityLog(workflowResult, MeshQualityChecker::check(meshData));
+    const MeshQualityReport qualityReport = MeshQualityChecker::check(meshData);
+    appendQualityLog(workflowResult, qualityReport);
+
+    for (MeshObject &meshObject : projectModel.meshObjects()) {
+        if (meshObject.sourceGeometryName != selectedGeometry->name) {
+            continue;
+        }
+        applyQualityReport(meshObject, qualityReport);
+        QString saveError;
+        if (!MeshManager(projectModel.project().rootPath).saveMeshObject(meshObject, &saveError)) {
+            workflowResult.logMessages.append(zh(u8"保存网格质量结果失败：") + saveError);
+        } else {
+            workflowResult.meshTreeChanged = true;
+            workflowResult.logMessages.append(zh(u8"网格质量结果已写入：") + meshObject.name);
+        }
+        break;
+    }
     return workflowResult;
 }
 

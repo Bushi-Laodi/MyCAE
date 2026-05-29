@@ -19,7 +19,7 @@ class MeshWorkflowController
 public:
     MeshWorkflowResult checkGmsh() const;
     MeshWorkflowResult generateMesh(ProjectModel &projectModel) const;
-    MeshWorkflowResult readMeshInfo(const ProjectModel &projectModel) const;
+    MeshWorkflowResult readMeshInfo(ProjectModel &projectModel) const;
     MeshWorkflowResult showSelectedGeometryMesh(const ProjectModel &projectModel, RenderView *renderView) const;
     MeshWorkflowResult displayMeshObject(
         const ProjectModel &projectModel,

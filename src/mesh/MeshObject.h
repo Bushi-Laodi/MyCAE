@@ -13,6 +13,9 @@ struct MeshObject
     QString type = "tetra4";
     int nodeCount = 0;
     int tetraCount = 0;
+    int tetra4Count = 0;
+    int tetra10Count = 0;
+    int surfaceTriangleCount = 0;
     QString createdAt;
     bool stale = false;
     QString staleReason;

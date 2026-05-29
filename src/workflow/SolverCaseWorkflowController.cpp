@@ -5,6 +5,7 @@
 #include "result/ResultObject.h"
 #include "result/ResultManager.h"
 #include "mesh/MeshObject.h"
+#include "mesh/MeshQualityService.h"
 #include "solver/calculix/CalculiXResultGridBuilder.h"
 #include "solver/SimulationCase.h"
 #include "solver/SimulationCaseBuilder.h"
@@ -201,6 +202,10 @@ SolverCaseWorkflowResult SolverCaseWorkflowController::runPlugin(const QString &
             if (!meshObject->staleReason.isEmpty()) {
                 result.logMessages.append(zh(u8"网格过期原因：") + meshObject->staleReason);
             }
+            return result;
+        }
+        result.logMessages.append(MeshQualityService::solverPreflightMessages(*meshObject));
+        if (MeshQualityService::hasCriticalIssues(*meshObject)) {
             return result;
         }
     }

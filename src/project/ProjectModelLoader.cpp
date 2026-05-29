@@ -4,6 +4,8 @@
 #include "mesh/MeshBoundaryBuilder.h"
 #include "mesh/MeshData.h"
 #include "mesh/MshReader.h"
+#include "mesh/MeshQualityChecker.h"
+#include "mesh/MeshQualityService.h"
 #include "project/ProjectModel.h"
 #include "result/ResultHistoryNormalizer.h"
 #include "result/ResultManager.h"
@@ -143,16 +145,24 @@ bool ProjectModelLoader::loadMeshes(ProjectModel &projectModel, QString *errorMe
     meshRepository.meshObjects().clear();
     meshRepository.meshBoundaries().clear();
     for (const MeshObject &meshObject : loadedMeshes) {
-        meshRepository.meshObjects().append(meshObject);
+        MeshObject normalizedMeshObject = meshObject;
 
-        const QString meshPath = QFileInfo(meshObject.mshFile).isAbsolute()
-            ? meshObject.mshFile
-            : QDir(projectModel.project().rootPath).filePath(meshObject.mshFile);
+        const QString meshPath = QFileInfo(normalizedMeshObject.mshFile).isAbsolute()
+            ? normalizedMeshObject.mshFile
+            : QDir(projectModel.project().rootPath).filePath(normalizedMeshObject.mshFile);
         MeshData meshData;
         QString meshReadError;
         if (QFileInfo::exists(meshPath) && MshReader::readMsh2(meshPath, meshData, &meshReadError)) {
-            meshRepository.replaceMeshBoundariesForMesh(meshObject.name, MeshBoundaryBuilder::build(meshData, meshObject));
+            const MeshQualityReport qualityReport = MeshQualityChecker::check(meshData);
+            MeshQualityService::applyReport(normalizedMeshObject, qualityReport);
+            MeshManager(projectModel.project().rootPath).saveMeshObject(normalizedMeshObject);
+            meshRepository.replaceMeshBoundariesForMesh(
+                normalizedMeshObject.name,
+                MeshBoundaryBuilder::build(meshData, normalizedMeshObject)
+            );
         }
+
+        meshRepository.meshObjects().append(normalizedMeshObject);
     }
 
     projectModel.clearSelectionIfKind(SelectionKind::Mesh);

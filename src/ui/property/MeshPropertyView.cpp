@@ -62,6 +62,24 @@ QString warningsText(const MeshObject &meshObject)
         : meshObject.qualityWarnings.join("\n");
 }
 
+QString issueSummaryText(const MeshObject &meshObject)
+{
+    if (!meshObject.qualityChecked) {
+        return zh(u8"尚未检查");
+    }
+    QStringList issues;
+    if (meshObject.invalidTetraCount > 0) {
+        issues.append(zh(u8"无效单元 %1").arg(meshObject.invalidTetraCount));
+    }
+    if (meshObject.degenerateTetraCount > 0) {
+        issues.append(zh(u8"退化单元 %1").arg(meshObject.degenerateTetraCount));
+    }
+    if (meshObject.highAspectRatioTetraCount > 0) {
+        issues.append(zh(u8"高长宽比单元 %1").arg(meshObject.highAspectRatioTetraCount));
+    }
+    return issues.isEmpty() ? zh(u8"未发现明显质量问题") : issues.join("；");
+}
+
 QString qualityStatusText(const MeshObject &meshObject)
 {
     if (!meshObject.qualityChecked) {
@@ -81,11 +99,15 @@ void MeshPropertyView::populate(QWidget *parent, const MeshObject &meshObject)
         sizeForm->addRow(zh(u8"过期原因:"), valueLabel(meshObject.staleReason, parent));
     }
     sizeForm->addRow(zh(u8"单元类型:"), valueLabel(meshObject.type, parent));
+    sizeForm->addRow(zh(u8"Tetra4:"), valueLabel(QString::number(meshObject.tetra4Count), parent));
+    sizeForm->addRow(zh(u8"Tetra10:"), valueLabel(QString::number(meshObject.tetra10Count), parent));
+    sizeForm->addRow(zh(u8"表面三角形:"), valueLabel(QString::number(meshObject.surfaceTriangleCount), parent));
     sizeForm->addRow(zh(u8"全局尺寸:"), valueLabel(globalSizeText(meshObject), parent));
     sizeForm->addRow(zh(u8"局部尺寸:"), valueLabel(localControlText(meshObject), parent));
 
     QFormLayout *qualityForm = addSection(dynamicLayout, parent, zh(u8"质量检查"));
     qualityForm->addRow(zh(u8"状态:"), valueLabel(qualityStatusText(meshObject), parent));
+    qualityForm->addRow(zh(u8"问题摘要:"), valueLabel(issueSummaryText(meshObject), parent));
     qualityForm->addRow(zh(u8"最小边长:"), valueLabel(numberText(meshObject.minimumEdgeLength), parent));
     qualityForm->addRow(zh(u8"最大边长:"), valueLabel(numberText(meshObject.maximumEdgeLength), parent));
     qualityForm->addRow(zh(u8"平均边长:"), valueLabel(numberText(meshObject.averageEdgeLength), parent));

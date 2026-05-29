@@ -176,6 +176,7 @@ MeshQualityReport MeshQualityChecker::check(const MeshData &meshData)
     report.tetra4Count = meshData.tetra4Count();
     report.tetra10Count = meshData.tetra10Count();
     report.tetraCount = meshData.tetraCount();
+    report.surfaceTriangleCount = meshData.surfaceTriangleCount();
     report.minimumEdgeLength = std::numeric_limits<double>::max();
     report.minimumTetraVolume = std::numeric_limits<double>::max();
 

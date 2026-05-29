@@ -1,5 +1,7 @@
 #include "diagnostics/DiagnosticCollector.h"
 
+#include <QStringList>
+
 namespace
 {
 bool containsAny(const QString &text, const QStringList &patterns)
@@ -14,10 +16,43 @@ bool containsAny(const QString &text, const QStringList &patterns)
 
 DiagnosticSeverity severityForMessage(const QString &lower)
 {
-    if (containsAny(lower, {"[fail]", " fail", "failed", "error", "cannot ", "does not exist", "not found", "invalid", "失败", "不存在", "无效"})) {
+    if (containsAny(lower, {
+            "[fail]",
+            " fail",
+            "failed",
+            "error",
+            "cannot ",
+            "does not exist",
+            "not found",
+            "invalid",
+            "degenerate",
+            "zero volume",
+            "negative jacobian",
+            "stale",
+            "failed:",
+            "失败",
+            "不存在",
+            "无效",
+            "错误",
+            "退化"
+        })) {
         return DiagnosticSeverity::Error;
     }
-    if (containsAny(lower, {" warning", "warning:", "skipped", "incomplete", "missing", "diagnostic hint", "警告", "缺失", "需要检查"})) {
+    if (containsAny(lower, {
+            " warning",
+            "warning:",
+            "skipped",
+            "incomplete",
+            "missing",
+            "diagnostic hint",
+            "mesh quality",
+            "aspect ratio",
+            "high aspect",
+            "警告",
+            "缺失",
+            "需要检查",
+            "长宽比"
+        })) {
         return DiagnosticSeverity::Warning;
     }
     return DiagnosticSeverity::Info;
@@ -28,22 +63,68 @@ DiagnosticCategory categoryForMessage(const QString &lower)
     if (containsAny(lower, {"calculix path", "gmsh path", "environment", "executable", "dll", "ccx.exe", "gmsh.exe"})) {
         return DiagnosticCategory::Environment;
     }
-    if (containsAny(lower, {"mesh", "msh", "tetra", "node count", "tetra count", "surface triangle", "网格", "四面体", "节点"})) {
+    if (containsAny(lower, {
+            "mesh",
+            "msh",
+            "tetra",
+            "node count",
+            "tetra count",
+            "surface triangle",
+            "mesh quality",
+            "aspect ratio",
+            "degenerate",
+            "zero volume",
+            "negative jacobian",
+            "网格",
+            "四面体",
+            "节点",
+            "长宽比",
+            "退化"
+        })) {
         return DiagnosticCategory::Mesh;
     }
-    if (containsAny(lower, {"result", ".dat", ".frd", "displacement", "stress", "von mises", "coverage"})) {
+    if (containsAny(lower, {"result", ".dat", ".frd", "displacement", "stress", "von mises", "coverage", "结果"})) {
         return DiagnosticCategory::Result;
     }
-    if (containsAny(lower, {"solver", "solved", "calculix", "openfoam", "analysis", ".sta", ".log", "converge", "ccx", "zero pivot", "singular", "cutbacks", "求解器", "求解"})) {
+    if (containsAny(lower, {
+            "solver",
+            "solved",
+            "calculix",
+            "openfoam",
+            "analysis",
+            ".sta",
+            ".log",
+            "converge",
+            "ccx",
+            "zero pivot",
+            "singular",
+            "cutbacks",
+            "求解器",
+            "求解"
+        })) {
         return DiagnosticCategory::Solver;
     }
-    if (containsAny(lower, {"material", "boundary", "load", "case data", "no enabled", "no material", "材料", "边界", "载荷", "工况", "面组"})) {
+    if (containsAny(lower, {
+            "material",
+            "boundary",
+            "load",
+            "case data",
+            "no enabled",
+            "no material",
+            "no load",
+            "no boundary",
+            "材料",
+            "边界",
+            "载荷",
+            "工况",
+            "面组"
+        })) {
         return DiagnosticCategory::Input;
     }
-    if (containsAny(lower, {"project", "open project", "new project", "save simulation case"})) {
+    if (containsAny(lower, {"project", "open project", "new project", "save simulation case", "工程"})) {
         return DiagnosticCategory::Project;
     }
-    if (containsAny(lower, {"selection", "selected", "canceled", "pick", "display skipped"})) {
+    if (containsAny(lower, {"selection", "selected", "canceled", "pick", "display skipped", "选择", "拾取"})) {
         return DiagnosticCategory::UI;
     }
     return DiagnosticCategory::Unknown;
@@ -59,9 +140,9 @@ QString suggestedFixFor(DiagnosticCategory category, DiagnosticSeverity severity
     case DiagnosticCategory::Environment:
         return "Check executable paths, PATH/DLL runtime directories, and Debug/Release library consistency.";
     case DiagnosticCategory::Input:
-        return "Check that the simulation case has material, boundary condition, load, and valid target face groups.";
+        return "Check material, boundary condition, load, and target face group definitions.";
     case DiagnosticCategory::Mesh:
-        return "Regenerate the mesh, verify the .msh file exists, and confirm node/tetra counts are nonzero.";
+        return "Regenerate the mesh, refine local mesh controls, verify node/tetra counts, and resolve degenerate or high-aspect elements before solving.";
     case DiagnosticCategory::Solver:
         return "Open the solver case directory and inspect .log, .sta, .dat, and the exported input deck.";
     case DiagnosticCategory::Result:
@@ -87,6 +168,12 @@ bool shouldCollect(const QString &lower)
         "does not exist",
         "not found",
         "invalid",
+        "mesh quality",
+        "aspect ratio",
+        "high aspect",
+        "degenerate",
+        "zero volume",
+        "negative jacobian",
         "missing",
         "incomplete",
         "skipped",
@@ -98,14 +185,17 @@ bool shouldCollect(const QString &lower)
         "diagnostic",
         "zero pivot",
         "singular",
-        "negative jacobian",
         "too many cutbacks",
+        "stale",
         "警告",
         "失败",
         "不存在",
         "无效",
+        "错误",
         "缺失",
-        "需要检查"
+        "需要检查",
+        "退化",
+        "长宽比"
     });
 }
 }
