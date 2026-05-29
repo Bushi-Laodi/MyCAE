@@ -6,7 +6,9 @@
 #include "result/ResultManager.h"
 #include "mesh/MeshObject.h"
 #include "mesh/MeshQualityService.h"
+#include "solver/BoundaryBindingInspector.h"
 #include "solver/calculix/CalculiXResultGridBuilder.h"
+#include "solver/calculix/CalculiXEnvironment.h"
 #include "solver/SimulationCase.h"
 #include "solver/SimulationCaseBuilder.h"
 #include "solver/export/SolverCaseWriter.h"
@@ -17,6 +19,7 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
+#include <QSet>
 
 namespace
 {
@@ -99,6 +102,254 @@ QString simulationMeshName(const QString &pluginId, const SimulationCase &simula
         return simulationCase.cfdCase.meshName;
     }
     return simulationCase.meshName;
+}
+
+struct SolverPreflightResult
+{
+    bool passed = true;
+    QStringList messages;
+};
+
+void addPreflightError(SolverPreflightResult &result, const QString &message)
+{
+    result.passed = false;
+    result.messages.append("Preflight error: " + message);
+}
+
+void addPreflightWarning(SolverPreflightResult &result, const QString &message)
+{
+    result.messages.append("Preflight warning: " + message);
+}
+
+bool hasStructuralMaterialAssignment(const StructuralCase &structuralCase)
+{
+    if (structuralCase.sectionAssignments.empty()) {
+        return false;
+    }
+
+    QSet<QString> materialIds;
+    for (const Material &material : structuralCase.materials) {
+        materialIds.insert(material.id);
+    }
+    for (const SectionAssignment &sectionAssignment : structuralCase.sectionAssignments) {
+        if (!sectionAssignment.enabled) {
+            continue;
+        }
+        if (materialIds.contains(sectionAssignment.materialId)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void validateMaterialAssignments(
+    SolverPreflightResult &preflight,
+    const SimulationCase &simulationCase
+)
+{
+    const StructuralCase &structuralCase = simulationCase.structuralCase;
+    if (structuralCase.materials.empty()) {
+        addPreflightError(preflight, "missing structural material. 请先创建结构材料。");
+        return;
+    }
+    if (structuralCase.materials.size() > 1 && simulationCase.sectionAssignments.empty()) {
+        addPreflightError(preflight, "multiple structural materials exist but no explicit section assignment is defined. 请为多材料模型分配材料分区。");
+        return;
+    }
+
+    QSet<QString> materialIds;
+    for (const Material &material : structuralCase.materials) {
+        materialIds.insert(material.id);
+    }
+    bool hasEnabledAssignment = false;
+    for (const SectionAssignment &sectionAssignment : structuralCase.sectionAssignments) {
+        if (!sectionAssignment.enabled) {
+            continue;
+        }
+        hasEnabledAssignment = true;
+        if (!materialIds.contains(sectionAssignment.materialId)) {
+            addPreflightError(preflight, "section assignment references missing material: "
+                + sectionAssignment.name + ". 请重新选择材料。");
+        }
+    }
+    if (!hasEnabledAssignment || !hasStructuralMaterialAssignment(structuralCase)) {
+        addPreflightError(preflight, "missing material section assignment. 请把材料分配到几何体、体区域或单元集。");
+    }
+}
+
+bool isStructuralConstraintBoundary(const BoundaryCondition &boundaryCondition, const std::vector<Load> &loads)
+{
+    if (!boundaryCondition.enabled) {
+        return false;
+    }
+    if (boundaryCondition.type == BoundaryConditionType::FixedSupport
+            || boundaryCondition.type == BoundaryConditionType::Displacement) {
+        return true;
+    }
+    return boundaryCondition.type == BoundaryConditionType::Wall
+        && !hasStructuralLoadForBoundary(loads, boundaryCondition.id);
+}
+
+bool loadReferencesExistingBoundary(const Load &load, const std::vector<BoundaryCondition> &boundaries)
+{
+    if (load.type == LoadType::Gravity) {
+        return true;
+    }
+    for (const BoundaryCondition &boundary : boundaries) {
+        if (boundary.id == load.boundaryConditionId && boundary.enabled) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void validateMeshPreflight(
+    SolverPreflightResult &preflight,
+    const ProjectModel &projectModel,
+    const QString &meshName
+)
+{
+    if (meshName.trimmed().isEmpty()) {
+        addPreflightError(preflight, "no mesh is selected for this simulation case. 请先生成或导入网格。");
+        return;
+    }
+
+    const MeshObject *meshObject = projectModel.findMeshByName(meshName);
+    if (!meshObject) {
+        addPreflightError(preflight, "mesh not found: " + meshName + ". 请重新选择或导入网格。");
+        return;
+    }
+    if (meshObject->mshFile.trimmed().isEmpty()) {
+        addPreflightError(preflight, "mesh object has no .msh file path: " + meshObject->name + ". 请重新生成或导入网格。");
+        return;
+    }
+
+    const QString meshPath = QFileInfo(meshObject->mshFile).isAbsolute()
+        ? meshObject->mshFile
+        : QDir(projectModel.project().rootPath).filePath(meshObject->mshFile);
+    if (!QFileInfo::exists(meshPath)) {
+        addPreflightError(preflight, "mesh file does not exist: " + meshPath + ". 请重新生成网格。");
+    }
+    if (meshObject->stale) {
+        addPreflightError(preflight, "mesh is stale. 网格已过期，请重新生成网格后再求解。");
+        if (!meshObject->staleReason.isEmpty()) {
+            addPreflightWarning(preflight, "mesh stale reason: " + meshObject->staleReason);
+        }
+    }
+
+    preflight.messages.append(MeshQualityService::solverPreflightMessages(*meshObject));
+    if (MeshQualityService::hasCriticalIssues(*meshObject)) {
+        addPreflightError(preflight, "mesh quality has critical issues. 请修复退化单元、负体积或无效单元。");
+    }
+}
+
+void validateBoundaryTargets(
+    SolverPreflightResult &preflight,
+    const ProjectModel &projectModel,
+    const QString &meshName,
+    const std::vector<BoundaryCondition> &boundaries,
+    const std::vector<FaceGroup> &faceGroups,
+    const std::vector<Load> &loads
+)
+{
+    for (const BoundaryCondition &boundaryCondition : boundaries) {
+        if (!boundaryCondition.enabled) {
+            continue;
+        }
+        if (boundaryCondition.target.kind == BoundaryTargetKind::MeshBoundary) {
+            bool found = false;
+            for (const MeshBoundary &meshBoundary : projectModel.meshRepository().meshBoundaries()) {
+                if (meshBoundary.meshName != meshName) {
+                    continue;
+                }
+                if (meshBoundary.id == boundaryCondition.target.meshBoundaryName
+                        || meshBoundary.name == boundaryCondition.target.meshBoundaryName
+                        || meshBoundary.physicalGroupName == boundaryCondition.target.meshBoundaryName) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                addPreflightError(preflight, "mesh boundary target is missing: "
+                    + boundaryCondition.name + ". 网格边界丢失，请重新生成网格或重新绑定边界。");
+            }
+            continue;
+        }
+
+        const BoundaryConditionBindingSummary summary =
+            BoundaryBindingInspector::summarizeBoundaryCondition(boundaryCondition, faceGroups, loads);
+        if (!summary.faceGroupExists) {
+            addPreflightError(preflight, "boundary target face group is missing: "
+                + boundaryCondition.name + ". 面组丢失，请重新绑定边界。");
+        } else if (summary.faceGroupIsEmpty) {
+            addPreflightError(preflight, "boundary target face group is empty: "
+                + boundaryCondition.name + ". 目标面组为空，请重新拾取面。");
+        }
+        for (const QString &warning : summary.warnings) {
+            addPreflightWarning(preflight, "boundary binding warning for "
+                + boundaryCondition.name + ": " + warning);
+        }
+    }
+}
+
+SolverPreflightResult validateCalculiXPreflight(
+    const ProjectModel &projectModel,
+    const SimulationCase &simulationCase,
+    const QString &meshName
+)
+{
+    SolverPreflightResult preflight;
+    if (projectModel.geometryObjects().isEmpty()) {
+        addPreflightError(preflight, "project has no geometry. 请先创建或导入几何。");
+    }
+
+    validateMeshPreflight(preflight, projectModel, meshName);
+
+    const StructuralCase &structuralCase = simulationCase.structuralCase;
+    validateMaterialAssignments(preflight, simulationCase);
+
+    bool hasConstraint = false;
+    for (const BoundaryCondition &boundaryCondition : structuralCase.constraints) {
+        hasConstraint = hasConstraint || isStructuralConstraintBoundary(boundaryCondition, structuralCase.loads);
+    }
+    if (!hasConstraint) {
+        addPreflightError(preflight, "missing fixed/displacement constraint; the model may move as a rigid body. 缺少固定约束，模型可能刚体运动。");
+    }
+    if (structuralCase.loads.empty()) {
+        addPreflightError(preflight, "missing structural load. 请添加压力、力或重力载荷。");
+    }
+    for (const Load &load : structuralCase.loads) {
+        if (!load.enabled) {
+            continue;
+        }
+        if (!loadReferencesExistingBoundary(load, structuralCase.constraints)) {
+            addPreflightError(preflight, "load target boundary is missing for load: "
+                + load.name + ". 载荷引用的边界已丢失，请重新选择载荷作用面。");
+        }
+    }
+
+    validateBoundaryTargets(
+        preflight,
+        projectModel,
+        meshName,
+        structuralCase.constraints,
+        simulationCase.geometrySetup.faceGroups,
+        structuralCase.loads
+    );
+
+    QString resolvedCcx;
+    if (!CalculiXEnvironment::executableAvailable(&resolvedCcx)) {
+        addPreflightError(preflight, "ccx executable is not available: "
+            + CalculiXEnvironment::executablePath()
+            + ". 请配置 MYCAE_CALCULIX_EXECUTABLE 或 CMake 中的 CalculiX 路径。");
+    } else {
+        preflight.messages.append("Preflight info: CalculiX executable found: " + resolvedCcx);
+    }
+
+    if (preflight.passed) {
+        preflight.messages.prepend("Preflight info: CalculiX preflight checks passed.");
+    }
+    return preflight;
 }
 
 ResultObject makeResultObject(
@@ -196,6 +447,14 @@ SolverCaseWorkflowResult SolverCaseWorkflowController::runPlugin(const QString &
 
     const SimulationCase simulationCase = SimulationCaseBuilder::fromProjectModel(m_projectModel);
     const QString meshName = simulationMeshName(pluginId, simulationCase);
+    if (pluginId == "calculix") {
+        const SolverPreflightResult preflight =
+            validateCalculiXPreflight(m_projectModel, simulationCase, meshName);
+        result.logMessages.append(preflight.messages);
+        if (!preflight.passed) {
+            return result;
+        }
+    }
     if (const MeshObject *meshObject = m_projectModel.findMeshByName(meshName)) {
         if (meshObject->stale) {
             result.logMessages.append(zh(u8"运行求解器失败：网格已过期，请重新生成网格后再求解。"));

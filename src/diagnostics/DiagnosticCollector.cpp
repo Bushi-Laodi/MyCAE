@@ -29,6 +29,7 @@ DiagnosticSeverity severityForMessage(const QString &lower)
             "zero volume",
             "negative jacobian",
             "stale",
+            "preflight error",
             "failed:",
             "失败",
             "不存在",
@@ -46,6 +47,7 @@ DiagnosticSeverity severityForMessage(const QString &lower)
             "missing",
             "diagnostic hint",
             "mesh quality",
+            "preflight warning",
             "aspect ratio",
             "high aspect",
             "警告",
@@ -108,6 +110,9 @@ DiagnosticCategory categoryForMessage(const QString &lower)
             "material",
             "boundary",
             "load",
+            "section assignment",
+            "face group",
+            "rigid body",
             "case data",
             "no enabled",
             "no material",
@@ -187,6 +192,11 @@ bool shouldCollect(const QString &lower)
         "singular",
         "too many cutbacks",
         "stale",
+        "preflight error",
+        "preflight warning",
+        "section assignment",
+        "face group",
+        "rigid body",
         "警告",
         "失败",
         "不存在",
@@ -224,6 +234,17 @@ bool DiagnosticCollector::addFromLogMessage(const QString &message)
     diagnostic.suggestedFix = suggestedFixFor(diagnostic.category, diagnostic.severity);
     addDiagnostic(diagnostic);
     return true;
+}
+
+int DiagnosticCollector::addFromLogMessages(const QStringList &messages)
+{
+    int collected = 0;
+    for (const QString &message : messages) {
+        if (addFromLogMessage(message)) {
+            ++collected;
+        }
+    }
+    return collected;
 }
 
 void DiagnosticCollector::addDiagnostic(const DiagnosticMessage &diagnostic)

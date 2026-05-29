@@ -42,4 +42,9 @@ public:
         const std::vector<FaceGroup> &faceGroups,
         const std::vector<Load> &loads
     );
+
+    static const FaceGroup *findTargetFaceGroup(
+        const BoundaryCondition &boundaryCondition,
+        const std::vector<FaceGroup> &faceGroups
+    );
 };

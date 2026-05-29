@@ -8,5 +8,6 @@ class CalculiXEnvironment
 public:
     static QString executablePath();
     static bool isExplicitExecutablePath(const QString &executablePath);
+    static bool executableAvailable(QString *resolvedPath = nullptr);
     static QProcessEnvironment processEnvironment(const QString &executablePath);
 };

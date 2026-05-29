@@ -40,6 +40,14 @@ const FaceGroup *findFaceGroup(
 }
 }
 
+const FaceGroup *BoundaryBindingInspector::findTargetFaceGroup(
+    const BoundaryCondition &boundaryCondition,
+    const std::vector<FaceGroup> &faceGroups
+)
+{
+    return findFaceGroup(faceGroups, boundaryCondition);
+}
+
 FaceGroupBindingSummary BoundaryBindingInspector::summarizeFaceGroup(
     const FaceGroup &faceGroup,
     const std::vector<BoundaryCondition> &boundaryConditions,

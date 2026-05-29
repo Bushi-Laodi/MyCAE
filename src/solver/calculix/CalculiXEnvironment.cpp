@@ -2,6 +2,7 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QStandardPaths>
 
 QString CalculiXEnvironment::executablePath()
 {
@@ -25,6 +26,24 @@ bool CalculiXEnvironment::isExplicitExecutablePath(const QString &executablePath
 {
     const QFileInfo executableInfo(executablePath);
     return executableInfo.isAbsolute() || executablePath.contains('/') || executablePath.contains('\\');
+}
+
+bool CalculiXEnvironment::executableAvailable(QString *resolvedPath)
+{
+    const QString executable = executablePath();
+    if (isExplicitExecutablePath(executable)) {
+        const bool exists = QFileInfo::exists(executable);
+        if (exists && resolvedPath) {
+            *resolvedPath = QFileInfo(executable).absoluteFilePath();
+        }
+        return exists;
+    }
+
+    const QString resolved = QStandardPaths::findExecutable(executable);
+    if (resolvedPath) {
+        *resolvedPath = resolved;
+    }
+    return !resolved.isEmpty();
 }
 
 QProcessEnvironment CalculiXEnvironment::processEnvironment(const QString &executablePath)
