@@ -52,6 +52,7 @@ void MainWindowToolBarBuilder::build(QMainWindow *window, const MainWindowAction
     prepareToolAction(actions.importStep, UiIconFactory::toolbarBadge("I", QColor("#475569")), zh(u8"导入 STEP"));
     prepareToolAction(actions.transformGeometry, UiIconFactory::toolbarBadge("T", QColor("#ea580c")), zh(u8"变换选中几何体"));
     prepareToolAction(actions.deleteGeometry, UiIconFactory::toolbarBadge("D", QColor("#dc2626")), zh(u8"删除选中几何体"));
+    prepareToolAction(actions.createSectionAssignment, UiIconFactory::toolbarBadge("SA", QColor("#16a34a")), zh(u8"创建材料分区"));
     prepareToolAction(actions.showOrientationMarker, UiIconFactory::toolbarBadge("XYZ", QColor("#334155")), zh(u8"显示或隐藏 XYZ 坐标轴"));
     prepareToolAction(actions.pickFace, UiIconFactory::toolbarBadge("P", QColor("#7c3aed")), zh(u8"拾取面"));
     prepareToolAction(

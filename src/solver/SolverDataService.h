@@ -3,6 +3,7 @@
 #include "solver/BoundaryCondition.h"
 #include "solver/Load.h"
 #include "solver/Material.h"
+#include "solver/SectionAssignment.h"
 
 #include <QString>
 #include <QStringList>
@@ -13,9 +14,11 @@ enum class SolverDataSelectionKind
 {
     None,
     MaterialCategory,
+    SectionAssignmentCategory,
     BoundaryConditionCategory,
     LoadCategory,
     Material,
+    SectionAssignment,
     BoundaryCondition,
     Load
 };
@@ -32,6 +35,10 @@ class SolverDataService
 {
 public:
     static SolverDataServiceResult createMaterial(ProjectModel &projectModel, const Material &material);
+    static SolverDataServiceResult createSectionAssignment(
+        ProjectModel &projectModel,
+        const SectionAssignment &sectionAssignment
+    );
     static SolverDataServiceResult createBoundaryCondition(
         ProjectModel &projectModel,
         const BoundaryCondition &boundaryCondition
@@ -42,6 +49,11 @@ public:
         const QString &originalId,
         const Material &material
     );
+    static SolverDataServiceResult updateSectionAssignment(
+        ProjectModel &projectModel,
+        const QString &originalId,
+        const SectionAssignment &sectionAssignment
+    );
     static SolverDataServiceResult updateBoundaryCondition(
         ProjectModel &projectModel,
         const QString &originalId,
@@ -49,6 +61,7 @@ public:
     );
     static SolverDataServiceResult updateLoad(ProjectModel &projectModel, const QString &originalId, const Load &load);
     static SolverDataServiceResult deleteMaterial(ProjectModel &projectModel, const QString &materialId);
+    static SolverDataServiceResult deleteSectionAssignment(ProjectModel &projectModel, const QString &sectionAssignmentId);
     static SolverDataServiceResult deleteBoundaryCondition(
         ProjectModel &projectModel,
         const QString &boundaryConditionId

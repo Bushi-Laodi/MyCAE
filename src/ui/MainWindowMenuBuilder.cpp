@@ -81,6 +81,7 @@ void MainWindowMenuBuilder::build(
     auto *caseMenu = window->menuBar()->addMenu(zh(u8"工况"));
     auto *structuralCaseMenu = caseMenu->addMenu(zh(u8"结构工况"));
     structuralCaseMenu->addAction(actions.createStructuralMaterial);
+    structuralCaseMenu->addAction(actions.createSectionAssignment);
     structuralCaseMenu->addAction(actions.createStructuralBoundaryCondition);
     structuralCaseMenu->addAction(actions.createStructuralLoad);
     auto *cfdCaseMenu = caseMenu->addMenu(zh(u8"CFD 工况"));

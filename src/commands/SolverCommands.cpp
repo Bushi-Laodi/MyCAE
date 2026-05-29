@@ -33,6 +33,9 @@ public:
         case SolverDataCommandType::CreateFluidMaterial:
             result = solverWorkflow.createFluidMaterial();
             break;
+        case SolverDataCommandType::CreateSectionAssignment:
+            result = solverWorkflow.createSectionAssignment();
+            break;
         case SolverDataCommandType::CreateBoundaryCondition:
             result = solverWorkflow.createBoundaryCondition();
             break;

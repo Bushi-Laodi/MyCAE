@@ -176,6 +176,35 @@ void SolverPropertyView::populateMaterialCategory(QWidget *parent, const std::ve
     }
 }
 
+void SolverPropertyView::populateSectionAssignmentCategory(
+    QWidget *parent,
+    const std::vector<SectionAssignment> &sectionAssignments
+)
+{
+    auto *dynamicLayout = new QVBoxLayout(parent);
+
+    if (sectionAssignments.empty()) {
+        dynamicLayout->addWidget(new QLabel(zh(u8"尚未定义材料分区。"), parent));
+        return;
+    }
+
+    for (size_t i = 0; i < sectionAssignments.size(); ++i) {
+        const SectionAssignment &sectionAssignment = sectionAssignments[i];
+        dynamicLayout->addWidget(
+            new QLabel(QString("<b>%1. %2</b>").arg(i + 1).arg(sectionAssignment.name), parent)
+        );
+
+        auto *form = new QFormLayout;
+        form->addRow("ID:", valueLabel(sectionAssignment.id, parent));
+        form->addRow(zh(u8"材料 ID:"), valueLabel(sectionAssignment.materialId, parent));
+        form->addRow(zh(u8"几何体:"), valueLabel(sectionAssignment.geometryName, parent));
+        form->addRow(zh(u8"网格:"), valueLabel(sectionAssignment.meshName, parent));
+        form->addRow(zh(u8"单元集:"), valueLabel(sectionAssignment.elementSetName, parent));
+        form->addRow(zh(u8"启用:"), valueLabel(yesNoText(sectionAssignment.enabled), parent));
+        dynamicLayout->addLayout(form);
+    }
+}
+
 void SolverPropertyView::populateBoundaryConditionCategory(
     QWidget *parent,
     const std::vector<BoundaryCondition> &boundaryConditions
@@ -250,6 +279,23 @@ void SolverPropertyView::populateMaterial(QWidget *parent, const Material &mater
     dynamicLayout->addLayout(form);
 }
 
+void SolverPropertyView::populateSectionAssignment(QWidget *parent, const SectionAssignment &sectionAssignment)
+{
+    auto *dynamicLayout = new QVBoxLayout(parent);
+    auto *form = new QFormLayout;
+    form->addRow("ID:", valueLabel(sectionAssignment.id, parent));
+    form->addRow(zh(u8"材料 ID:"), valueLabel(sectionAssignment.materialId, parent));
+    form->addRow(zh(u8"几何体:"), valueLabel(sectionAssignment.geometryName, parent));
+    form->addRow(zh(u8"网格:"), valueLabel(sectionAssignment.meshName, parent));
+    form->addRow(zh(u8"单元集:"), valueLabel(sectionAssignment.elementSetName, parent));
+    form->addRow(zh(u8"启用:"), valueLabel(yesNoText(sectionAssignment.enabled), parent));
+    dynamicLayout->addLayout(form);
+
+    if (sectionAssignment.elementSetName.trimmed().isEmpty()) {
+        dynamicLayout->addWidget(warningLabel(parent, zh(u8"单元集为空时将无法稳定映射材料，建议使用 EALL 或明确的物理体/单元集名称。")));
+    }
+}
+
 void SolverPropertyView::populateBoundaryCondition(
     QWidget *parent,
     const BoundaryCondition &boundaryCondition,
@@ -313,6 +359,7 @@ void SolverPropertyView::populateSolverCategory(QWidget *parent, const Simulatio
     form->addRow(zh(u8"写出间隔:"), new QLabel(QString::number(simulationCase.runControl.writeInterval), parent));
     form->addRow(zh(u8"后处理工具:"), new QLabel(simulationCase.postProcessingTool, parent));
     form->addRow(zh(u8"结构材料:"), new QLabel(QString::number(simulationCase.structuralCase.materials.size()), parent));
+    form->addRow(zh(u8"材料分区:"), new QLabel(QString::number(simulationCase.structuralCase.sectionAssignments.size()), parent));
     form->addRow(zh(u8"结构约束/目标:"), new QLabel(QString::number(simulationCase.structuralCase.constraints.size()), parent));
     form->addRow(zh(u8"结构载荷:"), new QLabel(QString::number(simulationCase.structuralCase.loads.size()), parent));
     form->addRow(zh(u8"流体材料:"), new QLabel(QString::number(simulationCase.cfdCase.materials.size()), parent));

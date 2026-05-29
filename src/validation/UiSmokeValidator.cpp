@@ -308,7 +308,9 @@ void validateDemoProjectUi(
     const QStringList populatedTreeGroups{
         zh(u8"几何"),
         zh(u8"面组"),
+        zh(u8"求解数据"),
         zh(u8"材料"),
+        zh(u8"材料分区"),
         zh(u8"边界条件"),
         zh(u8"载荷"),
         zh(u8"网格"),
@@ -326,7 +328,9 @@ void validateDemoProjectUi(
     const QStringList styledTreeGroups{
         zh(u8"几何"),
         zh(u8"面组"),
+        zh(u8"求解数据"),
         zh(u8"材料"),
+        zh(u8"材料分区"),
         zh(u8"边界条件"),
         zh(u8"载荷"),
         zh(u8"网格"),
@@ -341,6 +345,7 @@ void validateDemoProjectUi(
     addActionEnabledStep(report, window, "geometry.create.sphere");
     addActionEnabledStep(report, window, "geometry.import.step");
     addActionEnabledStep(report, window, "solverData.create.material");
+    addActionEnabledStep(report, window, "solverData.create.sectionAssignment");
     addActionEnabledStep(report, window, "solverData.create.boundaryCondition");
     addActionEnabledStep(report, window, "solverData.create.load");
     addActionEnabledStep(report, window, "solver.run.calculix");

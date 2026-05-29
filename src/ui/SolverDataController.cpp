@@ -3,7 +3,9 @@
 #include "BoundaryConditionDialog.h"
 #include "LoadDialog.h"
 #include "MaterialDialog.h"
+#include "SectionAssignmentDialog.h"
 #include "geometry/GeometryObject.h"
+#include "mesh/MeshObject.h"
 #include "project/ProjectModel.h"
 #include "PropertyPanel.h"
 #include "solver/SolverDataService.h"
@@ -12,6 +14,7 @@
 #include <QMessageBox>
 
 #include <optional>
+#include <utility>
 
 namespace
 {
@@ -136,6 +139,57 @@ LoadDialogOptions cfdFieldValueDialogOptions(const ProjectModel &projectModel)
     options.allowedTypes = {LoadType::Velocity, LoadType::Pressure};
     return options;
 }
+
+SectionAssignmentDialogOptions sectionAssignmentDialogOptions(const ProjectModel &projectModel)
+{
+    SectionAssignmentDialogOptions options;
+    const SolverRepository &solverRepository = projectModel.solverRepository();
+
+    for (const Material &material : solverRepository.materials()) {
+        if (isStructuralMaterial(material)) {
+            options.solidMaterials.append(material);
+        }
+    }
+    for (const GeometryObject &geometry : projectModel.geometryRepository().geometryObjects()) {
+        options.geometries.append(geometry);
+    }
+    for (const MeshObject &mesh : projectModel.meshRepository().meshObjects()) {
+        options.meshes.append(mesh);
+    }
+
+    switch (projectModel.selection().kind) {
+    case SelectionKind::Geometry:
+        options.defaultGeometryName = projectModel.selection().id;
+        break;
+    case SelectionKind::Mesh:
+        options.defaultMeshName = projectModel.selection().id;
+        if (const MeshObject *meshObject = projectModel.findMeshByName(projectModel.selection().id)) {
+            options.defaultGeometryName = meshObject->sourceGeometryName;
+        }
+        break;
+    default:
+        break;
+    }
+
+    if (options.defaultGeometryName.isEmpty() && options.geometries.size() == 1) {
+        options.defaultGeometryName = options.geometries.front().name;
+    }
+    if (options.defaultMeshName.isEmpty() && !options.defaultGeometryName.isEmpty()) {
+        for (const MeshObject &mesh : options.meshes) {
+            if (mesh.sourceGeometryName == options.defaultGeometryName) {
+                options.defaultMeshName = mesh.name;
+                break;
+            }
+        }
+    }
+    if (options.defaultMeshName.isEmpty() && options.meshes.size() == 1) {
+        options.defaultMeshName = options.meshes.front().name;
+        if (options.defaultGeometryName.isEmpty()) {
+            options.defaultGeometryName = options.meshes.front().sourceGeometryName;
+        }
+    }
+    return options;
+}
 }
 
 QStringList SolverDataController::showMaterialCategory(ProjectModel &projectModel, PropertyPanel *propertyPanel)
@@ -146,6 +200,19 @@ QStringList SolverDataController::showMaterialCategory(ProjectModel &projectMode
         propertyPanel->showMaterialCategory(solverRepository.materials());
     }
     return {zh(u8"材料：已定义 %1 个。").arg(solverRepository.materials().size())};
+}
+
+QStringList SolverDataController::showSectionAssignmentCategory(
+    ProjectModel &projectModel,
+    PropertyPanel *propertyPanel
+)
+{
+    projectModel.setSelection(Selection::category(SelectionKind::SectionAssignmentCategory));
+    const SolverRepository &solverRepository = projectModel.solverRepository();
+    if (propertyPanel) {
+        propertyPanel->showSectionAssignmentCategory(solverRepository.sectionAssignments());
+    }
+    return {zh(u8"材料分区：已定义 %1 个。").arg(solverRepository.sectionAssignments().size())};
 }
 
 QStringList SolverDataController::showBoundaryConditionCategory(
@@ -188,6 +255,30 @@ QStringList SolverDataController::showMaterial(
         propertyPanel->showMaterial(*material);
     }
     return {zh(u8"材料已选择：") + material->name};
+}
+
+QStringList SolverDataController::showSectionAssignment(
+    ProjectModel &projectModel,
+    PropertyPanel *propertyPanel,
+    const QString &sectionAssignmentId
+)
+{
+    const SectionAssignment *sectionAssignment =
+        projectModel.solverRepository().findSectionAssignmentById(sectionAssignmentId);
+    if (!sectionAssignment) {
+        projectModel.clearSolverSelection();
+        return {zh(u8"材料分区选择失败：未找到：") + sectionAssignmentId};
+    }
+
+    projectModel.setSelection(Selection::item(
+        SelectionKind::SectionAssignment,
+        sectionAssignment->id,
+        sectionAssignment->name
+    ));
+    if (propertyPanel) {
+        propertyPanel->showSectionAssignment(*sectionAssignment);
+    }
+    return {zh(u8"材料分区已选择：") + sectionAssignment->name};
 }
 
 QStringList SolverDataController::showBoundaryCondition(
@@ -285,6 +376,36 @@ SolverDataControllerResult SolverDataController::createFluidMaterial(QWidget *pa
         return result;
     }
     return SolverDataService::createMaterial(projectModel, *newMaterial);
+}
+
+SolverDataControllerResult SolverDataController::createSectionAssignment(QWidget *parent, ProjectModel &projectModel)
+{
+    if (!projectModel.hasProject()) {
+        return noProjectResult(zh(u8"创建材料分区"));
+    }
+
+    SolverDataControllerResult result;
+    SectionAssignmentDialogOptions options = sectionAssignmentDialogOptions(projectModel);
+    if (options.solidMaterials.isEmpty()) {
+        result.logMessages.append(zh(u8"创建材料分区失败：请先创建至少一个固体材料。"));
+        return result;
+    }
+    if (options.geometries.isEmpty()) {
+        result.logMessages.append(zh(u8"创建材料分区失败：请先创建或导入一个几何体。"));
+        return result;
+    }
+    if (options.meshes.isEmpty()) {
+        result.logMessages.append(zh(u8"创建材料分区失败：请先生成或导入一个网格。"));
+        return result;
+    }
+
+    const std::optional<SectionAssignment> newSectionAssignment =
+        SectionAssignmentDialog::createSectionAssignment(parent, std::move(options));
+    if (!newSectionAssignment) {
+        result.logMessages.append(zh(u8"已取消创建材料分区。"));
+        return result;
+    }
+    return SolverDataService::createSectionAssignment(projectModel, *newSectionAssignment);
 }
 
 SolverDataControllerResult SolverDataController::createBoundaryCondition(QWidget *parent, ProjectModel &projectModel)
@@ -397,6 +518,21 @@ SolverDataControllerResult SolverDataController::editSelected(QWidget *parent, P
         return SolverDataService::updateMaterial(projectModel, originalId, *editedMaterial);
     }
 
+    if (SectionAssignment *sectionAssignment = projectModel.sectionAssignmentForSelection()) {
+        const QString originalId = sectionAssignment->id;
+        const std::optional<SectionAssignment> editedSectionAssignment =
+            SectionAssignmentDialog::editSectionAssignment(
+                parent,
+                *sectionAssignment,
+                sectionAssignmentDialogOptions(projectModel)
+            );
+        if (!editedSectionAssignment) {
+            result.logMessages.append(zh(u8"已取消编辑材料分区。"));
+            return result;
+        }
+        return SolverDataService::updateSectionAssignment(projectModel, originalId, *editedSectionAssignment);
+    }
+
     if (BoundaryCondition *boundaryCondition = projectModel.boundaryConditionForSelection()) {
         const QString originalId = boundaryCondition->id;
         const std::optional<BoundaryCondition> editedBoundaryCondition =
@@ -423,7 +559,7 @@ SolverDataControllerResult SolverDataController::editSelected(QWidget *parent, P
         return SolverDataService::updateLoad(projectModel, originalId, *editedLoad);
     }
 
-    result.logMessages.append(zh(u8"编辑求解数据失败：请先选择材料、边界条件或载荷。"));
+    result.logMessages.append(zh(u8"编辑求解数据失败：请先选择材料、材料分区、边界条件或载荷。"));
     return result;
 }
 
@@ -448,6 +584,22 @@ SolverDataControllerResult SolverDataController::deleteSelected(QWidget *parent,
         }
 
         return SolverDataService::deleteMaterial(projectModel, id);
+    }
+
+    if (const SectionAssignment *sectionAssignment = projectModel.sectionAssignmentForSelection()) {
+        const QString id = sectionAssignment->id;
+        const QString name = sectionAssignment->name;
+        const QMessageBox::StandardButton answer = QMessageBox::question(
+            parent,
+            zh(u8"删除材料分区"),
+            zh(u8"删除材料分区“%1”？\n删除后该分区不会再导出为 *SOLID SECTION。").arg(name)
+        );
+        if (answer != QMessageBox::Yes) {
+            result.logMessages.append(zh(u8"已取消删除材料分区。"));
+            return result;
+        }
+
+        return SolverDataService::deleteSectionAssignment(projectModel, id);
     }
 
     if (const BoundaryCondition *boundaryCondition = projectModel.boundaryConditionForSelection()) {
@@ -482,6 +634,6 @@ SolverDataControllerResult SolverDataController::deleteSelected(QWidget *parent,
         return SolverDataService::deleteLoad(projectModel, id);
     }
 
-    result.logMessages.append(zh(u8"删除求解数据失败：请先选择材料、边界条件或载荷。"));
+    result.logMessages.append(zh(u8"删除求解数据失败：请先选择材料、材料分区、边界条件或载荷。"));
     return result;
 }

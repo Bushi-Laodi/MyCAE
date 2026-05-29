@@ -64,6 +64,7 @@ SelectionControllerResult SelectionController::apply(const Selection &selection)
     case SelectionKind::FaceGroup:
         return showFaceGroup(selection.id);
     case SelectionKind::MaterialCategory:
+    case SelectionKind::SectionAssignmentCategory:
     case SelectionKind::BoundaryConditionCategory:
     case SelectionKind::LoadCategory:
     case SelectionKind::SolverCategory:
@@ -73,6 +74,13 @@ SelectionControllerResult SelectionController::apply(const Selection &selection)
         SelectionControllerResult result;
         result.logMessages = SolverDataController::showMaterial(m_projectModel, m_propertyPanel, selection.id);
         result.accepted = m_projectModel.selection().kind == SelectionKind::Material;
+        return result;
+    }
+    case SelectionKind::SectionAssignment: {
+        SelectionControllerResult result;
+        result.logMessages =
+            SolverDataController::showSectionAssignment(m_projectModel, m_propertyPanel, selection.id);
+        result.accepted = m_projectModel.selection().kind == SelectionKind::SectionAssignment;
         return result;
     }
     case SelectionKind::BoundaryCondition: {
@@ -247,6 +255,9 @@ SelectionControllerResult SelectionController::showSolverCategory(SelectionKind 
     switch (kind) {
     case SelectionKind::MaterialCategory:
         result.logMessages = SolverDataController::showMaterialCategory(m_projectModel, m_propertyPanel);
+        break;
+    case SelectionKind::SectionAssignmentCategory:
+        result.logMessages = SolverDataController::showSectionAssignmentCategory(m_projectModel, m_propertyPanel);
         break;
     case SelectionKind::BoundaryConditionCategory:
         result.logMessages = SolverDataController::showBoundaryConditionCategory(m_projectModel, m_propertyPanel);

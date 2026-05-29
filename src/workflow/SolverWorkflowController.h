@@ -33,6 +33,7 @@ public:
     SolverWorkflowResult createMaterial() const;
     SolverWorkflowResult createStructuralMaterial() const;
     SolverWorkflowResult createFluidMaterial() const;
+    SolverWorkflowResult createSectionAssignment() const;
     SolverWorkflowResult createBoundaryCondition() const;
     SolverWorkflowResult createStructuralBoundaryCondition() const;
     SolverWorkflowResult createCfdBoundaryCondition() const;

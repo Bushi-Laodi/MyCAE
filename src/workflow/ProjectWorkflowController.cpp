@@ -197,8 +197,9 @@ ProjectWorkflowResult ProjectWorkflowController::loadSimulationCase() const
     }
 
     const SolverRepository &solverRepository = m_projectModel.solverRepository();
-    result.logMessages.append(zh(u8"已加载仿真工况数据：%1 个材料，%2 个边界条件，%3 个载荷。")
+    result.logMessages.append(zh(u8"已加载仿真工况数据：%1 个材料，%2 个材料分区，%3 个边界条件，%4 个载荷。")
         .arg(solverRepository.materials().size())
+        .arg(solverRepository.sectionAssignments().size())
         .arg(solverRepository.boundaryConditions().size())
         .arg(solverRepository.loads().size()));
     result.success = true;
@@ -286,6 +287,7 @@ void ProjectWorkflowController::refreshSolverDataTree() const
 
     const SolverRepository &solverRepository = m_projectModel.solverRepository();
     m_projectTreePanel->setMaterialItems(solverRepository.materials());
+    m_projectTreePanel->setSectionAssignmentItems(solverRepository.sectionAssignments());
     m_projectTreePanel->setBoundaryConditionItems(solverRepository.boundaryConditions());
     m_projectTreePanel->setLoadItems(solverRepository.loads());
 }

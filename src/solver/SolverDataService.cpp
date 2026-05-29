@@ -42,6 +42,100 @@ bool hasLoadId(const std::vector<Load> &loads, const QString &id, const QString 
     return false;
 }
 
+bool hasSectionAssignmentId(
+    const std::vector<SectionAssignment> &sectionAssignments,
+    const QString &id,
+    const QString &excludedId = {}
+)
+{
+    for (const SectionAssignment &sectionAssignment : sectionAssignments) {
+        if (sectionAssignment.id == id && sectionAssignment.id != excludedId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QString sanitizedIdPart(QString text)
+{
+    text = text.trimmed().toLower();
+    for (qsizetype i = 0; i < text.size(); ++i) {
+        if (!text.at(i).isLetterOrNumber()) {
+            text[i] = '_';
+        }
+    }
+    while (text.contains("__")) {
+        text.replace("__", "_");
+    }
+    while (text.startsWith('_')) {
+        text.remove(0, 1);
+    }
+    while (text.endsWith('_')) {
+        text.chop(1);
+    }
+    return text;
+}
+
+QString defaultSectionAssignmentId(const SectionAssignment &sectionAssignment)
+{
+    const QString materialPart = sanitizedIdPart(sectionAssignment.materialId);
+    const QString meshPart = sanitizedIdPart(sectionAssignment.meshName);
+    const QString fallbackPart = sanitizedIdPart(sectionAssignment.name);
+    QStringList parts{"section"};
+    if (!materialPart.isEmpty()) {
+        parts.append(materialPart);
+    }
+    if (!meshPart.isEmpty()) {
+        parts.append(meshPart);
+    }
+    if (parts.size() == 1 && !fallbackPart.isEmpty()) {
+        parts.append(fallbackPart);
+    }
+    return parts.join('_');
+}
+
+SectionAssignment normalizedSectionAssignment(SectionAssignment sectionAssignment)
+{
+    sectionAssignment.name = sectionAssignment.name.trimmed();
+    sectionAssignment.materialId = sectionAssignment.materialId.trimmed();
+    sectionAssignment.geometryName = sectionAssignment.geometryName.trimmed();
+    sectionAssignment.meshName = sectionAssignment.meshName.trimmed();
+    sectionAssignment.elementSetName = sectionAssignment.elementSetName.trimmed();
+    if (sectionAssignment.elementSetName.isEmpty()) {
+        sectionAssignment.elementSetName = "EALL";
+    }
+    if (sectionAssignment.name.isEmpty()) {
+        sectionAssignment.name = QString("%1 @ %2")
+            .arg(sectionAssignment.materialId, sectionAssignment.meshName);
+    }
+    if (sectionAssignment.id.trimmed().isEmpty()) {
+        sectionAssignment.id = defaultSectionAssignmentId(sectionAssignment);
+    } else {
+        sectionAssignment.id = sanitizedIdPart(sectionAssignment.id);
+    }
+    if (sectionAssignment.id.isEmpty()) {
+        sectionAssignment.id = "section_assignment";
+    }
+    return sectionAssignment;
+}
+
+QString uniqueSectionAssignmentId(
+    const std::vector<SectionAssignment> &sectionAssignments,
+    const QString &baseId
+)
+{
+    if (!hasSectionAssignmentId(sectionAssignments, baseId)) {
+        return baseId;
+    }
+    for (int suffix = 2; suffix < 10000; ++suffix) {
+        const QString candidate = QString("%1_%2").arg(baseId).arg(suffix);
+        if (!hasSectionAssignmentId(sectionAssignments, candidate)) {
+            return candidate;
+        }
+    }
+    return baseId;
+}
+
 void replaceMaterialReferences(
     std::vector<BoundaryCondition> &boundaryConditions,
     const QString &oldMaterialId,
@@ -96,6 +190,41 @@ SolverDataServiceResult SolverDataService::createMaterial(ProjectModel &projectM
     result.selectionKind = SolverDataSelectionKind::Material;
     result.selectionId = material.id;
     result.logMessages.append(QString("Material created: %1 (ID: %2)").arg(material.name, material.id));
+    return result;
+}
+
+SolverDataServiceResult SolverDataService::createSectionAssignment(
+    ProjectModel &projectModel,
+    const SectionAssignment &sectionAssignment
+)
+{
+    SolverDataServiceResult result;
+    SolverRepository &solverRepository = projectModel.solverRepository();
+    SectionAssignment normalized = normalizedSectionAssignment(sectionAssignment);
+    normalized.id = uniqueSectionAssignmentId(solverRepository.sectionAssignments(), normalized.id);
+    if (!solverRepository.findMaterialById(normalized.materialId)) {
+        result.logMessages.append("Create section assignment failed: material does not exist: " + normalized.materialId);
+        return result;
+    }
+    if (!projectModel.findGeometryByName(normalized.geometryName)) {
+        result.logMessages.append("Create section assignment failed: geometry does not exist: " + normalized.geometryName);
+        return result;
+    }
+    if (normalized.meshName.isEmpty()) {
+        result.logMessages.append("Create section assignment failed: mesh name is empty.");
+        return result;
+    }
+    if (!projectModel.findMeshByName(normalized.meshName)) {
+        result.logMessages.append("Create section assignment failed: mesh does not exist: " + normalized.meshName);
+        return result;
+    }
+
+    solverRepository.sectionAssignments().push_back(normalized);
+    result.changed = true;
+    result.selectionKind = SolverDataSelectionKind::SectionAssignment;
+    result.selectionId = normalized.id;
+    result.logMessages.append(QString("Section assignment created: %1 (Element set: %2)")
+        .arg(normalized.name, normalized.elementSetName));
     return result;
 }
 
@@ -165,6 +294,46 @@ SolverDataServiceResult SolverDataService::updateMaterial(
     result.selectionKind = SolverDataSelectionKind::Material;
     result.selectionId = material.id;
     result.logMessages.append("Material edited: " + material.name);
+    return result;
+}
+
+SolverDataServiceResult SolverDataService::updateSectionAssignment(
+    ProjectModel &projectModel,
+    const QString &originalId,
+    const SectionAssignment &sectionAssignment
+)
+{
+    SolverDataServiceResult result;
+    SolverRepository &solverRepository = projectModel.solverRepository();
+    const SectionAssignment normalized = normalizedSectionAssignment(sectionAssignment);
+    if (hasSectionAssignmentId(solverRepository.sectionAssignments(), normalized.id, originalId)) {
+        result.logMessages.append("Edit section assignment failed: duplicated section assignment ID: " + normalized.id);
+        return result;
+    }
+    if (!solverRepository.findMaterialById(normalized.materialId)) {
+        result.logMessages.append("Edit section assignment failed: material does not exist: " + normalized.materialId);
+        return result;
+    }
+    if (!projectModel.findGeometryByName(normalized.geometryName)) {
+        result.logMessages.append("Edit section assignment failed: geometry does not exist: " + normalized.geometryName);
+        return result;
+    }
+    if (!projectModel.findMeshByName(normalized.meshName)) {
+        result.logMessages.append("Edit section assignment failed: mesh does not exist: " + normalized.meshName);
+        return result;
+    }
+
+    SectionAssignment *storedSectionAssignment = solverRepository.findSectionAssignmentById(originalId);
+    if (!storedSectionAssignment) {
+        result.logMessages.append("Edit section assignment failed: selected section assignment no longer exists.");
+        return result;
+    }
+
+    *storedSectionAssignment = normalized;
+    result.changed = true;
+    result.selectionKind = SolverDataSelectionKind::SectionAssignment;
+    result.selectionId = normalized.id;
+    result.logMessages.append("Section assignment edited: " + normalized.name);
     return result;
 }
 
@@ -247,6 +416,39 @@ SolverDataServiceResult SolverDataService::deleteMaterial(ProjectModel &projectM
     result.changed = true;
     result.selectionKind = SolverDataSelectionKind::MaterialCategory;
     result.logMessages.append("Material deleted: " + name);
+    return result;
+}
+
+SolverDataServiceResult SolverDataService::deleteSectionAssignment(
+    ProjectModel &projectModel,
+    const QString &sectionAssignmentId
+)
+{
+    SolverDataServiceResult result;
+    SolverRepository &solverRepository = projectModel.solverRepository();
+    const SectionAssignment *sectionAssignment = solverRepository.findSectionAssignmentById(sectionAssignmentId);
+    if (!sectionAssignment) {
+        result.logMessages.append("Delete section assignment failed: selected section assignment no longer exists.");
+        return result;
+    }
+
+    const QString name = sectionAssignment->name;
+    auto &sectionAssignments = solverRepository.sectionAssignments();
+    sectionAssignments.erase(
+        std::remove_if(
+            sectionAssignments.begin(),
+            sectionAssignments.end(),
+            [&sectionAssignmentId](const SectionAssignment &candidate) {
+                return candidate.id == sectionAssignmentId;
+            }
+        ),
+        sectionAssignments.end()
+    );
+    projectModel.clearSolverSelection();
+
+    result.changed = true;
+    result.selectionKind = SolverDataSelectionKind::SectionAssignmentCategory;
+    result.logMessages.append("Section assignment deleted: " + name);
     return result;
 }
 

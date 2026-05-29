@@ -51,6 +51,7 @@ struct MainWindowActions
     QAction *createMaterial = nullptr;
     QAction *createStructuralMaterial = nullptr;
     QAction *createFluidMaterial = nullptr;
+    QAction *createSectionAssignment = nullptr;
     QAction *createBoundaryCondition = nullptr;
     QAction *createStructuralBoundaryCondition = nullptr;
     QAction *createCfdBoundaryCondition = nullptr;

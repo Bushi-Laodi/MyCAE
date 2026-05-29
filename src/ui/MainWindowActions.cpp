@@ -54,6 +54,7 @@ constexpr auto CommandToggleFaceGroupPhysicalGroup = "picking.faceGroup.togglePh
 constexpr auto CommandCreateMaterial = "solverData.create.material";
 constexpr auto CommandCreateStructuralMaterial = "solverData.create.structuralMaterial";
 constexpr auto CommandCreateFluidMaterial = "solverData.create.fluidMaterial";
+constexpr auto CommandCreateSectionAssignment = "solverData.create.sectionAssignment";
 constexpr auto CommandCreateBoundaryCondition = "solverData.create.boundaryCondition";
 constexpr auto CommandCreateStructuralBoundaryCondition = "solverData.create.structuralBoundaryCondition";
 constexpr auto CommandCreateCfdBoundaryCondition = "solverData.create.cfdBoundaryCondition";
@@ -344,6 +345,15 @@ MainWindowActions MainWindowActionBuilder::build(
         makeSolverDataCommand(context, SolverDataCommandType::CreateFluidMaterial)
     );
 
+    actions.createSectionAssignment = new QAction(zh(u8"创建材料分区"), window);
+    actions.createSectionAssignment->setStatusTip(zh(u8"把固体材料分配到指定几何、网格和单元集"));
+    actionRegistry.registerActionCommand(
+        CommandCreateSectionAssignment,
+        actions.createSectionAssignment,
+        window,
+        makeSolverDataCommand(context, SolverDataCommandType::CreateSectionAssignment)
+    );
+
     actions.createBoundaryCondition = new QAction(zh(u8"创建边界条件"), window);
     actions.createBoundaryCondition->setStatusTip(zh(u8"创建新的边界条件"));
     actionRegistry.registerActionCommand(
@@ -395,7 +405,7 @@ MainWindowActions MainWindowActionBuilder::build(
     );
 
     actions.editSolverData = new QAction(zh(u8"编辑选中求解数据"), window);
-    actions.editSolverData->setStatusTip(zh(u8"编辑选中的材料、边界条件或载荷"));
+    actions.editSolverData->setStatusTip(zh(u8"编辑选中的材料、材料分区、边界条件或载荷"));
     actionRegistry.registerActionCommand(
         CommandEditSolverData,
         actions.editSolverData,
@@ -404,7 +414,7 @@ MainWindowActions MainWindowActionBuilder::build(
     );
 
     actions.deleteSolverData = new QAction(zh(u8"删除选中求解数据"), window);
-    actions.deleteSolverData->setStatusTip(zh(u8"删除选中的材料、边界条件或载荷"));
+    actions.deleteSolverData->setStatusTip(zh(u8"删除选中的材料、材料分区、边界条件或载荷"));
     actionRegistry.registerActionCommand(
         CommandDeleteSolverData,
         actions.deleteSolverData,

@@ -41,6 +41,11 @@ SolverWorkflowResult SolverWorkflowController::createFluidMaterial() const
     return handleSolverDataResult(SolverDataController::createFluidMaterial(m_parent, m_projectModel));
 }
 
+SolverWorkflowResult SolverWorkflowController::createSectionAssignment() const
+{
+    return handleSolverDataResult(SolverDataController::createSectionAssignment(m_parent, m_projectModel));
+}
+
 SolverWorkflowResult SolverWorkflowController::createBoundaryCondition() const
 {
     return handleSolverDataResult(SolverDataController::createBoundaryCondition(m_parent, m_projectModel));
@@ -122,6 +127,9 @@ SolverWorkflowResult SolverWorkflowController::handleSolverDataResult(const Solv
     case SolverDataSelectionKind::MaterialCategory:
         selection = Selection::category(SelectionKind::MaterialCategory);
         break;
+    case SolverDataSelectionKind::SectionAssignmentCategory:
+        selection = Selection::category(SelectionKind::SectionAssignmentCategory);
+        break;
     case SolverDataSelectionKind::BoundaryConditionCategory:
         selection = Selection::category(SelectionKind::BoundaryConditionCategory);
         break;
@@ -130,6 +138,9 @@ SolverWorkflowResult SolverWorkflowController::handleSolverDataResult(const Solv
         break;
     case SolverDataSelectionKind::Material:
         selection = Selection::item(SelectionKind::Material, dataResult.selectionId);
+        break;
+    case SolverDataSelectionKind::SectionAssignment:
+        selection = Selection::item(SelectionKind::SectionAssignment, dataResult.selectionId);
         break;
     case SolverDataSelectionKind::BoundaryCondition:
         selection = Selection::item(SelectionKind::BoundaryCondition, dataResult.selectionId);

@@ -17,6 +17,7 @@ struct GeometryObject;
 struct Load;
 struct Material;
 struct ResultObject;
+struct SectionAssignment;
 
 class ProjectTreePanel final : public QWidget
 {
@@ -30,6 +31,7 @@ public:
     void setMeshItems(const QStringList &meshNames);
     void setFaceGroupItems(const std::vector<FaceGroup> &faceGroups);
     void setMaterialItems(const std::vector<Material> &materials);
+    void setSectionAssignmentItems(const std::vector<SectionAssignment> &sectionAssignments);
     void setBoundaryConditionItems(const std::vector<BoundaryCondition> &boundaryConditions);
     void setLoadItems(const std::vector<Load> &loads);
     void setResultItems(const std::vector<ResultObject> &results);
@@ -46,8 +48,10 @@ private:
     QTreeWidget *m_tree = nullptr;
     QTreeWidgetItem *m_geometryRoot = nullptr;
     QTreeWidgetItem *m_faceGroupRoot = nullptr;
+    QTreeWidgetItem *m_solverDataRoot = nullptr;
     QTreeWidgetItem *m_meshRoot = nullptr;
     QTreeWidgetItem *m_materialRoot = nullptr;
+    QTreeWidgetItem *m_sectionAssignmentRoot = nullptr;
     QTreeWidgetItem *m_boundaryConditionRoot = nullptr;
     QTreeWidgetItem *m_loadRoot = nullptr;
     QTreeWidgetItem *m_solverRoot = nullptr;

@@ -106,6 +106,9 @@ void MainWindowStateController::update(
     if (actions.createFluidMaterial) {
         actions.createFluidMaterial->setEnabled(hasProject);
     }
+    if (actions.createSectionAssignment) {
+        actions.createSectionAssignment->setEnabled(hasProject);
+    }
     if (actions.createBoundaryCondition) {
         actions.createBoundaryCondition->setEnabled(hasProject);
     }

@@ -225,6 +225,16 @@ const Material *ProjectModel::materialForSelection() const
     return selection().kind == SelectionKind::Material ? findMaterialById(selection().id) : nullptr;
 }
 
+SectionAssignment *ProjectModel::sectionAssignmentForSelection()
+{
+    return selection().kind == SelectionKind::SectionAssignment ? findSectionAssignmentById(selection().id) : nullptr;
+}
+
+const SectionAssignment *ProjectModel::sectionAssignmentForSelection() const
+{
+    return selection().kind == SelectionKind::SectionAssignment ? findSectionAssignmentById(selection().id) : nullptr;
+}
+
 BoundaryCondition *ProjectModel::boundaryConditionForSelection()
 {
     return selection().kind == SelectionKind::BoundaryCondition ? findBoundaryConditionById(selection().id) : nullptr;

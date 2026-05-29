@@ -9,11 +9,13 @@ enum class SelectionKind
     Mesh,
     FaceGroup,
     MaterialCategory,
+    SectionAssignmentCategory,
     BoundaryConditionCategory,
     LoadCategory,
     SolverCategory,
     ResultCategory,
     Material,
+    SectionAssignment,
     BoundaryCondition,
     Load,
     Result

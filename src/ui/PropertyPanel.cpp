@@ -356,6 +356,16 @@ void PropertyPanel::showMaterialCategory(const std::vector<Material> &materials)
     SolverPropertyView::populateMaterialCategory(m_dynamicArea, materials);
 }
 
+void PropertyPanel::showSectionAssignmentCategory(const std::vector<SectionAssignment> &sectionAssignments)
+{
+    clearAll();
+    m_selectionValue->setText(zh(u8"材料分区"));
+    m_typeValue->setText(zh(u8"结构工况数据"));
+
+    resetDynamicArea();
+    SolverPropertyView::populateSectionAssignmentCategory(m_dynamicArea, sectionAssignments);
+}
+
 void PropertyPanel::showBoundaryConditionCategory(const std::vector<BoundaryCondition> &boundaryConditions)
 {
     clearAll();
@@ -383,6 +393,19 @@ void PropertyPanel::showMaterial(const Material &material)
 
     resetDynamicArea();
     SolverPropertyView::populateMaterial(m_dynamicArea, material);
+}
+
+void PropertyPanel::showSectionAssignment(const SectionAssignment &sectionAssignment)
+{
+    clearAll();
+    m_selectionValue->setText(sectionAssignment.name);
+    m_typeValue->setText(zh(u8"材料分区"));
+    m_nameValue->setText(sectionAssignment.name);
+    m_sourceGeometryValue->setText(sectionAssignment.geometryName);
+    m_meshFileValue->setText(sectionAssignment.meshName);
+
+    resetDynamicArea();
+    SolverPropertyView::populateSectionAssignment(m_dynamicArea, sectionAssignment);
 }
 
 void PropertyPanel::showBoundaryCondition(const BoundaryCondition &boundaryCondition)

@@ -6,6 +6,7 @@
 #include "solver/BoundaryCondition.h"
 #include "solver/Load.h"
 #include "solver/Material.h"
+#include "solver/SectionAssignment.h"
 #include "solver/SimulationCase.h"
 #include "ui/UiIconFactory.h"
 
@@ -249,6 +250,41 @@ void ProjectTreePanel::setMaterialItems(const std::vector<Material> &materials)
     m_tree->expandAll();
 }
 
+void ProjectTreePanel::setSectionAssignmentItems(const std::vector<SectionAssignment> &sectionAssignments)
+{
+    if (!m_sectionAssignmentRoot) {
+        return;
+    }
+
+    clearChildren(m_sectionAssignmentRoot);
+    for (const SectionAssignment &sectionAssignment : sectionAssignments) {
+        QString text = sectionAssignment.name;
+        if (!sectionAssignment.elementSetName.trimmed().isEmpty()) {
+            text += QString(" [%1]").arg(sectionAssignment.elementSetName);
+        }
+        if (!sectionAssignment.enabled) {
+            text += zh(u8" (停用)");
+        }
+        auto *item = new QTreeWidgetItem(QStringList{text});
+        setItemSelection(
+            item,
+            Selection::item(SelectionKind::SectionAssignment, sectionAssignment.id, sectionAssignment.name)
+        );
+        item->setToolTip(
+            0,
+            QString("%1\nMaterial: %2\nMesh: %3\nElement set: %4")
+                .arg(sectionAssignment.id)
+                .arg(sectionAssignment.materialId)
+                .arg(sectionAssignment.meshName)
+                .arg(sectionAssignment.elementSetName)
+        );
+        applyLeafStyle(item, UiIconFactory::treeBadge("SA", QColor("#16a34a")));
+        m_sectionAssignmentRoot->addChild(item);
+    }
+
+    m_tree->expandAll();
+}
+
 void ProjectTreePanel::setBoundaryConditionItems(const std::vector<BoundaryCondition> &boundaryConditions)
 {
     if (!m_boundaryConditionRoot) {
@@ -347,17 +383,30 @@ void ProjectTreePanel::buildProjectTree(const QString &projectName, const QStrin
 
     m_faceGroupRoot = createStyledCategory(zh(u8"面组"), UiIconFactory::treeBadge("F", QColor("#7c3aed")), projectRoot);
 
-    m_materialRoot = createStyledCategory(zh(u8"材料"), UiIconFactory::treeBadge("Mt", QColor("#16a34a")), projectRoot);
+    m_solverDataRoot = createStyledCategory(
+        zh(u8"求解数据"),
+        UiIconFactory::treeBadge("SD", QColor("#334155")),
+        projectRoot
+    );
+
+    m_materialRoot = createStyledCategory(zh(u8"材料"), UiIconFactory::treeBadge("Mt", QColor("#16a34a")), m_solverDataRoot);
     setItemSelection(m_materialRoot, Selection::category(SelectionKind::MaterialCategory));
+
+    m_sectionAssignmentRoot = createStyledCategory(
+        zh(u8"材料分区"),
+        UiIconFactory::treeBadge("SA", QColor("#16a34a")),
+        m_solverDataRoot
+    );
+    setItemSelection(m_sectionAssignmentRoot, Selection::category(SelectionKind::SectionAssignmentCategory));
 
     m_boundaryConditionRoot = createStyledCategory(
         zh(u8"边界条件"),
         UiIconFactory::treeBadge("BC", QColor("#ca8a04")),
-        projectRoot
+        m_solverDataRoot
     );
     setItemSelection(m_boundaryConditionRoot, Selection::category(SelectionKind::BoundaryConditionCategory));
 
-    m_loadRoot = createStyledCategory(zh(u8"载荷"), UiIconFactory::treeBadge("L", QColor("#dc2626")), projectRoot);
+    m_loadRoot = createStyledCategory(zh(u8"载荷"), UiIconFactory::treeBadge("L", QColor("#dc2626")), m_solverDataRoot);
     setItemSelection(m_loadRoot, Selection::category(SelectionKind::LoadCategory));
 
     m_meshRoot = createStyledCategory(zh(u8"网格"), UiIconFactory::treeBadge("M", QColor("#0891b2")), projectRoot);

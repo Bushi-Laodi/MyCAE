@@ -15,9 +15,15 @@ class SolverDataController
 {
 public:
     static QStringList showMaterialCategory(ProjectModel &projectModel, PropertyPanel *propertyPanel);
+    static QStringList showSectionAssignmentCategory(ProjectModel &projectModel, PropertyPanel *propertyPanel);
     static QStringList showBoundaryConditionCategory(ProjectModel &projectModel, PropertyPanel *propertyPanel);
     static QStringList showLoadCategory(ProjectModel &projectModel, PropertyPanel *propertyPanel);
     static QStringList showMaterial(ProjectModel &projectModel, PropertyPanel *propertyPanel, const QString &materialId);
+    static QStringList showSectionAssignment(
+        ProjectModel &projectModel,
+        PropertyPanel *propertyPanel,
+        const QString &sectionAssignmentId
+    );
     static QStringList showBoundaryCondition(
         ProjectModel &projectModel,
         PropertyPanel *propertyPanel,
@@ -28,6 +34,7 @@ public:
     static SolverDataControllerResult createMaterial(QWidget *parent, ProjectModel &projectModel);
     static SolverDataControllerResult createStructuralMaterial(QWidget *parent, ProjectModel &projectModel);
     static SolverDataControllerResult createFluidMaterial(QWidget *parent, ProjectModel &projectModel);
+    static SolverDataControllerResult createSectionAssignment(QWidget *parent, ProjectModel &projectModel);
     static SolverDataControllerResult createBoundaryCondition(QWidget *parent, ProjectModel &projectModel);
     static SolverDataControllerResult createStructuralBoundaryCondition(QWidget *parent, ProjectModel &projectModel);
     static SolverDataControllerResult createCfdBoundaryCondition(QWidget *parent, ProjectModel &projectModel);

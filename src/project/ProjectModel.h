@@ -59,6 +59,8 @@ public:
     const MeshObject *meshForSelection() const;
     Material *materialForSelection();
     const Material *materialForSelection() const;
+    SectionAssignment *sectionAssignmentForSelection();
+    const SectionAssignment *sectionAssignmentForSelection() const;
     BoundaryCondition *boundaryConditionForSelection();
     const BoundaryCondition *boundaryConditionForSelection() const;
     Load *loadForSelection();

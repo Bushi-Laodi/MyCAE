@@ -3,6 +3,7 @@
 #include "solver/BoundaryCondition.h"
 #include "solver/Load.h"
 #include "solver/Material.h"
+#include "solver/SectionAssignment.h"
 #include "solver/SimulationCase.h"
 #include "picking/PickMode.h"
 #include "ui/property/GeometryPropertyView.h"
@@ -46,9 +47,11 @@ public:
     void showPickState(PickMode mode, const QString &geometryName, const std::vector<int> &faceIndices);
 
     void showMaterialCategory(const std::vector<Material> &materials);
+    void showSectionAssignmentCategory(const std::vector<SectionAssignment> &sectionAssignments);
     void showBoundaryConditionCategory(const std::vector<BoundaryCondition> &boundaryConditions);
     void showLoadCategory(const std::vector<Load> &loads);
     void showMaterial(const Material &material);
+    void showSectionAssignment(const SectionAssignment &sectionAssignment);
     void showBoundaryCondition(const BoundaryCondition &boundaryCondition);
     void showBoundaryCondition(
         const BoundaryCondition &boundaryCondition,

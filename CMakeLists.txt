@@ -397,6 +397,8 @@ qt_add_executable(MyCAE
     src/ui/MainWindowViewController.h
     src/ui/MaterialDialog.cpp
     src/ui/MaterialDialog.h
+    src/ui/SectionAssignmentDialog.cpp
+    src/ui/SectionAssignmentDialog.h
     src/ui/GeometryTransformDialog.cpp
     src/ui/GeometryTransformDialog.h
     src/ui/MeshSetupDialog.cpp

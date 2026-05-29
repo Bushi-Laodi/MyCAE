@@ -12,6 +12,7 @@ enum class SolverDataCommandType
     CreateMaterial,
     CreateStructuralMaterial,
     CreateFluidMaterial,
+    CreateSectionAssignment,
     CreateBoundaryCondition,
     CreateStructuralBoundaryCondition,
     CreateCfdBoundaryCondition,

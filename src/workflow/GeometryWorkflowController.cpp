@@ -6,6 +6,7 @@
 #include "mesh/MeshManager.h"
 #include "project/ProjectModel.h"
 #include "result/ResultManager.h"
+#include "solver/SectionAssignment.h"
 #include "workflow/ProjectWorkflowController.h"
 #include "ui/PropertyPanel.h"
 #include "ui/RenderView.h"
@@ -280,11 +281,19 @@ GeometryWorkflowResult GeometryWorkflowController::deleteSelectedGeometry() cons
         }
     }
 
-    const QString message = zh(u8"确定删除几何体“%1”吗？\n\n将同步移除关联的网格、面组、边界条件、载荷和结果历史索引。")
+    int dependentSectionAssignmentCount = 0;
+    for (const SectionAssignment &sectionAssignment : m_projectModel.sectionAssignments()) {
+        if (sectionAssignment.geometryName == geometryName) {
+            ++dependentSectionAssignmentCount;
+        }
+    }
+
+    const QString message = zh(u8"确定删除几何体“%1”吗？\n\n将同步移除关联的网格、面组、材料分区、边界条件、载荷和结果历史索引。")
         .arg(geometryName)
-        + zh(u8"\n\n关联网格：%1\n关联面组：%2\n关联边界条件：%3")
+        + zh(u8"\n\n关联网格：%1\n关联面组：%2\n关联材料分区：%3\n关联边界条件：%4")
             .arg(dependentMeshCount)
             .arg(dependentFaceGroupCount)
+            .arg(dependentSectionAssignmentCount)
             .arg(dependentBoundaryConditionCount);
     if (QMessageBox::question(m_parent, zh(u8"删除几何体"), message) != QMessageBox::Yes) {
         workflowResult.canceled = true;
@@ -361,6 +370,15 @@ GeometryWorkflowResult GeometryWorkflowController::deleteSelectedGeometry() cons
                 || removedFaceGroupIds.contains(boundaryCondition.target.faceGroupId);
         }),
         boundaryConditions.end()
+    );
+
+    auto &sectionAssignments = m_projectModel.sectionAssignments();
+    sectionAssignments.erase(
+        std::remove_if(sectionAssignments.begin(), sectionAssignments.end(), [&](const SectionAssignment &sectionAssignment) {
+            return sectionAssignment.geometryName == geometryName
+                || removedMeshNames.contains(sectionAssignment.meshName);
+        }),
+        sectionAssignments.end()
     );
 
     auto &loads = m_projectModel.loads();

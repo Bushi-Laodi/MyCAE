@@ -29,6 +29,7 @@ bool Selection::isNone() const
 bool Selection::isSolverData() const
 {
     return kind == SelectionKind::Material
+        || kind == SelectionKind::SectionAssignment
         || kind == SelectionKind::BoundaryCondition
         || kind == SelectionKind::Load
         || kind == SelectionKind::Result;
@@ -37,6 +38,7 @@ bool Selection::isSolverData() const
 bool Selection::isSolverCategory() const
 {
     return kind == SelectionKind::MaterialCategory
+        || kind == SelectionKind::SectionAssignmentCategory
         || kind == SelectionKind::BoundaryConditionCategory
         || kind == SelectionKind::LoadCategory
         || kind == SelectionKind::SolverCategory
@@ -56,6 +58,7 @@ SelectionCapabilities Selection::capabilities() const
         capabilities.canShowMesh = true;
         break;
     case SelectionKind::Material:
+    case SelectionKind::SectionAssignment:
     case SelectionKind::BoundaryCondition:
     case SelectionKind::Load:
         capabilities.canEditSolverData = true;
