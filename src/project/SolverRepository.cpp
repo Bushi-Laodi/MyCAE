@@ -11,6 +11,7 @@ void SolverRepository::clear()
 void SolverRepository::clearSolverData()
 {
     m_materials.clear();
+    m_sectionAssignments.clear();
     m_boundaryConditions.clear();
     m_loads.clear();
 }
@@ -23,6 +24,16 @@ std::vector<Material> &SolverRepository::materials()
 const std::vector<Material> &SolverRepository::materials() const
 {
     return m_materials;
+}
+
+std::vector<SectionAssignment> &SolverRepository::sectionAssignments()
+{
+    return m_sectionAssignments;
+}
+
+const std::vector<SectionAssignment> &SolverRepository::sectionAssignments() const
+{
+    return m_sectionAssignments;
 }
 
 std::vector<BoundaryCondition> &SolverRepository::boundaryConditions()
@@ -107,6 +118,26 @@ const Material *SolverRepository::findMaterialById(const QString &id) const
     for (const Material &material : m_materials) {
         if (material.id == id) {
             return &material;
+        }
+    }
+    return nullptr;
+}
+
+SectionAssignment *SolverRepository::findSectionAssignmentById(const QString &id)
+{
+    for (SectionAssignment &sectionAssignment : m_sectionAssignments) {
+        if (sectionAssignment.id == id) {
+            return &sectionAssignment;
+        }
+    }
+    return nullptr;
+}
+
+const SectionAssignment *SolverRepository::findSectionAssignmentById(const QString &id) const
+{
+    for (const SectionAssignment &sectionAssignment : m_sectionAssignments) {
+        if (sectionAssignment.id == id) {
+            return &sectionAssignment;
         }
     }
     return nullptr;

@@ -186,6 +186,7 @@ bool ProjectModelLoader::loadSimulationCase(ProjectModel &projectModel, QString 
 
     SolverRepository &solverRepository = projectModel.solverRepository();
     solverRepository.materials() = simulationCase.materials;
+    solverRepository.sectionAssignments() = simulationCase.sectionAssignments;
     solverRepository.boundaryConditions() = simulationCase.boundaryConditions;
     solverRepository.loads() = simulationCase.loads;
     solverRepository.faceGroups() = simulationCase.geometrySetup.faceGroups;

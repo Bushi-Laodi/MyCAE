@@ -4,6 +4,7 @@
 #include "solver/BoundaryCondition.h"
 #include "solver/Load.h"
 #include "solver/Material.h"
+#include "solver/SectionAssignment.h"
 
 #include <vector>
 
@@ -17,6 +18,8 @@ public:
 
     std::vector<Material> &materials();
     const std::vector<Material> &materials() const;
+    std::vector<SectionAssignment> &sectionAssignments();
+    const std::vector<SectionAssignment> &sectionAssignments() const;
     std::vector<BoundaryCondition> &boundaryConditions();
     const std::vector<BoundaryCondition> &boundaryConditions() const;
     std::vector<Load> &loads();
@@ -30,6 +33,8 @@ public:
     const FaceGroup *findFaceGroupById(const QString &id) const;
     Material *findMaterialById(const QString &id);
     const Material *findMaterialById(const QString &id) const;
+    SectionAssignment *findSectionAssignmentById(const QString &id);
+    const SectionAssignment *findSectionAssignmentById(const QString &id) const;
     BoundaryCondition *findBoundaryConditionById(const QString &id);
     const BoundaryCondition *findBoundaryConditionById(const QString &id) const;
     Load *findLoadById(const QString &id);
@@ -37,6 +42,7 @@ public:
 
 private:
     std::vector<Material> m_materials;
+    std::vector<SectionAssignment> m_sectionAssignments;
     std::vector<BoundaryCondition> m_boundaryConditions;
     std::vector<Load> m_loads;
     std::vector<FaceGroup> m_faceGroups;

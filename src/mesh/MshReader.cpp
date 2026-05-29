@@ -191,7 +191,27 @@ bool readTriangleElement(
     return true;
 }
 
-bool readTetraElement(const QStringList &parts, int elementId, int nodeStart, MeshData &meshData, QString *errorMessage)
+void applyElementTags(const QStringList &parts, int tagCount, int &physicalGroupTag, int &elementaryEntityTag)
+{
+    if (tagCount > 0) {
+        parseInt(parts.at(3), physicalGroupTag);
+    }
+    if (tagCount > 1) {
+        parseInt(parts.at(4), elementaryEntityTag);
+    }
+    if (physicalGroupTag <= 0 && elementaryEntityTag > 0) {
+        physicalGroupTag = elementaryEntityTag;
+    }
+}
+
+bool readTetraElement(
+    const QStringList &parts,
+    int elementId,
+    int tagCount,
+    int nodeStart,
+    MeshData &meshData,
+    QString *errorMessage
+)
 {
     if (parts.size() < nodeStart + 4) {
         return fail(errorMessage, "Invalid tetrahedron element line: " + parts.join(' '));
@@ -199,6 +219,7 @@ bool readTetraElement(const QStringList &parts, int elementId, int nodeStart, Me
 
     TetraElement tetra;
     tetra.id = elementId;
+    applyElementTags(parts, tagCount, tetra.physicalGroupTag, tetra.elementaryEntityTag);
     if (!parseInt(parts.at(nodeStart), tetra.node1)
             || !parseInt(parts.at(nodeStart + 1), tetra.node2)
             || !parseInt(parts.at(nodeStart + 2), tetra.node3)
@@ -209,7 +230,14 @@ bool readTetraElement(const QStringList &parts, int elementId, int nodeStart, Me
     return true;
 }
 
-bool readTetra10Element(const QStringList &parts, int elementId, int nodeStart, MeshData &meshData, QString *errorMessage)
+bool readTetra10Element(
+    const QStringList &parts,
+    int elementId,
+    int tagCount,
+    int nodeStart,
+    MeshData &meshData,
+    QString *errorMessage
+)
 {
     if (parts.size() < nodeStart + 10) {
         return fail(errorMessage, "Invalid quadratic tetrahedron element line: " + parts.join(' '));
@@ -217,6 +245,7 @@ bool readTetra10Element(const QStringList &parts, int elementId, int nodeStart, 
 
     Tetra10Element tetra;
     tetra.id = elementId;
+    applyElementTags(parts, tagCount, tetra.physicalGroupTag, tetra.elementaryEntityTag);
     if (!parseInt(parts.at(nodeStart), tetra.node1)
             || !parseInt(parts.at(nodeStart + 1), tetra.node2)
             || !parseInt(parts.at(nodeStart + 2), tetra.node3)
@@ -258,10 +287,10 @@ bool readElementLine(const QString &elementLine, MeshData &meshData, QString *er
         return readTriangleElement(parts, elementId, tagCount, nodeStart, 6, meshData, errorMessage);
     }
     if (elementType == 4) {
-        return readTetraElement(parts, elementId, nodeStart, meshData, errorMessage);
+        return readTetraElement(parts, elementId, tagCount, nodeStart, meshData, errorMessage);
     }
     if (elementType == 11) {
-        return readTetra10Element(parts, elementId, nodeStart, meshData, errorMessage);
+        return readTetra10Element(parts, elementId, tagCount, nodeStart, meshData, errorMessage);
     }
     return true;
 }

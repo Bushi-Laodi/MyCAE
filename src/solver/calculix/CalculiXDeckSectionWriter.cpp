@@ -92,7 +92,10 @@ void CalculiXDeckSectionWriter::appendMaterial(
     const CalculiXMaterialData &material
 ) const
 {
-    const QString materialName = calculixSafeName(material.name, "material_1");
+    const QString materialName = calculixSafeName(
+        material.id.trimmed().isEmpty() ? material.name : material.id,
+        "material_1"
+    );
     deck.appendLine("*MATERIAL, NAME=" + materialName);
     deck.appendLine("*ELASTIC");
     deck.appendLine(QString("%1, %2")
@@ -102,7 +105,27 @@ void CalculiXDeckSectionWriter::appendMaterial(
         deck.appendLine("*DENSITY");
         deck.appendLine(calculixNumber(material.density));
     }
-    deck.appendLine("*SOLID SECTION, ELSET=EALL, MATERIAL=" + materialName);
+}
+
+void CalculiXDeckSectionWriter::appendSolidSections(
+    CalculiXInputDeck &deck,
+    const std::vector<CalculiXSectionAssignmentData> &sectionAssignments
+) const
+{
+    for (const CalculiXSectionAssignmentData &sectionAssignment : sectionAssignments) {
+        if (!sectionAssignment.enabled) {
+            continue;
+        }
+
+        const QString elementSetName = calculixSafeName(sectionAssignment.elementSetName, "EALL");
+        if (elementSetName.compare("EALL", Qt::CaseInsensitive) != 0) {
+            deck.appendLine("*ELSET, ELSET=" + elementSetName);
+            appendCalculiXIdList(deck, sectionAssignment.elementIds);
+        }
+
+        const QString materialName = calculixSafeName(sectionAssignment.materialName, "material_1");
+        deck.appendLine("*SOLID SECTION, ELSET=" + elementSetName + ", MATERIAL=" + materialName);
+    }
 }
 
 void CalculiXDeckSectionWriter::appendBoundaryDefinitions(

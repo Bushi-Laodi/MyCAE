@@ -277,6 +277,7 @@ qt_add_executable(MyCAE
     src/solver/BoundaryBindingInspector.h
     src/solver/Load.h
     src/solver/Material.h
+    src/solver/SectionAssignment.h
     src/solver/SimulationCase.h
     src/solver/SimulationCaseBuilder.cpp
     src/solver/SimulationCaseBuilder.h

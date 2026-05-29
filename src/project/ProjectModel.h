@@ -39,6 +39,8 @@ public:
     const QVector<MeshObject> &meshObjects() const;
     std::vector<Material> &materials();
     const std::vector<Material> &materials() const;
+    std::vector<SectionAssignment> &sectionAssignments();
+    const std::vector<SectionAssignment> &sectionAssignments() const;
     std::vector<BoundaryCondition> &boundaryConditions();
     const std::vector<BoundaryCondition> &boundaryConditions() const;
     std::vector<Load> &loads();
@@ -73,6 +75,8 @@ public:
     const FaceGroup *findFaceGroupById(const QString &id) const;
     Material *findMaterialById(const QString &id);
     const Material *findMaterialById(const QString &id) const;
+    SectionAssignment *findSectionAssignmentById(const QString &id);
+    const SectionAssignment *findSectionAssignmentById(const QString &id) const;
     BoundaryCondition *findBoundaryConditionById(const QString &id);
     const BoundaryCondition *findBoundaryConditionById(const QString &id) const;
     Load *findLoadById(const QString &id);

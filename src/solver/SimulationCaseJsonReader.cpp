@@ -219,6 +219,19 @@ Material materialFromJson(const QJsonObject &object)
     return material;
 }
 
+SectionAssignment sectionAssignmentFromJson(const QJsonObject &object)
+{
+    SectionAssignment sectionAssignment;
+    sectionAssignment.id = stringValue(object, "id");
+    sectionAssignment.name = stringValue(object, "name");
+    sectionAssignment.materialId = stringValue(object, "materialId");
+    sectionAssignment.geometryName = stringValue(object, "geometryName");
+    sectionAssignment.meshName = stringValue(object, "meshName");
+    sectionAssignment.elementSetName = stringValue(object, "elementSetName");
+    sectionAssignment.enabled = boolValue(object, "enabled", true);
+    return sectionAssignment;
+}
+
 BoundaryCondition boundaryConditionFromJson(const QJsonObject &object)
 {
     const QJsonObject targetObject = object.value("target").toObject();
@@ -267,6 +280,21 @@ StructuralCase deriveStructuralCase(const SimulationCase &simulationCase)
         if (isStructuralMaterial(material)) {
             structuralCase.materials.push_back(material);
         }
+    }
+    for (const SectionAssignment &sectionAssignment : simulationCase.sectionAssignments) {
+        if (sectionAssignment.enabled) {
+            structuralCase.sectionAssignments.push_back(sectionAssignment);
+        }
+    }
+    if (structuralCase.sectionAssignments.empty() && !structuralCase.materials.empty()) {
+        SectionAssignment sectionAssignment;
+        sectionAssignment.id = simulationCase.id + "_default_section";
+        sectionAssignment.name = "Default Solid Section";
+        sectionAssignment.materialId = structuralCase.materials.front().id;
+        sectionAssignment.geometryName = simulationCase.sourceGeometryName;
+        sectionAssignment.meshName = simulationCase.meshName;
+        sectionAssignment.elementSetName = "EALL";
+        structuralCase.sectionAssignments.push_back(sectionAssignment);
     }
     for (const BoundaryCondition &boundaryCondition : simulationCase.boundaryConditions) {
         if (isStructuralConstraint(boundaryCondition, simulationCase.loads)) {
@@ -322,6 +350,26 @@ StructuralCase structuralCaseFromJson(const QJsonObject &object, const Simulatio
     structuralCase.meshName = stringValue(object, "meshName", fallback.meshName);
     for (const QJsonValue &materialValue : object.value("materials").toArray()) {
         structuralCase.materials.push_back(materialFromJson(materialValue.toObject()));
+    }
+    for (const QJsonValue &sectionAssignmentValue : object.value("sectionAssignments").toArray()) {
+        structuralCase.sectionAssignments.push_back(sectionAssignmentFromJson(sectionAssignmentValue.toObject()));
+    }
+    if (structuralCase.sectionAssignments.empty()) {
+        for (const SectionAssignment &sectionAssignment : fallback.sectionAssignments) {
+            if (sectionAssignment.enabled) {
+                structuralCase.sectionAssignments.push_back(sectionAssignment);
+            }
+        }
+    }
+    if (structuralCase.sectionAssignments.empty() && !structuralCase.materials.empty()) {
+        SectionAssignment sectionAssignment;
+        sectionAssignment.id = fallback.id + "_default_section";
+        sectionAssignment.name = "Default Solid Section";
+        sectionAssignment.materialId = structuralCase.materials.front().id;
+        sectionAssignment.geometryName = structuralCase.sourceGeometryName;
+        sectionAssignment.meshName = structuralCase.meshName;
+        sectionAssignment.elementSetName = "EALL";
+        structuralCase.sectionAssignments.push_back(sectionAssignment);
     }
     for (const QJsonValue &constraintValue : object.value("constraints").toArray()) {
         structuralCase.constraints.push_back(boundaryConditionFromJson(constraintValue.toObject()));
@@ -427,6 +475,9 @@ bool SimulationCaseJsonReader::fromJson(
     for (const QJsonValue &materialValue : root.value("materials").toArray()) {
         loadedCase.materials.push_back(materialFromJson(materialValue.toObject()));
     }
+    for (const QJsonValue &sectionAssignmentValue : root.value("sectionAssignments").toArray()) {
+        loadedCase.sectionAssignments.push_back(sectionAssignmentFromJson(sectionAssignmentValue.toObject()));
+    }
     for (const QJsonValue &boundaryConditionValue : root.value("boundaryConditions").toArray()) {
         loadedCase.boundaryConditions.push_back(boundaryConditionFromJson(boundaryConditionValue.toObject()));
     }
@@ -436,6 +487,9 @@ bool SimulationCaseJsonReader::fromJson(
 
     loadedCase.structuralCase = structuralCaseFromJson(root.value("structuralCase").toObject(), loadedCase);
     loadedCase.cfdCase = cfdCaseFromJson(root.value("cfdCase").toObject(), loadedCase);
+    if (loadedCase.sectionAssignments.empty()) {
+        loadedCase.sectionAssignments = loadedCase.structuralCase.sectionAssignments;
+    }
 
     simulationCase = loadedCase;
     return true;

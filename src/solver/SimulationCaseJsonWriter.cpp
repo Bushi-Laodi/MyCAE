@@ -107,6 +107,19 @@ QJsonObject materialToJson(const Material &material)
     return object;
 }
 
+QJsonObject sectionAssignmentToJson(const SectionAssignment &sectionAssignment)
+{
+    QJsonObject object;
+    object.insert("id", sectionAssignment.id);
+    object.insert("name", sectionAssignment.name);
+    object.insert("materialId", sectionAssignment.materialId);
+    object.insert("geometryName", sectionAssignment.geometryName);
+    object.insert("meshName", sectionAssignment.meshName);
+    object.insert("elementSetName", sectionAssignment.elementSetName);
+    object.insert("enabled", sectionAssignment.enabled);
+    return object;
+}
+
 QJsonObject boundaryConditionToJson(const BoundaryCondition &boundaryCondition)
 {
     QJsonObject target;
@@ -156,6 +169,10 @@ QJsonObject structuralCaseToJson(const StructuralCase &structuralCase)
     for (const BoundaryCondition &constraint : structuralCase.constraints) {
         constraints.append(boundaryConditionToJson(constraint));
     }
+    QJsonArray sectionAssignments;
+    for (const SectionAssignment &sectionAssignment : structuralCase.sectionAssignments) {
+        sectionAssignments.append(sectionAssignmentToJson(sectionAssignment));
+    }
     QJsonArray loads;
     for (const Load &load : structuralCase.loads) {
         loads.append(loadToJson(load));
@@ -167,6 +184,7 @@ QJsonObject structuralCaseToJson(const StructuralCase &structuralCase)
     object.insert("sourceGeometryName", structuralCase.sourceGeometryName);
     object.insert("meshName", structuralCase.meshName);
     object.insert("materials", materials);
+    object.insert("sectionAssignments", sectionAssignments);
     object.insert("constraints", constraints);
     object.insert("loads", loads);
     return object;
@@ -256,6 +274,11 @@ QJsonDocument SimulationCaseJsonWriter::toJson(const SimulationCase &simulationC
         materials.append(materialToJson(material));
     }
 
+    QJsonArray sectionAssignments;
+    for (const SectionAssignment &sectionAssignment : simulationCase.sectionAssignments) {
+        sectionAssignments.append(sectionAssignmentToJson(sectionAssignment));
+    }
+
     QJsonArray boundaryConditions;
     for (const BoundaryCondition &boundaryCondition : simulationCase.boundaryConditions) {
         boundaryConditions.append(boundaryConditionToJson(boundaryCondition));
@@ -278,6 +301,7 @@ QJsonDocument SimulationCaseJsonWriter::toJson(const SimulationCase &simulationC
     root.insert("runControl", runControl);
     root.insert("postProcessingTool", simulationCase.postProcessingTool);
     root.insert("materials", materials);
+    root.insert("sectionAssignments", sectionAssignments);
     root.insert("boundaryConditions", boundaryConditions);
     root.insert("loads", loads);
     root.insert("structuralCase", structuralCaseToJson(simulationCase.structuralCase));

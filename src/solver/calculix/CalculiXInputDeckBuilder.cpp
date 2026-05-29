@@ -20,6 +20,9 @@ bool validateRequiredData(const CalculiXCaseData &caseData, CalculiXInputDeckBui
     if (caseData.materials.empty()) {
         result.errors.append("CalculiX export failed: no material is defined.");
     }
+    if (caseData.sectionAssignments.empty()) {
+        result.errors.append("CalculiX export failed: no solid section assignment is defined.");
+    }
     if (caseData.boundaries.empty()) {
         result.errors.append("CalculiX export failed: no enabled boundary condition is defined.");
     }
@@ -38,10 +41,6 @@ CalculiXInputDeckBuildResult CalculiXInputDeckBuilder::build(const CalculiXCaseD
         return result;
     }
 
-    if (caseData.materials.size() > 1) {
-        result.warnings.append("CalculiX export currently assigns the first material to all tetrahedral elements.");
-    }
-
     const CalculiXBoundaryMapResult boundaryMapResult = CalculiXBoundaryMapper().map(caseData);
     result.warnings.append(boundaryMapResult.warnings);
     result.errors.append(boundaryMapResult.errors);
@@ -52,7 +51,10 @@ CalculiXInputDeckBuildResult CalculiXInputDeckBuilder::build(const CalculiXCaseD
     const CalculiXDeckSectionWriter sectionWriter;
     sectionWriter.appendHeading(result.deck, caseData);
     sectionWriter.appendMesh(result.deck, caseData.meshData);
-    sectionWriter.appendMaterial(result.deck, caseData.materials.front());
+    for (const CalculiXMaterialData &material : caseData.materials) {
+        sectionWriter.appendMaterial(result.deck, material);
+    }
+    sectionWriter.appendSolidSections(result.deck, caseData.sectionAssignments);
     sectionWriter.appendBoundaryDefinitions(result.deck, boundaryMapResult.boundaries);
     if (!sectionWriter.appendFixedConstraints(result.deck, boundaryMapResult.boundaries, result.errors)) {
         return result;

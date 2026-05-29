@@ -5,6 +5,7 @@
 #include "solver/BoundaryCondition.h"
 #include "solver/Load.h"
 #include "solver/Material.h"
+#include "solver/SectionAssignment.h"
 
 #include <QString>
 
@@ -85,6 +86,7 @@ struct StructuralCase
     QString sourceGeometryName;
     QString meshName;
     std::vector<Material> materials;
+    std::vector<SectionAssignment> sectionAssignments;
     std::vector<BoundaryCondition> constraints;
     std::vector<Load> loads;
 };
@@ -116,6 +118,7 @@ struct SimulationCase
     RunControl runControl;
     QString postProcessingTool;
     std::vector<Material> materials;
+    std::vector<SectionAssignment> sectionAssignments;
     std::vector<BoundaryCondition> boundaryConditions;
     std::vector<Load> loads;
     StructuralCase structuralCase;

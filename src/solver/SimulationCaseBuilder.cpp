@@ -59,6 +59,21 @@ StructuralCase buildStructuralCase(const SimulationCase &simulationCase)
             structuralCase.materials.push_back(material);
         }
     }
+    for (const SectionAssignment &sectionAssignment : simulationCase.sectionAssignments) {
+        if (sectionAssignment.enabled) {
+            structuralCase.sectionAssignments.push_back(sectionAssignment);
+        }
+    }
+    if (structuralCase.sectionAssignments.empty() && !structuralCase.materials.empty()) {
+        SectionAssignment sectionAssignment;
+        sectionAssignment.id = simulationCase.id + "_default_section";
+        sectionAssignment.name = "Default Solid Section";
+        sectionAssignment.materialId = structuralCase.materials.front().id;
+        sectionAssignment.geometryName = simulationCase.sourceGeometryName;
+        sectionAssignment.meshName = simulationCase.meshName;
+        sectionAssignment.elementSetName = "EALL";
+        structuralCase.sectionAssignments.push_back(sectionAssignment);
+    }
     for (const BoundaryCondition &boundaryCondition : simulationCase.boundaryConditions) {
         if (isStructuralConstraint(boundaryCondition, simulationCase.loads)) {
             structuralCase.constraints.push_back(boundaryCondition);
@@ -116,6 +131,7 @@ SimulationCase SimulationCaseBuilder::fromProjectModel(const ProjectModel &proje
     simulationCase.postProcessingTool = "ParaView";
     const SolverRepository &solverRepository = projectModel.solverRepository();
     simulationCase.materials = solverRepository.materials();
+    simulationCase.sectionAssignments = solverRepository.sectionAssignments();
     simulationCase.boundaryConditions = solverRepository.boundaryConditions();
     simulationCase.loads = solverRepository.loads();
     simulationCase.geometrySetup.faceGroups = solverRepository.faceGroups();

@@ -130,6 +130,16 @@ const std::vector<Material> &ProjectModel::materials() const
     return m_context.solver().materials();
 }
 
+std::vector<SectionAssignment> &ProjectModel::sectionAssignments()
+{
+    return m_context.solver().sectionAssignments();
+}
+
+const std::vector<SectionAssignment> &ProjectModel::sectionAssignments() const
+{
+    return m_context.solver().sectionAssignments();
+}
+
 std::vector<BoundaryCondition> &ProjectModel::boundaryConditions()
 {
     return m_context.solver().boundaryConditions();
@@ -288,6 +298,16 @@ Material *ProjectModel::findMaterialById(const QString &id)
 const Material *ProjectModel::findMaterialById(const QString &id) const
 {
     return m_context.solver().findMaterialById(id);
+}
+
+SectionAssignment *ProjectModel::findSectionAssignmentById(const QString &id)
+{
+    return m_context.solver().findSectionAssignmentById(id);
+}
+
+const SectionAssignment *ProjectModel::findSectionAssignmentById(const QString &id) const
+{
+    return m_context.solver().findSectionAssignmentById(id);
 }
 
 BoundaryCondition *ProjectModel::findBoundaryConditionById(const QString &id)

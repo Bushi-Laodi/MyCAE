@@ -15,6 +15,8 @@ struct MeshNode
 struct TetraElement
 {
     int id = 0;
+    int physicalGroupTag = -1;
+    int elementaryEntityTag = -1;
     int node1 = 0;
     int node2 = 0;
     int node3 = 0;
@@ -24,6 +26,8 @@ struct TetraElement
 struct Tetra10Element
 {
     int id = 0;
+    int physicalGroupTag = -1;
+    int elementaryEntityTag = -1;
     int node1 = 0;
     int node2 = 0;
     int node3 = 0;

@@ -1,6 +1,7 @@
 #include "solver/SolverDataService.h"
 
 #include "project/ProjectModel.h"
+#include "solver/SectionAssignment.h"
 
 #include <algorithm>
 #include <vector>
@@ -50,6 +51,19 @@ void replaceMaterialReferences(
     for (BoundaryCondition &boundaryCondition : boundaryConditions) {
         if (boundaryCondition.materialId == oldMaterialId) {
             boundaryCondition.materialId = newMaterialId;
+        }
+    }
+}
+
+void replaceMaterialReferences(
+    std::vector<SectionAssignment> &sectionAssignments,
+    const QString &oldMaterialId,
+    const QString &newMaterialId
+)
+{
+    for (SectionAssignment &sectionAssignment : sectionAssignments) {
+        if (sectionAssignment.materialId == oldMaterialId) {
+            sectionAssignment.materialId = newMaterialId;
         }
     }
 }
@@ -146,6 +160,7 @@ SolverDataServiceResult SolverDataService::updateMaterial(
 
     *storedMaterial = material;
     replaceMaterialReferences(solverRepository.boundaryConditions(), originalId, material.id);
+    replaceMaterialReferences(solverRepository.sectionAssignments(), originalId, material.id);
     result.changed = true;
     result.selectionKind = SolverDataSelectionKind::Material;
     result.selectionId = material.id;
@@ -226,6 +241,7 @@ SolverDataServiceResult SolverDataService::deleteMaterial(ProjectModel &projectM
         return candidate.id == materialId;
     }), materials.end());
     replaceMaterialReferences(solverRepository.boundaryConditions(), materialId, {});
+    replaceMaterialReferences(solverRepository.sectionAssignments(), materialId, {});
     projectModel.clearSolverSelection();
 
     result.changed = true;

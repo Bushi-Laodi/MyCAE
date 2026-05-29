@@ -43,6 +43,19 @@ struct CalculiXLoadData
     LoadValue value;
 };
 
+struct CalculiXSectionAssignmentData
+{
+    QString id;
+    QString name;
+    QString materialId;
+    QString materialName;
+    QString geometryName;
+    QString meshName;
+    QString elementSetName;
+    std::vector<int> elementIds;
+    bool enabled = true;
+};
+
 struct CalculiXCaseData
 {
     QString caseName;
@@ -51,6 +64,7 @@ struct CalculiXCaseData
     MeshData meshData;
     std::vector<MeshBoundary> meshBoundaries;
     std::vector<CalculiXMaterialData> materials;
+    std::vector<CalculiXSectionAssignmentData> sectionAssignments;
     std::vector<CalculiXBoundaryData> boundaries;
     std::vector<CalculiXLoadData> loads;
 };

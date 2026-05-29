@@ -15,6 +15,10 @@ public:
     void appendHeading(CalculiXInputDeck &deck, const CalculiXCaseData &caseData) const;
     void appendMesh(CalculiXInputDeck &deck, const MeshData &meshData) const;
     void appendMaterial(CalculiXInputDeck &deck, const CalculiXMaterialData &material) const;
+    void appendSolidSections(
+        CalculiXInputDeck &deck,
+        const std::vector<CalculiXSectionAssignmentData> &sectionAssignments
+    ) const;
     void appendBoundaryDefinitions(
         CalculiXInputDeck &deck,
         const std::vector<CalculiXBoundaryExport> &boundaries
