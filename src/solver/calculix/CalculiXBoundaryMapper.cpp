@@ -41,7 +41,15 @@ bool hasLoadTarget(const CalculiXCaseData &caseData, const QString &boundaryId)
 
 bool writesFixedConstraint(const CalculiXCaseData &caseData, const CalculiXBoundaryData &boundary)
 {
+    if (boundary.type == BoundaryConditionType::FixedSupport) {
+        return true;
+    }
     return boundary.type == BoundaryConditionType::Wall && !hasLoadTarget(caseData, boundary.id);
+}
+
+bool writesDisplacementConstraint(const CalculiXBoundaryData &boundary)
+{
+    return boundary.type == BoundaryConditionType::Displacement;
 }
 
 bool matchesBoundaryName(const QString &target, const MeshBoundary &meshBoundary)
@@ -133,10 +141,11 @@ std::optional<CalculiXBoundaryExport> mapBoundary(
 {
     const bool isLoadBoundary = hasLoadTarget(caseData, boundary.id);
     const bool isFixedBoundary = writesFixedConstraint(caseData, boundary);
-    if (!isLoadBoundary && !isFixedBoundary) {
+    const bool isDisplacementBoundary = writesDisplacementConstraint(boundary);
+    if (!isLoadBoundary && !isFixedBoundary && !isDisplacementBoundary) {
         warnings.append("CalculiX export warning: boundary '" + boundary.name
             + "' is ignored by the structural solver because type '" + toString(boundary.type)
-            + "' is neither a load target nor a fixed constraint.");
+            + "' is neither a load target nor a supported structural constraint.");
         return std::nullopt;
     }
 
@@ -177,6 +186,8 @@ std::optional<CalculiXBoundaryExport> mapBoundary(
     boundaryExport.surfaceFaces = std::move(faces);
     boundaryExport.elementIds = elementIdsForSurfaceFaces(boundaryExport.surfaceFaces);
     boundaryExport.writesFixedConstraint = isFixedBoundary;
+    boundaryExport.writesDisplacementConstraint = isDisplacementBoundary;
+    boundaryExport.displacement = boundary.displacement;
     return boundaryExport;
 }
 }

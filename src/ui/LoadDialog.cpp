@@ -4,6 +4,7 @@
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
@@ -24,8 +25,12 @@ QString defaultFieldName(LoadType type)
     switch (type) {
     case LoadType::Velocity:
         return "U";
+    case LoadType::Force:
+        return "force";
     case LoadType::Pressure:
         return "pressure";
+    case LoadType::Gravity:
+        return "gravity";
     case LoadType::BodyForce:
         return "bodyForce";
     case LoadType::Unknown:
@@ -39,8 +44,17 @@ bool isDefaultFieldName(const QString &fieldName)
     const QString normalized = fieldName.trimmed();
     return normalized.isEmpty()
         || normalized == defaultFieldName(LoadType::Velocity)
+        || normalized == defaultFieldName(LoadType::Force)
         || normalized == defaultFieldName(LoadType::Pressure)
+        || normalized == defaultFieldName(LoadType::Gravity)
         || normalized == defaultFieldName(LoadType::BodyForce);
+}
+
+bool isVectorLoadType(LoadType type)
+{
+    return type == LoadType::Force
+        || type == LoadType::Gravity
+        || type == LoadType::BodyForce;
 }
 
 QStringList unitOptions(LoadType type)
@@ -48,8 +62,12 @@ QStringList unitOptions(LoadType type)
     switch (type) {
     case LoadType::Velocity:
         return {"m/s", "mm/s"};
+    case LoadType::Force:
+        return {"N", "kN"};
     case LoadType::Pressure:
         return {"Pa", "kPa", "MPa", "N/mm^2"};
+    case LoadType::Gravity:
+        return {"m/s^2", "mm/s^2"};
     case LoadType::BodyForce:
         return {"N", "N/m^3", "N/mm^3", "m/s^2"};
     case LoadType::Unknown:
@@ -68,8 +86,12 @@ QString loadTypeLabel(LoadType type)
     switch (type) {
     case LoadType::Velocity:
         return zh(u8"速度");
+    case LoadType::Force:
+        return zh(u8"集中力 / 面力");
     case LoadType::Pressure:
-        return zh(u8"压力");
+        return zh(u8"压力载荷");
+    case LoadType::Gravity:
+        return zh(u8"重力");
     case LoadType::BodyForce:
         return zh(u8"体力");
     case LoadType::Unknown:
@@ -80,7 +102,7 @@ QString loadTypeLabel(LoadType type)
 
 std::vector<LoadType> defaultLoadTypes()
 {
-    return {LoadType::Velocity, LoadType::Pressure, LoadType::BodyForce};
+    return {LoadType::Velocity, LoadType::Force, LoadType::Pressure, LoadType::Gravity};
 }
 }
 
@@ -101,7 +123,7 @@ void LoadDialog::setupUi()
     auto *form = new QFormLayout;
 
     m_nameEdit = new QLineEdit(this);
-    m_nameEdit->setPlaceholderText(zh(u8"例如：入口速度、端面压力"));
+    m_nameEdit->setPlaceholderText(zh(u8"例如：端面压力、Z 向力、重力"));
     form->addRow(zh(u8"名称:"), m_nameEdit);
 
     m_typeCombo = new QComboBox(this);
@@ -131,27 +153,58 @@ void LoadDialog::setupUi()
     form->addRow(zh(u8"边界条件:"), m_boundaryConditionIdCombo);
 
     m_fieldNameEdit = new QLineEdit(this);
-    m_fieldNameEdit->setPlaceholderText(zh(u8"例如：U（速度），p（压力）"));
+    m_fieldNameEdit->setPlaceholderText(zh(u8"例如：pressure、force、gravity"));
     form->addRow(zh(u8"场名称:"), m_fieldNameEdit);
 
     m_valueSpin = new QDoubleSpinBox(this);
-    m_valueSpin->setRange(-1e9, 1e9);
-    m_valueSpin->setDecimals(4);
-    form->addRow(zh(u8"数值:"), m_valueSpin);
+    m_yValueSpin = new QDoubleSpinBox(this);
+    m_zValueSpin = new QDoubleSpinBox(this);
+    for (QDoubleSpinBox *spin : {m_valueSpin, m_yValueSpin, m_zValueSpin}) {
+        spin->setRange(-1e12, 1e12);
+        spin->setDecimals(6);
+    }
+    form->addRow(zh(u8"X / 数值:"), m_valueSpin);
+    form->addRow("Y:", m_yValueSpin);
+    form->addRow("Z:", m_zValueSpin);
+    if (QWidget *label = form->labelForField(m_yValueSpin)) {
+        label->setObjectName("loadYLabel");
+    }
+    if (QWidget *label = form->labelForField(m_zValueSpin)) {
+        label->setObjectName("loadZLabel");
+    }
 
     m_unitCombo = new QComboBox(this);
     m_unitCombo->setEditable(false);
     form->addRow(zh(u8"单位:"), m_unitCombo);
 
     connect(m_typeCombo, &QComboBox::currentTextChanged, this, [this]() {
-        const QString currentDefault = defaultFieldName(selectedLoadType(m_typeCombo));
+        const LoadType type = selectedLoadType(m_typeCombo);
+        const QString currentDefault = defaultFieldName(type);
         if (isDefaultFieldName(m_fieldNameEdit->text())) {
             m_fieldNameEdit->setText(currentDefault);
         }
         updateUnitItems();
+        const bool vectorLoad = isVectorLoadType(type);
+        m_yValueSpin->setVisible(vectorLoad);
+        m_zValueSpin->setVisible(vectorLoad);
+        if (QWidget *label = findChild<QWidget *>("loadYLabel")) {
+            label->setVisible(vectorLoad);
+        }
+        if (QWidget *label = findChild<QWidget *>("loadZLabel")) {
+            label->setVisible(vectorLoad);
+        }
     });
     m_fieldNameEdit->setText(defaultFieldName(selectedLoadType(m_typeCombo)));
     updateUnitItems();
+    const bool vectorLoad = isVectorLoadType(selectedLoadType(m_typeCombo));
+    m_yValueSpin->setVisible(vectorLoad);
+    m_zValueSpin->setVisible(vectorLoad);
+    if (QWidget *label = findChild<QWidget *>("loadYLabel")) {
+        label->setVisible(vectorLoad);
+    }
+    if (QWidget *label = findChild<QWidget *>("loadZLabel")) {
+        label->setVisible(vectorLoad);
+    }
 
     mainLayout->addLayout(form);
 
@@ -161,19 +214,15 @@ void LoadDialog::setupUi()
     buttonBox->button(QDialogButtonBox::Cancel)->setText(zh(u8"取消"));
     connect(buttonBox, &QDialogButtonBox::accepted, this, [this]() {
         if (m_nameEdit->text().trimmed().isEmpty()) {
-            QMessageBox::warning(this, zh(u8"校验"), zh(u8"载荷名称不能为空。"));
+            QMessageBox::warning(this, zh(u8"验证"), zh(u8"载荷名称不能为空。"));
             return;
         }
-        if (selectedBoundaryConditionId().isEmpty()) {
-            QMessageBox::warning(
-                this,
-                zh(u8"校验"),
-                zh(u8"创建载荷前，请先创建并选择一个边界条件。")
-            );
+        if (selectedLoadType(m_typeCombo) != LoadType::Gravity && selectedBoundaryConditionId().isEmpty()) {
+            QMessageBox::warning(this, zh(u8"验证"), zh(u8"创建该载荷前，请先选择一个边界条件。"));
             return;
         }
         if (m_unitCombo->currentText().trimmed().isEmpty()) {
-            QMessageBox::warning(this, zh(u8"校验"), zh(u8"请选择载荷单位。"));
+            QMessageBox::warning(this, zh(u8"验证"), zh(u8"请选择载荷单位。"));
             return;
         }
         accept();
@@ -190,8 +239,10 @@ Load LoadDialog::load() const
     ld.type = static_cast<LoadType>(m_typeCombo->currentData().toInt());
     ld.boundaryConditionId = selectedBoundaryConditionId();
     ld.fieldName = m_fieldNameEdit->text().trimmed();
-    ld.value.kind = LoadValueKind::Scalar;
+    ld.value.kind = isVectorLoadType(ld.type) ? LoadValueKind::Vector3 : LoadValueKind::Scalar;
     ld.value.x = m_valueSpin->value();
+    ld.value.y = m_yValueSpin->value();
+    ld.value.z = m_zValueSpin->value();
     ld.value.unit = m_unitCombo->currentText().trimmed();
     ld.enabled = true;
     return ld;
@@ -213,7 +264,18 @@ void LoadDialog::setLoad(const Load &ld)
             : ld.fieldName
     );
     m_valueSpin->setValue(ld.value.x);
+    m_yValueSpin->setValue(ld.value.y);
+    m_zValueSpin->setValue(ld.value.z);
     updateUnitItems();
+    const bool vectorLoad = isVectorLoadType(selectedLoadType(m_typeCombo));
+    m_yValueSpin->setVisible(vectorLoad);
+    m_zValueSpin->setVisible(vectorLoad);
+    if (QWidget *label = findChild<QWidget *>("loadYLabel")) {
+        label->setVisible(vectorLoad);
+    }
+    if (QWidget *label = findChild<QWidget *>("loadZLabel")) {
+        label->setVisible(vectorLoad);
+    }
     setComboCurrentText(m_unitCombo, ld.value.unit);
 }
 

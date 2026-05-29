@@ -10,12 +10,26 @@ enum class BoundaryTargetKind
 
 enum class BoundaryConditionType
 {
+    FixedSupport,
+    Displacement,
+    LoadTarget,
     Wall,
     VelocityInlet,
     PressureInlet,
     PressureOutlet,
     Symmetry,
     Unknown
+};
+
+struct DisplacementConstraint
+{
+    bool uxEnabled = true;
+    bool uyEnabled = true;
+    bool uzEnabled = true;
+    double ux = 0.0;
+    double uy = 0.0;
+    double uz = 0.0;
+    QString unit;
 };
 
 struct BoundaryTarget
@@ -33,6 +47,7 @@ struct BoundaryCondition
     QString name;
     BoundaryConditionType type = BoundaryConditionType::Unknown;
     BoundaryTarget target;
+    DisplacementConstraint displacement;
     QString materialId;
     bool enabled = true;
 };
@@ -51,6 +66,12 @@ inline QString toString(BoundaryTargetKind kind)
 inline QString toString(BoundaryConditionType type)
 {
     switch (type) {
+    case BoundaryConditionType::FixedSupport:
+        return "fixedSupport";
+    case BoundaryConditionType::Displacement:
+        return "displacement";
+    case BoundaryConditionType::LoadTarget:
+        return "loadTarget";
     case BoundaryConditionType::Wall:
         return "wall";
     case BoundaryConditionType::VelocityInlet:

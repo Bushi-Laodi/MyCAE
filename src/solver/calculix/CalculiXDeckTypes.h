@@ -1,5 +1,7 @@
 #pragma once
 
+#include "solver/BoundaryCondition.h"
+
 #include <QString>
 
 #include <vector>
@@ -21,4 +23,6 @@ struct CalculiXBoundaryExport
     std::vector<int> elementIds;
     std::vector<CalculiXElementSurfaceFace> surfaceFaces;
     bool writesFixedConstraint = false;
+    bool writesDisplacementConstraint = false;
+    DisplacementConstraint displacement;
 };

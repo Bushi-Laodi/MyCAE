@@ -54,7 +54,11 @@ BoundaryConditionDialogOptions boundaryConditionDialogOptions(const ProjectModel
 BoundaryConditionDialogOptions structuralBoundaryConditionDialogOptions(const ProjectModel &projectModel)
 {
     BoundaryConditionDialogOptions options = boundaryConditionDialogOptions(projectModel);
-    options.allowedTypes = {BoundaryConditionType::Wall, BoundaryConditionType::Symmetry};
+    options.allowedTypes = {
+        BoundaryConditionType::FixedSupport,
+        BoundaryConditionType::Displacement,
+        BoundaryConditionType::LoadTarget
+    };
     return options;
 }
 
@@ -96,8 +100,33 @@ LoadDialogOptions loadDialogOptions(const ProjectModel &projectModel)
 
 LoadDialogOptions structuralLoadDialogOptions(const ProjectModel &projectModel)
 {
-    LoadDialogOptions options = loadDialogOptions(projectModel);
-    options.allowedTypes = {LoadType::Pressure, LoadType::BodyForce};
+    LoadDialogOptions options;
+    const SolverRepository &solverRepository = projectModel.solverRepository();
+    for (const BoundaryCondition &boundaryCondition : solverRepository.boundaryConditions()) {
+        if (boundaryCondition.type != BoundaryConditionType::LoadTarget
+                && boundaryCondition.type != BoundaryConditionType::Wall) {
+            continue;
+        }
+        LoadBoundaryConditionOption option;
+        option.id = boundaryCondition.id;
+        option.displayName = boundaryCondition.name.trimmed().isEmpty()
+            || boundaryCondition.name == boundaryCondition.id
+            ? boundaryCondition.id
+            : QString("%1 (%2)").arg(boundaryCondition.name, boundaryCondition.id);
+        options.boundaryConditions.push_back(option);
+    }
+    if (projectModel.selection().kind == SelectionKind::BoundaryCondition) {
+        const BoundaryCondition *boundaryCondition =
+            solverRepository.findBoundaryConditionById(projectModel.selection().id);
+        if (boundaryCondition
+                && (boundaryCondition->type == BoundaryConditionType::LoadTarget
+                    || boundaryCondition->type == BoundaryConditionType::Wall)) {
+            options.defaultBoundaryConditionId = projectModel.selection().id;
+        }
+    } else if (options.boundaryConditions.size() == 1) {
+        options.defaultBoundaryConditionId = options.boundaryConditions.front().id;
+    }
+    options.allowedTypes = {LoadType::Pressure, LoadType::Force, LoadType::Gravity};
     return options;
 }
 

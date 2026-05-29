@@ -3,6 +3,7 @@
 #include "solver/calculix/CalculiXDeckFormatting.h"
 
 #include <optional>
+#include <cmath>
 
 namespace
 {
@@ -103,6 +104,38 @@ bool appendPressureLoad(
         .arg(calculixNumber(load.value.x)));
     return true;
 }
+
+bool appendGravityLoad(
+    CalculiXInputDeck &deck,
+    const CalculiXLoadData &load,
+    QStringList &errors
+)
+{
+    if (load.value.kind != LoadValueKind::Vector3) {
+        errors.append("CalculiX export failed: gravity load '" + load.name
+            + "' must use a vector value.");
+        return false;
+    }
+
+    const double magnitude = std::sqrt(
+        load.value.x * load.value.x
+        + load.value.y * load.value.y
+        + load.value.z * load.value.z
+    );
+    if (magnitude <= 0.0) {
+        errors.append("CalculiX export failed: gravity load '" + load.name
+            + "' has zero magnitude.");
+        return false;
+    }
+
+    deck.appendLine("*DLOAD");
+    deck.appendLine(QString("EALL, GRAV, %1, %2, %3, %4")
+        .arg(calculixNumber(magnitude))
+        .arg(calculixNumber(load.value.x / magnitude))
+        .arg(calculixNumber(load.value.y / magnitude))
+        .arg(calculixNumber(load.value.z / magnitude)));
+    return true;
+}
 }
 
 bool CalculiXLoadWriter::appendLoads(
@@ -114,6 +147,11 @@ bool CalculiXLoadWriter::appendLoads(
 {
     bool wroteLoad = false;
     for (const CalculiXLoadData &load : caseData.loads) {
+        if (load.type == LoadType::Gravity) {
+            wroteLoad = appendGravityLoad(deck, load, errors) || wroteLoad;
+            continue;
+        }
+
         const CalculiXBoundaryExport *boundary = findBoundaryExport(boundaries, load.boundaryConditionId);
         if (!boundary) {
             errors.append("CalculiX export failed: load '" + load.name
@@ -123,7 +161,7 @@ bool CalculiXLoadWriter::appendLoads(
 
         if (load.type == LoadType::Pressure) {
             wroteLoad = appendPressureLoad(deck, load, *boundary, errors) || wroteLoad;
-        } else if (load.type == LoadType::BodyForce) {
+        } else if (load.type == LoadType::Force || load.type == LoadType::BodyForce) {
             wroteLoad = appendConcentratedLoad(deck, load, *boundary, errors) || wroteLoad;
         } else {
             errors.append("CalculiX export failed: load '" + load.name

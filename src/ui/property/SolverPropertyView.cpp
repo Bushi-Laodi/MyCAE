@@ -36,6 +36,12 @@ QString boundaryTargetKindText(BoundaryTargetKind kind)
 QString boundaryConditionTypeText(BoundaryConditionType type)
 {
     switch (type) {
+    case BoundaryConditionType::FixedSupport:
+        return zh(u8"固定约束");
+    case BoundaryConditionType::Displacement:
+        return zh(u8"指定位移");
+    case BoundaryConditionType::LoadTarget:
+        return zh(u8"载荷作用面");
     case BoundaryConditionType::Wall:
         return zh(u8"壁面");
     case BoundaryConditionType::VelocityInlet:
@@ -57,8 +63,12 @@ QString loadTypeText(LoadType type)
     switch (type) {
     case LoadType::Velocity:
         return zh(u8"速度");
+    case LoadType::Force:
+        return zh(u8"集中力 / 面力");
     case LoadType::Pressure:
         return zh(u8"压力");
+    case LoadType::Gravity:
+        return zh(u8"重力");
     case LoadType::BodyForce:
         return zh(u8"体力");
     case LoadType::Unknown:

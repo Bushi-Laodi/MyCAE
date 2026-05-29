@@ -77,6 +77,7 @@ CalculiXBoundaryData toCalculiXBoundary(const BoundaryCondition &boundaryConditi
     boundaryData.faceGroupId = boundaryCondition.target.faceGroupId;
     boundaryData.faceGroupName = boundaryCondition.target.faceGroupName;
     boundaryData.meshBoundaryName = boundaryCondition.target.meshBoundaryName;
+    boundaryData.displacement = boundaryCondition.displacement;
     return boundaryData;
 }
 

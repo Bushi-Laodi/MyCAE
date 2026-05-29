@@ -11,6 +11,8 @@
 
 class QLineEdit;
 class QComboBox;
+class QCheckBox;
+class QDoubleSpinBox;
 
 struct BoundaryConditionDialogOptions
 {
@@ -48,6 +50,7 @@ public:
 private:
     void setupUi();
     void updateFaceGroupItems(const QString &geometryName);
+    void updateDisplacementEditors();
     void setComboCurrentText(QComboBox *combo, const QString &text);
     QString selectedFaceGroupId() const;
 
@@ -58,4 +61,11 @@ private:
     QComboBox *m_geometryNameCombo = nullptr;
     QComboBox *m_faceGroupNameCombo = nullptr;
     QComboBox *m_materialIdCombo = nullptr;
+    QCheckBox *m_uxCheck = nullptr;
+    QCheckBox *m_uyCheck = nullptr;
+    QCheckBox *m_uzCheck = nullptr;
+    QDoubleSpinBox *m_uxSpin = nullptr;
+    QDoubleSpinBox *m_uySpin = nullptr;
+    QDoubleSpinBox *m_uzSpin = nullptr;
+    QComboBox *m_displacementUnitCombo = nullptr;
 };

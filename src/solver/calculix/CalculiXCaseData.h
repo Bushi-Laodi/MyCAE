@@ -31,6 +31,7 @@ struct CalculiXBoundaryData
     QString faceGroupId;
     QString faceGroupName;
     QString meshBoundaryName;
+    DisplacementConstraint displacement;
 };
 
 struct CalculiXLoadData

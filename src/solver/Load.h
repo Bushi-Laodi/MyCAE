@@ -5,7 +5,9 @@
 enum class LoadType
 {
     Velocity,
+    Force,
     Pressure,
+    Gravity,
     BodyForce,
     Unknown
 };
@@ -41,8 +43,12 @@ inline QString toString(LoadType type)
     switch (type) {
     case LoadType::Velocity:
         return "velocity";
+    case LoadType::Force:
+        return "force";
     case LoadType::Pressure:
         return "pressure";
+    case LoadType::Gravity:
+        return "gravity";
     case LoadType::BodyForce:
         return "bodyForce";
     case LoadType::Unknown:

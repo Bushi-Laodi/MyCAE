@@ -157,15 +157,39 @@ bool CalculiXDeckSectionWriter::appendFixedConstraints(
 {
     bool wroteConstraint = false;
     for (const CalculiXBoundaryExport &boundary : boundaries) {
-        if (!boundary.writesFixedConstraint) {
-            continue;
+        if (boundary.writesFixedConstraint) {
+            deck.appendLine("*BOUNDARY");
+            deck.appendLine(boundary.nodeSetName + ", 1, 3, 0.0");
+            wroteConstraint = true;
         }
-        deck.appendLine("*BOUNDARY");
-        deck.appendLine(boundary.nodeSetName + ", 1, 3, 0.0");
-        wroteConstraint = true;
+        if (boundary.writesDisplacementConstraint) {
+            const DisplacementConstraint &displacement = boundary.displacement;
+            if (!displacement.uxEnabled && !displacement.uyEnabled && !displacement.uzEnabled) {
+                errors.append("CalculiX export failed: displacement constraint '" + boundary.boundaryName
+                    + "' has no enabled degree of freedom.");
+                return false;
+            }
+            deck.appendLine("*BOUNDARY");
+            if (displacement.uxEnabled) {
+                deck.appendLine(QString("%1, 1, 1, %2")
+                    .arg(boundary.nodeSetName)
+                    .arg(calculixNumber(displacement.ux)));
+            }
+            if (displacement.uyEnabled) {
+                deck.appendLine(QString("%1, 2, 2, %2")
+                    .arg(boundary.nodeSetName)
+                    .arg(calculixNumber(displacement.uy)));
+            }
+            if (displacement.uzEnabled) {
+                deck.appendLine(QString("%1, 3, 3, %2")
+                    .arg(boundary.nodeSetName)
+                    .arg(calculixNumber(displacement.uz)));
+            }
+            wroteConstraint = true;
+        }
     }
     if (!wroteConstraint) {
-        errors.append("CalculiX export failed: no fixed boundary constraint was written.");
+        errors.append("CalculiX export failed: no structural boundary constraint was written.");
     }
     return wroteConstraint;
 }

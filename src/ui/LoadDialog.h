@@ -61,5 +61,7 @@ private:
     QComboBox *m_boundaryConditionIdCombo = nullptr;
     QLineEdit *m_fieldNameEdit = nullptr;
     QDoubleSpinBox *m_valueSpin = nullptr;
+    QDoubleSpinBox *m_yValueSpin = nullptr;
+    QDoubleSpinBox *m_zValueSpin = nullptr;
     QComboBox *m_unitCombo = nullptr;
 };

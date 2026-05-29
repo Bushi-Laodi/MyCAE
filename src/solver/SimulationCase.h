@@ -146,7 +146,10 @@ inline bool isCfdBoundaryType(BoundaryConditionType type)
 
 inline bool isStructuralLoadType(LoadType type)
 {
-    return type == LoadType::Pressure || type == LoadType::BodyForce;
+    return type == LoadType::Force
+        || type == LoadType::Pressure
+        || type == LoadType::Gravity
+        || type == LoadType::BodyForce;
 }
 
 inline bool isCfdFieldValueType(LoadType type)
@@ -192,6 +195,10 @@ inline bool isStructuralConstraint(const BoundaryCondition &boundaryCondition, c
 {
     if (!boundaryCondition.enabled) {
         return false;
+    }
+    if (boundaryCondition.type == BoundaryConditionType::FixedSupport
+            || boundaryCondition.type == BoundaryConditionType::Displacement) {
+        return true;
     }
     if (hasStructuralLoadForBoundary(loads, boundaryCondition.id)) {
         return true;

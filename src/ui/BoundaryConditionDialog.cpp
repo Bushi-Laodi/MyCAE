@@ -2,9 +2,12 @@
 
 #include "geometry/FaceGroup.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QDoubleSpinBox>
 #include <QFormLayout>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
@@ -22,6 +25,12 @@ QString zh(const char *text)
 QString boundaryTypeLabel(BoundaryConditionType type)
 {
     switch (type) {
+    case BoundaryConditionType::FixedSupport:
+        return zh(u8"固定约束");
+    case BoundaryConditionType::Displacement:
+        return zh(u8"指定位移");
+    case BoundaryConditionType::LoadTarget:
+        return zh(u8"载荷作用面");
     case BoundaryConditionType::Wall:
         return zh(u8"壁面 / 固定支撑");
     case BoundaryConditionType::VelocityInlet:
@@ -41,6 +50,9 @@ QString boundaryTypeLabel(BoundaryConditionType type)
 std::vector<BoundaryConditionType> defaultBoundaryTypes()
 {
     return {
+        BoundaryConditionType::FixedSupport,
+        BoundaryConditionType::Displacement,
+        BoundaryConditionType::LoadTarget,
         BoundaryConditionType::Wall,
         BoundaryConditionType::VelocityInlet,
         BoundaryConditionType::PressureInlet,
@@ -109,6 +121,35 @@ void BoundaryConditionDialog::setupUi()
     }
     form->addRow(zh(u8"材料 ID:"), m_materialIdCombo);
 
+    m_uxCheck = new QCheckBox("Ux", this);
+    m_uyCheck = new QCheckBox("Uy", this);
+    m_uzCheck = new QCheckBox("Uz", this);
+    m_uxCheck->setChecked(true);
+    m_uyCheck->setChecked(true);
+    m_uzCheck->setChecked(true);
+
+    m_uxSpin = new QDoubleSpinBox(this);
+    m_uySpin = new QDoubleSpinBox(this);
+    m_uzSpin = new QDoubleSpinBox(this);
+    for (QDoubleSpinBox *spin : {m_uxSpin, m_uySpin, m_uzSpin}) {
+        spin->setRange(-1e9, 1e9);
+        spin->setDecimals(6);
+    }
+    m_displacementUnitCombo = new QComboBox(this);
+    m_displacementUnitCombo->addItems({"m", "mm"});
+    form->addRow(m_uxCheck, m_uxSpin);
+    form->addRow(m_uyCheck, m_uySpin);
+    form->addRow(m_uzCheck, m_uzSpin);
+    form->addRow(zh(u8"位移单位:"), m_displacementUnitCombo);
+    if (QWidget *label = form->labelForField(m_displacementUnitCombo)) {
+        label->setObjectName("displacementUnitLabel");
+    }
+
+    connect(m_typeCombo, &QComboBox::currentIndexChanged, this, [this]() {
+        updateDisplacementEditors();
+    });
+    updateDisplacementEditors();
+
     connect(m_geometryNameCombo, &QComboBox::currentTextChanged, this, [this](const QString &geometryName) {
         updateFaceGroupItems(geometryName);
     });
@@ -136,6 +177,14 @@ void BoundaryConditionDialog::setupUi()
             QMessageBox::warning(this, zh(u8"校验"), zh(u8"请选择或输入面组。"));
             return;
         }
+        const auto type = static_cast<BoundaryConditionType>(m_typeCombo->currentData().toInt());
+        if (type == BoundaryConditionType::Displacement
+                && !m_uxCheck->isChecked()
+                && !m_uyCheck->isChecked()
+                && !m_uzCheck->isChecked()) {
+            QMessageBox::warning(this, zh(u8"验证"), zh(u8"指定位移至少需要启用一个自由度。"));
+            return;
+        }
         accept();
     });
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -154,6 +203,13 @@ BoundaryCondition BoundaryConditionDialog::boundaryCondition() const
         bc.target.faceGroupId,
         m_faceGroupNameCombo->currentText().trimmed()
     );
+    bc.displacement.uxEnabled = m_uxCheck->isChecked();
+    bc.displacement.uyEnabled = m_uyCheck->isChecked();
+    bc.displacement.uzEnabled = m_uzCheck->isChecked();
+    bc.displacement.ux = m_uxSpin->value();
+    bc.displacement.uy = m_uySpin->value();
+    bc.displacement.uz = m_uzSpin->value();
+    bc.displacement.unit = m_displacementUnitCombo->currentText().trimmed();
     bc.materialId = m_materialIdCombo->currentText().trimmed();
     return bc;
 }
@@ -173,6 +229,14 @@ void BoundaryConditionDialog::setBoundaryCondition(const BoundaryCondition &bc)
         m_faceGroupNameCombo,
         bc.target.faceGroupId.isEmpty() ? bc.target.faceGroupName : bc.target.faceGroupId
     );
+    m_uxCheck->setChecked(bc.displacement.uxEnabled);
+    m_uyCheck->setChecked(bc.displacement.uyEnabled);
+    m_uzCheck->setChecked(bc.displacement.uzEnabled);
+    m_uxSpin->setValue(bc.displacement.ux);
+    m_uySpin->setValue(bc.displacement.uy);
+    m_uzSpin->setValue(bc.displacement.uz);
+    setComboCurrentText(m_displacementUnitCombo, bc.displacement.unit);
+    updateDisplacementEditors();
     setComboCurrentText(m_materialIdCombo, bc.materialId);
 }
 
@@ -191,6 +255,26 @@ void BoundaryConditionDialog::updateFaceGroupItems(const QString &geometryName)
         setComboCurrentText(m_faceGroupNameCombo, currentText.trimmed());
     }
     m_faceGroupNameCombo->blockSignals(false);
+}
+
+void BoundaryConditionDialog::updateDisplacementEditors()
+{
+    const auto type = static_cast<BoundaryConditionType>(m_typeCombo->currentData().toInt());
+    const bool enabled = type == BoundaryConditionType::Displacement;
+    for (QWidget *widget : {
+             static_cast<QWidget *>(m_uxCheck),
+             static_cast<QWidget *>(m_uyCheck),
+             static_cast<QWidget *>(m_uzCheck),
+             static_cast<QWidget *>(m_uxSpin),
+             static_cast<QWidget *>(m_uySpin),
+             static_cast<QWidget *>(m_uzSpin),
+             static_cast<QWidget *>(m_displacementUnitCombo)
+         }) {
+        widget->setVisible(enabled);
+    }
+    if (QWidget *label = findChild<QWidget *>("displacementUnitLabel")) {
+        label->setVisible(enabled);
+    }
 }
 
 QString BoundaryConditionDialog::selectedFaceGroupId() const

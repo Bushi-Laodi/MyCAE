@@ -129,11 +129,21 @@ QJsonObject boundaryConditionToJson(const BoundaryCondition &boundaryCondition)
     target.insert("faceGroupName", boundaryCondition.target.faceGroupName);
     target.insert("meshBoundaryName", boundaryCondition.target.meshBoundaryName);
 
+    QJsonObject displacement;
+    displacement.insert("uxEnabled", boundaryCondition.displacement.uxEnabled);
+    displacement.insert("uyEnabled", boundaryCondition.displacement.uyEnabled);
+    displacement.insert("uzEnabled", boundaryCondition.displacement.uzEnabled);
+    displacement.insert("ux", boundaryCondition.displacement.ux);
+    displacement.insert("uy", boundaryCondition.displacement.uy);
+    displacement.insert("uz", boundaryCondition.displacement.uz);
+    displacement.insert("unit", boundaryCondition.displacement.unit);
+
     QJsonObject object;
     object.insert("id", boundaryCondition.id);
     object.insert("name", boundaryCondition.name);
     object.insert("type", toString(boundaryCondition.type));
     object.insert("target", target);
+    object.insert("displacement", displacement);
     object.insert("materialId", boundaryCondition.materialId);
     object.insert("enabled", boundaryCondition.enabled);
     return object;

@@ -47,6 +47,15 @@ BoundaryTargetKind boundaryTargetKindFromString(const QString &value)
 
 BoundaryConditionType boundaryConditionTypeFromString(const QString &value)
 {
+    if (value.compare("fixedSupport", Qt::CaseInsensitive) == 0) {
+        return BoundaryConditionType::FixedSupport;
+    }
+    if (value.compare("displacement", Qt::CaseInsensitive) == 0) {
+        return BoundaryConditionType::Displacement;
+    }
+    if (value.compare("loadTarget", Qt::CaseInsensitive) == 0) {
+        return BoundaryConditionType::LoadTarget;
+    }
     if (value.compare("wall", Qt::CaseInsensitive) == 0) {
         return BoundaryConditionType::Wall;
     }
@@ -70,8 +79,14 @@ LoadType loadTypeFromString(const QString &value)
     if (value.compare("velocity", Qt::CaseInsensitive) == 0) {
         return LoadType::Velocity;
     }
+    if (value.compare("force", Qt::CaseInsensitive) == 0) {
+        return LoadType::Force;
+    }
     if (value.compare("pressure", Qt::CaseInsensitive) == 0) {
         return LoadType::Pressure;
+    }
+    if (value.compare("gravity", Qt::CaseInsensitive) == 0) {
+        return LoadType::Gravity;
     }
     if (value.compare("bodyForce", Qt::CaseInsensitive) == 0) {
         return LoadType::BodyForce;
@@ -235,6 +250,7 @@ SectionAssignment sectionAssignmentFromJson(const QJsonObject &object)
 BoundaryCondition boundaryConditionFromJson(const QJsonObject &object)
 {
     const QJsonObject targetObject = object.value("target").toObject();
+    const QJsonObject displacementObject = object.value("displacement").toObject();
 
     BoundaryCondition boundaryCondition;
     boundaryCondition.id = stringValue(object, "id");
@@ -245,6 +261,13 @@ BoundaryCondition boundaryConditionFromJson(const QJsonObject &object)
     boundaryCondition.target.faceGroupId = stringValue(targetObject, "faceGroupId");
     boundaryCondition.target.faceGroupName = stringValue(targetObject, "faceGroupName");
     boundaryCondition.target.meshBoundaryName = stringValue(targetObject, "meshBoundaryName");
+    boundaryCondition.displacement.uxEnabled = boolValue(displacementObject, "uxEnabled", true);
+    boundaryCondition.displacement.uyEnabled = boolValue(displacementObject, "uyEnabled", true);
+    boundaryCondition.displacement.uzEnabled = boolValue(displacementObject, "uzEnabled", true);
+    boundaryCondition.displacement.ux = numberValue(displacementObject, "ux");
+    boundaryCondition.displacement.uy = numberValue(displacementObject, "uy");
+    boundaryCondition.displacement.uz = numberValue(displacementObject, "uz");
+    boundaryCondition.displacement.unit = stringValue(displacementObject, "unit");
     boundaryCondition.materialId = stringValue(object, "materialId");
     boundaryCondition.enabled = boolValue(object, "enabled", true);
     return boundaryCondition;
