@@ -137,12 +137,12 @@ void appendGmshRunLog(
 )
 {
     workflowResult.logMessages.append(zh(u8"Gmsh 退出码：%1").arg(gmshResult.exitCode));
-    workflowResult.logMessages.append(
-        zh(u8"Gmsh 标准输出：") + (gmshResult.standardOutput.isEmpty() ? zh(u8"<空>") : gmshResult.standardOutput)
-    );
-    workflowResult.logMessages.append(
-        zh(u8"Gmsh 错误输出：") + (gmshResult.standardError.isEmpty() ? zh(u8"<空>") : gmshResult.standardError)
-    );
+    if (!gmshResult.standardOutput.trimmed().isEmpty()) {
+        workflowResult.logMessages.append(zh(u8"Gmsh 标准输出：") + gmshResult.standardOutput.trimmed());
+    }
+    if (!gmshResult.standardError.trimmed().isEmpty()) {
+        workflowResult.logMessages.append(zh(u8"Gmsh 错误输出：") + gmshResult.standardError.trimmed());
+    }
     Q_UNUSED(gmshRunner);
 }
 

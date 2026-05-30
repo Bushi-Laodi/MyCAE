@@ -1,6 +1,9 @@
 #include "diagnostics/DiagnosticCollector.h"
 
+#include <QRegularExpression>
 #include <QStringList>
+
+#include <optional>
 
 namespace
 {
@@ -14,6 +17,55 @@ bool containsAny(const QString &text, const QStringList &patterns)
     return false;
 }
 
+bool isEmptyGmshErrorOutput(const QString &lower)
+{
+    return lower.startsWith(QString::fromUtf8(u8"gmsh 错误输出"))
+        && (lower.contains("<空>") || lower.endsWith(":") || lower.endsWith(QString::fromUtf8(u8"：")));
+}
+
+bool isMeshQualityMessage(const QString &lower)
+{
+    return lower.contains(QString::fromUtf8(u8"网格质量统计"))
+        || lower.contains("mesh quality");
+}
+
+std::optional<int> integerFieldValue(const QString &text, const QString &fieldName)
+{
+    const QRegularExpression expression(
+        QString("\\b%1\\s*=\\s*(\\d+)").arg(QRegularExpression::escape(fieldName)),
+        QRegularExpression::CaseInsensitiveOption
+    );
+    const QRegularExpressionMatch match = expression.match(text);
+    if (!match.hasMatch()) {
+        return std::nullopt;
+    }
+
+    bool ok = false;
+    const int value = match.captured(1).toInt(&ok);
+    if (!ok) {
+        return std::nullopt;
+    }
+    return value;
+}
+
+std::optional<DiagnosticSeverity> meshQualitySeverity(const QString &message)
+{
+    const std::optional<int> invalid = integerFieldValue(message, "invalid");
+    const std::optional<int> degenerate = integerFieldValue(message, "degenerate");
+    const std::optional<int> highAspect = integerFieldValue(message, "highAspect");
+
+    if (!invalid || !degenerate || !highAspect) {
+        return DiagnosticSeverity::Warning;
+    }
+    if (*invalid > 0 || *degenerate > 0) {
+        return DiagnosticSeverity::Error;
+    }
+    if (*highAspect > 0) {
+        return DiagnosticSeverity::Warning;
+    }
+    return std::nullopt;
+}
+
 DiagnosticSeverity severityForMessage(const QString &lower)
 {
     if (containsAny(lower, {
@@ -24,8 +76,9 @@ DiagnosticSeverity severityForMessage(const QString &lower)
             "cannot ",
             "does not exist",
             "not found",
-            "invalid",
-            "degenerate",
+            "invalid shape",
+            "invalid solver case",
+            "invalid input",
             "zero volume",
             "negative jacobian",
             "stale",
@@ -46,7 +99,6 @@ DiagnosticSeverity severityForMessage(const QString &lower)
             "incomplete",
             "missing",
             "diagnostic hint",
-            "mesh quality",
             "preflight warning",
             "aspect ratio",
             "high aspect",
@@ -172,11 +224,11 @@ bool shouldCollect(const QString &lower)
         "cannot",
         "does not exist",
         "not found",
-        "invalid",
-        "mesh quality",
+        "invalid shape",
+        "invalid solver case",
+        "invalid input",
         "aspect ratio",
         "high aspect",
-        "degenerate",
         "zero volume",
         "negative jacobian",
         "missing",
@@ -223,6 +275,23 @@ bool DiagnosticCollector::addFromLogMessage(const QString &message)
     }
 
     const QString lower = trimmed.toLower();
+    if (isEmptyGmshErrorOutput(lower)) {
+        return false;
+    }
+    if (isMeshQualityMessage(lower)) {
+        const std::optional<DiagnosticSeverity> severity = meshQualitySeverity(trimmed);
+        if (!severity) {
+            return false;
+        }
+
+        DiagnosticMessage diagnostic;
+        diagnostic.severity = *severity;
+        diagnostic.category = DiagnosticCategory::Mesh;
+        diagnostic.message = trimmed;
+        diagnostic.suggestedFix = suggestedFixFor(diagnostic.category, diagnostic.severity);
+        addDiagnostic(diagnostic);
+        return true;
+    }
     if (!shouldCollect(lower)) {
         return false;
     }
