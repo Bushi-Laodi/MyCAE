@@ -13,6 +13,7 @@
 #include <vtkUnstructuredGrid.h>
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <vector>
@@ -34,6 +35,14 @@ bool isDisplacementField(const QString &fieldName)
         || fieldName == CalculiXResultFields::DisplacementMagnitude;
 }
 
+bool isReactionForceField(const QString &fieldName)
+{
+    return fieldName == CalculiXResultFields::RFx
+        || fieldName == CalculiXResultFields::RFy
+        || fieldName == CalculiXResultFields::RFz
+        || fieldName == CalculiXResultFields::ReactionForceMagnitude;
+}
+
 double displacementScalar(const CalculiXNodeDisplacement &value, const QString &fieldName)
 {
     if (fieldName == CalculiXResultFields::Ux) {
@@ -46,6 +55,20 @@ double displacementScalar(const CalculiXNodeDisplacement &value, const QString &
         return value.uz;
     }
     return CalculiXResultMath::displacementMagnitude(value);
+}
+
+double reactionForceScalar(const CalculiXNodeReactionForce &value, const QString &fieldName)
+{
+    if (fieldName == CalculiXResultFields::RFx) {
+        return value.rf1;
+    }
+    if (fieldName == CalculiXResultFields::RFy) {
+        return value.rf2;
+    }
+    if (fieldName == CalculiXResultFields::RFz) {
+        return value.rf3;
+    }
+    return std::sqrt(value.rf1 * value.rf1 + value.rf2 * value.rf2 + value.rf3 * value.rf3);
 }
 
 void updateRange(double value, double &scalarMin, double &scalarMax)
@@ -80,6 +103,10 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
         buildResult.errors.append("Cannot build result grid: displacement field is empty.");
         return buildResult;
     }
+    if (result.reactionForces.empty() && isReactionForceField(buildResult.scalarName)) {
+        buildResult.errors.append("Cannot build result grid: reaction force field is empty.");
+        return buildResult;
+    }
     if (buildResult.scalarName == CalculiXResultFields::VonMisesStress && result.stresses.empty()) {
         buildResult.errors.append("Cannot build result grid: stress field is empty.");
         return buildResult;
@@ -89,6 +116,12 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
     displacementByNodeId.reserve(result.displacements.size());
     for (const CalculiXNodeDisplacement &displacement : result.displacements) {
         displacementByNodeId.insert_or_assign(displacement.nodeId, displacement);
+    }
+
+    std::unordered_map<int, CalculiXNodeReactionForce> reactionForceByNodeId;
+    reactionForceByNodeId.reserve(result.reactionForces.size());
+    for (const CalculiXNodeReactionForce &reactionForce : result.reactionForces) {
+        reactionForceByNodeId.insert_or_assign(reactionForce.nodeId, reactionForce);
     }
 
     std::unordered_map<int, StressAccumulator> stressByElementId;
@@ -105,6 +138,11 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
     vtkNew<vtkDoubleArray> uyArray;
     vtkNew<vtkDoubleArray> uzArray;
     vtkNew<vtkDoubleArray> displacementMagnitudeArray;
+    vtkNew<vtkDoubleArray> rfVector;
+    vtkNew<vtkDoubleArray> rf1Array;
+    vtkNew<vtkDoubleArray> rf2Array;
+    vtkNew<vtkDoubleArray> rf3Array;
+    vtkNew<vtkDoubleArray> rfMagnitudeArray;
     vtkNew<vtkDoubleArray> selectedPointScalar;
     vtkNew<vtkIntArray> nodeIdArray;
     displacementVector->SetName("Displacement");
@@ -113,6 +151,12 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
     uyArray->SetName(CalculiXResultFields::Uy);
     uzArray->SetName(CalculiXResultFields::Uz);
     displacementMagnitudeArray->SetName(CalculiXResultFields::DisplacementMagnitude);
+    rfVector->SetName("Reaction Force");
+    rfVector->SetNumberOfComponents(3);
+    rf1Array->SetName(CalculiXResultFields::RFx);
+    rf2Array->SetName(CalculiXResultFields::RFy);
+    rf3Array->SetName(CalculiXResultFields::RFz);
+    rfMagnitudeArray->SetName(CalculiXResultFields::ReactionForceMagnitude);
     selectedPointScalar->SetName(buildResult.scalarName.toUtf8().constData());
     nodeIdArray->SetName("MyCAE_NodeId");
 
@@ -133,7 +177,16 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
             uyArray->InsertNextValue(0.0);
             uzArray->InsertNextValue(0.0);
             displacementMagnitudeArray->InsertNextValue(0.0);
+            rfVector->InsertNextTuple3(0.0, 0.0, 0.0);
+            rf1Array->InsertNextValue(0.0);
+            rf2Array->InsertNextValue(0.0);
+            rf3Array->InsertNextValue(0.0);
+            rfMagnitudeArray->InsertNextValue(0.0);
             if (isDisplacementField(buildResult.scalarName)) {
+                selectedPointScalar->InsertNextValue(0.0);
+                updateRange(0.0, scalarMin, scalarMax);
+            }
+            if (isReactionForceField(buildResult.scalarName)) {
                 selectedPointScalar->InsertNextValue(0.0);
                 updateRange(0.0, scalarMin, scalarMax);
             }
@@ -155,6 +208,34 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
         uyArray->InsertNextValue(displacement.uy);
         uzArray->InsertNextValue(displacement.uz);
         displacementMagnitudeArray->InsertNextValue(magnitude);
+        const auto reactionIt = reactionForceByNodeId.find(node.id);
+        if (reactionIt != reactionForceByNodeId.end()) {
+            const CalculiXNodeReactionForce &reactionForce = reactionIt->second;
+            const double rfMagnitude = reactionForceScalar(
+                reactionForce,
+                CalculiXResultFields::ReactionForceMagnitude
+            );
+            rfVector->InsertNextTuple3(reactionForce.rf1, reactionForce.rf2, reactionForce.rf3);
+            rf1Array->InsertNextValue(reactionForce.rf1);
+            rf2Array->InsertNextValue(reactionForce.rf2);
+            rf3Array->InsertNextValue(reactionForce.rf3);
+            rfMagnitudeArray->InsertNextValue(rfMagnitude);
+            if (isReactionForceField(buildResult.scalarName)) {
+                const double scalar = reactionForceScalar(reactionForce, buildResult.scalarName);
+                selectedPointScalar->InsertNextValue(scalar);
+                updateRange(scalar, scalarMin, scalarMax);
+            }
+        } else {
+            rfVector->InsertNextTuple3(0.0, 0.0, 0.0);
+            rf1Array->InsertNextValue(0.0);
+            rf2Array->InsertNextValue(0.0);
+            rf3Array->InsertNextValue(0.0);
+            rfMagnitudeArray->InsertNextValue(0.0);
+            if (isReactionForceField(buildResult.scalarName)) {
+                selectedPointScalar->InsertNextValue(0.0);
+                updateRange(0.0, scalarMin, scalarMax);
+            }
+        }
         if (isDisplacementField(buildResult.scalarName)) {
             const double scalar = displacementScalar(displacement, buildResult.scalarName);
             selectedPointScalar->InsertNextValue(scalar);
@@ -248,12 +329,21 @@ CalculiXResultGridBuildResult CalculiXResultGridBuilder::buildResultGrid(
     grid->GetPointData()->AddArray(uyArray);
     grid->GetPointData()->AddArray(uzArray);
     grid->GetPointData()->AddArray(displacementMagnitudeArray);
+    grid->GetPointData()->AddArray(rfVector);
+    grid->GetPointData()->AddArray(rf1Array);
+    grid->GetPointData()->AddArray(rf2Array);
+    grid->GetPointData()->AddArray(rf3Array);
+    grid->GetPointData()->AddArray(rfMagnitudeArray);
     grid->GetPointData()->AddArray(nodeIdArray);
-    if (isDisplacementField(buildResult.scalarName)
+    if ((isDisplacementField(buildResult.scalarName) || isReactionForceField(buildResult.scalarName))
             && buildResult.scalarName != CalculiXResultFields::Ux
             && buildResult.scalarName != CalculiXResultFields::Uy
             && buildResult.scalarName != CalculiXResultFields::Uz
-            && buildResult.scalarName != CalculiXResultFields::DisplacementMagnitude) {
+            && buildResult.scalarName != CalculiXResultFields::DisplacementMagnitude
+            && buildResult.scalarName != CalculiXResultFields::RFx
+            && buildResult.scalarName != CalculiXResultFields::RFy
+            && buildResult.scalarName != CalculiXResultFields::RFz
+            && buildResult.scalarName != CalculiXResultFields::ReactionForceMagnitude) {
         grid->GetPointData()->AddArray(selectedPointScalar);
     }
     grid->GetCellData()->AddArray(vonMisesArray);

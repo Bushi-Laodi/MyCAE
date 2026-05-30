@@ -75,6 +75,8 @@ QString loadTypeText(LoadType type)
         return zh(u8"体力");
     case LoadType::SurfaceForce:
         return zh(u8"等效节点力");
+    case LoadType::Traction:
+        return zh(u8"真实面力 / Surface traction");
     case LoadType::Temperature:
         return zh(u8"温度");
     case LoadType::Unknown:
@@ -232,6 +234,9 @@ void SolverPropertyView::populateBoundaryConditionCategory(
         form->addRow(zh(u8"类型:"), new QLabel(boundaryConditionTypeText(bc.type), parent));
         form->addRow(zh(u8"几何:"), new QLabel(bc.target.geometryName, parent));
         form->addRow(zh(u8"面组:"), new QLabel(bc.target.faceGroupName, parent));
+        if (bc.type == BoundaryConditionType::SymmetryStructural) {
+            form->addRow(zh(u8"对称法向:"), new QLabel(bc.symmetryNormal, parent));
+        }
         form->addRow(zh(u8"材料 ID:"), new QLabel(bc.materialId, parent));
         form->addRow(zh(u8"启用:"), new QLabel(yesNoText(bc.enabled), parent));
         dynamicLayout->addLayout(form);
@@ -317,6 +322,9 @@ void SolverPropertyView::populateBoundaryCondition(
     form->addRow(zh(u8"面组 ID:"), new QLabel(boundaryCondition.target.faceGroupId, parent));
     form->addRow(zh(u8"面组:"), new QLabel(boundaryCondition.target.faceGroupName, parent));
     form->addRow(zh(u8"网格边界:"), new QLabel(boundaryCondition.target.meshBoundaryName, parent));
+    if (boundaryCondition.type == BoundaryConditionType::SymmetryStructural) {
+        form->addRow(zh(u8"对称法向:"), new QLabel(boundaryCondition.symmetryNormal, parent));
+    }
     form->addRow(zh(u8"材料 ID:"), new QLabel(boundaryCondition.materialId, parent));
     form->addRow(zh(u8"启用:"), new QLabel(yesNoText(boundaryCondition.enabled), parent));
     dynamicLayout->addLayout(form);

@@ -4,5 +4,12 @@
 
 QString ResultFieldMetadata::unitForField(const QString &fieldName)
 {
-    return fieldName == CalculiXResultFields::VonMisesStress ? "Pa" : "model length";
+    if (fieldName == CalculiXResultFields::VonMisesStress) {
+        return "MPa";
+    }
+    if (fieldName.startsWith("RF", Qt::CaseInsensitive)
+            || fieldName.contains("Reaction Force", Qt::CaseInsensitive)) {
+        return "N";
+    }
+    return "mm";
 }

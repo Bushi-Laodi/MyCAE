@@ -16,6 +16,10 @@ constexpr const char *Uy = "Uy";
 constexpr const char *Uz = "Uz";
 constexpr const char *DisplacementMagnitude = "Displacement Magnitude";
 constexpr const char *VonMisesStress = "Von Mises Stress";
+constexpr const char *RFx = "RF1";
+constexpr const char *RFy = "RF2";
+constexpr const char *RFz = "RF3";
+constexpr const char *ReactionForceMagnitude = "Reaction Force Magnitude";
 }
 
 enum class CalculiXResultScalarAssociation

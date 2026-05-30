@@ -78,6 +78,7 @@ private:
     QComboBox *m_elementTypeCombo = nullptr;
     QComboBox *m_algorithmCombo = nullptr;
     QCheckBox *m_autoSizeCheckBox = nullptr;
+    QComboBox *m_meshSizeUnitCombo = nullptr;
     QDoubleSpinBox *m_minimumSizeSpin = nullptr;
     QDoubleSpinBox *m_maximumSizeSpin = nullptr;
     QLabel *m_sizePreviewLabel = nullptr;

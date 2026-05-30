@@ -25,10 +25,19 @@ struct CalculiXElementStress
     double syz = 0.0;
 };
 
+struct CalculiXNodeReactionForce
+{
+    int nodeId = 0;
+    double rf1 = 0.0;
+    double rf2 = 0.0;
+    double rf3 = 0.0;
+};
+
 struct CalculiXDatResult
 {
     QString sourceFile;
     std::vector<CalculiXNodeDisplacement> displacements;
+    std::vector<CalculiXNodeReactionForce> reactionForces;
     std::vector<CalculiXElementStress> stresses;
 
     bool hasDisplacements() const

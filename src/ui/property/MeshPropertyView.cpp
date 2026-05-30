@@ -42,12 +42,14 @@ QFormLayout *addSection(QVBoxLayout *layout, QWidget *parent, const QString &tit
 
 QString globalSizeText(const MeshObject &meshObject)
 {
+    const QString unit = meshObject.meshSizeUnit.trimmed().isEmpty() ? QStringLiteral("mm") : meshObject.meshSizeUnit;
     if (meshObject.meshAutoSize) {
-        return zh(u8"自动，Gmsh 根据几何尺度估算");
+        return zh(u8"自动，Gmsh 根据几何尺度估算，单位 ") + unit;
     }
-    return zh(u8"手动，min=%1，max=%2")
+    return zh(u8"手动，min=%1 %3，max=%2 %3")
         .arg(numberText(meshObject.meshMinimumSize))
-        .arg(numberText(meshObject.meshMaximumSize));
+        .arg(numberText(meshObject.meshMaximumSize))
+        .arg(unit);
 }
 
 QString localControlText(const MeshObject &meshObject)

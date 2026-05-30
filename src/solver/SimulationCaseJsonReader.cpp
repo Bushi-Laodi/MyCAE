@@ -88,6 +88,10 @@ LoadType loadTypeFromString(const QString &value)
     if (value.compare("surfaceForce", Qt::CaseInsensitive) == 0) {
         return LoadType::SurfaceForce;
     }
+    if (value.compare("traction", Qt::CaseInsensitive) == 0
+            || value.compare("surfaceTraction", Qt::CaseInsensitive) == 0) {
+        return LoadType::Traction;
+    }
     if (value.compare("pressure", Qt::CaseInsensitive) == 0) {
         return LoadType::Pressure;
     }
@@ -269,6 +273,7 @@ BoundaryCondition boundaryConditionFromJson(const QJsonObject &object)
     boundaryCondition.displacement.uy = numberValue(displacementObject, "uy");
     boundaryCondition.displacement.uz = numberValue(displacementObject, "uz");
     boundaryCondition.displacement.unit = stringValue(displacementObject, "unit");
+    boundaryCondition.symmetryNormal = stringValue(object, "symmetryNormal", "Z").trimmed().toUpper();
     boundaryCondition.materialId = stringValue(object, "materialId");
     boundaryCondition.enabled = boolValue(object, "enabled", true);
     return boundaryCondition;
@@ -466,6 +471,7 @@ bool SimulationCaseJsonReader::fromJson(
     loadedCase.meshSetup.algorithm = gmshMeshAlgorithm3DFromString(stringValue(meshSetup, "algorithm", "default"));
     loadedCase.meshSetup.minimumSize = numberValue(meshSetup, "minimumSize");
     loadedCase.meshSetup.maximumSize = numberValue(meshSetup, "maximumSize", 1.0);
+    loadedCase.meshSetup.meshSizeUnit = stringValue(meshSetup, "meshSizeUnit", "mm");
     loadedCase.meshSetup.autoSize = boolValue(meshSetup, "autoSize", true);
     loadedCase.meshSetup.localFaceGroupName = stringValue(meshSetup, "localFaceGroupName");
     loadedCase.meshSetup.autoImportAfterGeneration = boolValue(meshSetup, "autoImportAfterGeneration", true);

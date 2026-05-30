@@ -7,6 +7,7 @@ enum class LoadType
     Velocity,
     Force,
     SurfaceForce,
+    Traction,
     Pressure,
     Gravity,
     BodyForce,
@@ -49,6 +50,8 @@ inline QString toString(LoadType type)
         return "force";
     case LoadType::SurfaceForce:
         return "surfaceForce";
+    case LoadType::Traction:
+        return "traction";
     case LoadType::Pressure:
         return "pressure";
     case LoadType::Gravity:

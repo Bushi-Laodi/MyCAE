@@ -135,6 +135,14 @@ void MaterialDialog::setupUi()
     m_poissonRatioSpin->setValue(0.3);
     form->addRow(zh(u8"泊松比:"), m_poissonRatioSpin);
 
+    m_thermalExpansionSpin = new QDoubleSpinBox(this);
+    m_thermalExpansionSpin->setRange(0.0, 1.0);
+    m_thermalExpansionSpin->setDecimals(12);
+    m_thermalExpansionSpin->setSingleStep(1.0e-6);
+    m_thermalExpansionSpin->setValue(0.0);
+    m_thermalExpansionSpin->setSuffix(" 1/K");
+    form->addRow(zh(u8"热膨胀系数 alpha:"), m_thermalExpansionSpin);
+
     mainLayout->addLayout(form);
 
     auto *buttonBox = new QDialogButtonBox(
@@ -165,6 +173,7 @@ void MaterialDialog::onDomainChanged(int index)
     m_youngModulusSpin->setEnabled(solid);
     m_youngModulusUnitCombo->setEnabled(solid);
     m_poissonRatioSpin->setEnabled(solid);
+    m_thermalExpansionSpin->setEnabled(solid);
 }
 
 Material MaterialDialog::material() const
@@ -187,6 +196,9 @@ Material MaterialDialog::material() const
     if (mat.domain == MaterialDomain::Solid) {
         mat.extraProperties.push_back({"youngModulus", m_youngModulusSpin->value(), m_youngModulusUnitCombo->currentText()});
         mat.extraProperties.push_back({"poissonRatio", m_poissonRatioSpin->value(), ""});
+        if (m_thermalExpansionSpin->value() > 0.0) {
+            mat.extraProperties.push_back({"thermalExpansion", m_thermalExpansionSpin->value(), "1/K"});
+        }
     }
 
     return mat;
@@ -224,6 +236,7 @@ void MaterialDialog::setMaterial(const Material &mat)
     }
     m_youngModulusSpin->setValue(materialPropertyValue(mat, "youngModulus", youngUnit == "GPa" ? 210.0 : 2.1e11));
     m_poissonRatioSpin->setValue(materialPropertyValue(mat, "poissonRatio", 0.3));
+    m_thermalExpansionSpin->setValue(materialPropertyValue(mat, "thermalExpansion", 0.0));
     onDomainChanged(m_domainCombo->currentIndex());
 }
 

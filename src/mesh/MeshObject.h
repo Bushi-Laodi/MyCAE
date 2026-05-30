@@ -22,6 +22,7 @@ struct MeshObject
     bool meshAutoSize = true;
     double meshMinimumSize = 0.0;
     double meshMaximumSize = 0.0;
+    QString meshSizeUnit = "mm";
     QString meshAlgorithm = "default";
     QStringList localMeshControls;
     bool qualityChecked = false;

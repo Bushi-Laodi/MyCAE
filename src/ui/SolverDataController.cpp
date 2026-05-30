@@ -60,6 +60,7 @@ BoundaryConditionDialogOptions structuralBoundaryConditionDialogOptions(const Pr
     options.allowedTypes = {
         BoundaryConditionType::FixedSupport,
         BoundaryConditionType::Displacement,
+        BoundaryConditionType::SymmetryStructural,
         BoundaryConditionType::LoadTarget
     };
     return options;
@@ -129,7 +130,7 @@ LoadDialogOptions structuralLoadDialogOptions(const ProjectModel &projectModel)
     } else if (options.boundaryConditions.size() == 1) {
         options.defaultBoundaryConditionId = options.boundaryConditions.front().id;
     }
-    options.allowedTypes = {LoadType::Pressure, LoadType::Force, LoadType::SurfaceForce, LoadType::Gravity};
+    options.allowedTypes = {LoadType::Pressure, LoadType::Force, LoadType::SurfaceForce, LoadType::Traction, LoadType::Gravity};
     return options;
 }
 

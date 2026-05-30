@@ -163,7 +163,8 @@ bool isStructuralConstraintBoundary(const BoundaryCondition &boundaryCondition, 
         return false;
     }
     if (boundaryCondition.type == BoundaryConditionType::FixedSupport
-            || boundaryCondition.type == BoundaryConditionType::Displacement) {
+            || boundaryCondition.type == BoundaryConditionType::Displacement
+            || boundaryCondition.type == BoundaryConditionType::SymmetryStructural) {
         return true;
     }
     return boundaryCondition.type == BoundaryConditionType::Wall
@@ -222,6 +223,9 @@ void validateStructuralMaterialUnits(SolverPreflightResult &preflight, const std
         if (material.hasDensity && !UnitConverter::isKnownUnit(UnitQuantity::Density, material.densityUnit)) {
             addPreflightError(preflight, "material density has unknown unit: "
                 + material.name + ", unit=" + material.densityUnit + ".", "Unit");
+        } else if (material.hasDensity) {
+            addPreflightWarning(preflight, "material density is present but the mm-N-MPa mass unit closure is not fully normalized yet: "
+                + material.name + ".", "Unit");
         }
         for (const MaterialProperty &property : material.extraProperties) {
             if (isYoungModulusProperty(property.name)
@@ -239,7 +243,17 @@ void validateStructuralMaterialUnits(SolverPreflightResult &preflight, const std
 
 void validateStructuralLoad(SolverPreflightResult &preflight, const Load &load)
 {
-    if (load.type == LoadType::BodyForce || load.type == LoadType::Temperature) {
+    if (load.type == LoadType::Temperature) {
+        if (load.value.unit.compare("K", Qt::CaseInsensitive) != 0
+                && load.value.unit.compare("C", Qt::CaseInsensitive) != 0) {
+            addPreflightError(preflight, "temperature load has unknown unit: "
+                + load.name + ", unit=" + load.value.unit + ".", "Unit");
+        }
+        addPreflightError(preflight, "CalculiX temperature load export is not enabled yet: "
+            + load.name + " (" + toString(load.type) + ").");
+        return;
+    }
+    if (load.type == LoadType::BodyForce) {
         addPreflightError(preflight, "CalculiX load type is not supported yet: "
             + load.name + " (" + toString(load.type) + ").");
         return;
@@ -265,6 +279,19 @@ void validateStructuralLoad(SolverPreflightResult &preflight, const Load &load)
             addPreflightWarning(preflight, "SurfaceForce 当前按目标边界节点平均分配为 *CLOAD；不是真实 surface traction: "
                 + load.name + ".");
         }
+    } else if (load.type == LoadType::Traction) {
+        if (load.value.kind != LoadValueKind::Vector3) {
+            addPreflightError(preflight, "traction load must use a vector value: " + load.name + ".");
+        }
+        if (vectorIsZero(load.value)) {
+            addPreflightWarning(preflight, "traction vector is zero: " + load.name + ".");
+        }
+        if (!UnitConverter::isKnownUnit(UnitQuantity::Stress, load.value.unit)) {
+            addPreflightError(preflight, "traction load has unknown stress unit: "
+                + load.name + ", unit=" + load.value.unit + ".", "Unit");
+        }
+        addPreflightWarning(preflight, "Traction V1 exports the vector magnitude as normal *DLOAD pressure; tangential traction is not exported: "
+            + load.name + ".");
     } else if (load.type == LoadType::Gravity) {
         if (load.value.kind != LoadValueKind::Vector3 || vectorIsZero(load.value)) {
             addPreflightError(preflight, "gravity load must use a non-zero vector value: " + load.name + ".");
@@ -295,6 +322,13 @@ void validateMeshPreflight(
     if (meshObject->mshFile.trimmed().isEmpty()) {
         addPreflightError(preflight, "mesh object has no .msh file path: " + meshObject->name + ". 请重新生成或导入网格。", "Mesh");
         return;
+    }
+    if (!UnitConverter::isKnownUnit(UnitQuantity::Length, meshObject->meshSizeUnit)) {
+        addPreflightError(preflight, "mesh size has unknown length unit: "
+            + meshObject->name + ", unit=" + meshObject->meshSizeUnit + ".", "Unit");
+    } else if (meshObject->meshSizeUnit.compare("mm", Qt::CaseInsensitive) != 0) {
+        addPreflightWarning(preflight, "mesh size unit is "
+            + meshObject->meshSizeUnit + "; Gmsh sizes are converted to internal mm before meshing.", "Unit");
     }
 
     const QString meshPath = QFileInfo(meshObject->mshFile).isAbsolute()
@@ -454,10 +488,24 @@ SolverPreflightResult validateCalculiXPreflight(
         addPreflightItem(preflight, "Material", PreflightCheckStatus::Passed, "structural material exists.");
     }
     validateStructuralMaterialUnits(preflight, structuralCase.materials);
-    for (const BoundaryCondition &boundaryCondition : simulationCase.boundaryConditions) {
-        if (boundaryCondition.enabled && boundaryCondition.type == BoundaryConditionType::SymmetryStructural) {
-            addPreflightError(preflight, "structural symmetry boundary is not supported by CalculiX export yet: "
-                + boundaryCondition.name + ". Please use FixedSupport or Displacement constraints.");
+    for (const BoundaryCondition &boundaryCondition : structuralCase.constraints) {
+        if (boundaryCondition.enabled
+                && boundaryCondition.type == BoundaryConditionType::SymmetryStructural
+                && boundaryCondition.symmetryNormal.trimmed().isEmpty()) {
+            addPreflightError(preflight, "structural symmetry boundary must define a normal axis: "
+                + boundaryCondition.name + ".", "Boundary");
+        } else if (boundaryCondition.enabled
+                && boundaryCondition.type == BoundaryConditionType::SymmetryStructural) {
+            const QString normal = boundaryCondition.symmetryNormal.trimmed().toUpper();
+            if (normal != "X" && normal != "Y" && normal != "Z") {
+                addPreflightError(preflight, "structural symmetry boundary has invalid normal axis: "
+                    + boundaryCondition.name + ", normal=" + boundaryCondition.symmetryNormal + ".", "Boundary");
+            }
+        } else if (boundaryCondition.enabled
+                && boundaryCondition.type == BoundaryConditionType::Displacement
+                && !UnitConverter::isKnownUnit(UnitQuantity::Length, boundaryCondition.displacement.unit)) {
+            addPreflightError(preflight, "displacement constraint has unknown length unit: "
+                + boundaryCondition.name + ", unit=" + boundaryCondition.displacement.unit + ".", "Unit");
         }
     }
     if (const MeshObject *meshObject = projectModel.findMeshByName(meshName)) {
@@ -566,7 +614,11 @@ ResultObject makeResultObject(
             CalculiXResultFields::Uy,
             CalculiXResultFields::Uz,
             CalculiXResultFields::DisplacementMagnitude,
-            CalculiXResultFields::VonMisesStress
+            CalculiXResultFields::VonMisesStress,
+            CalculiXResultFields::RFx,
+            CalculiXResultFields::RFy,
+            CalculiXResultFields::RFz,
+            CalculiXResultFields::ReactionForceMagnitude
         };
     }
     resultObject.createdAt = createdAt;

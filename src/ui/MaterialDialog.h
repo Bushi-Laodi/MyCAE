@@ -50,4 +50,5 @@ private:
     QDoubleSpinBox *m_youngModulusSpin = nullptr;
     QComboBox *m_youngModulusUnitCombo = nullptr;
     QDoubleSpinBox *m_poissonRatioSpin = nullptr;
+    QDoubleSpinBox *m_thermalExpansionSpin = nullptr;
 };

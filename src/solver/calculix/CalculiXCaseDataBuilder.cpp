@@ -46,11 +46,11 @@ double materialPropertyValue(const Material &material, const QStringList &aliase
     return fallback;
 }
 
-double materialStressPropertyPa(const Material &material, const QStringList &aliases, double fallback = 0.0)
+double materialStressPropertyMPa(const Material &material, const QStringList &aliases, double fallback = 0.0)
 {
     for (const MaterialProperty &property : material.extraProperties) {
         if (propertyMatches(normalizedPropertyName(property.name), aliases)) {
-            return UnitConverter::stressToPa(property.value, property.unit);
+            return UnitConverter::stressToMPa(property.value, property.unit);
         }
     }
     return fallback;
@@ -62,7 +62,7 @@ CalculiXMaterialData toCalculiXMaterial(const Material &material)
     materialData.id = material.id;
     materialData.name = material.name;
     materialData.domain = material.domain;
-    materialData.youngModulus = materialStressPropertyPa(
+    materialData.youngModulus = materialStressPropertyMPa(
         material,
         {"youngModulus", "youngsModulus", "elasticModulus", "E"}
     );
@@ -73,6 +73,10 @@ CalculiXMaterialData toCalculiXMaterial(const Material &material)
     materialData.density = material.hasDensity
         ? UnitConverter::densityToKgPerM3(material.density, material.densityUnit)
         : materialPropertyValue(material, {"density", "rho"});
+    materialData.thermalExpansion = materialPropertyValue(
+        material,
+        {"thermalExpansion", "alpha", "thermalExpansionCoefficient"}
+    );
     return materialData;
 }
 
@@ -88,6 +92,7 @@ CalculiXBoundaryData toCalculiXBoundary(const BoundaryCondition &boundaryConditi
     boundaryData.faceGroupName = boundaryCondition.target.faceGroupName;
     boundaryData.meshBoundaryName = boundaryCondition.target.meshBoundaryName;
     boundaryData.displacement = boundaryCondition.displacement;
+    boundaryData.symmetryNormal = boundaryCondition.symmetryNormal;
     return boundaryData;
 }
 
@@ -105,9 +110,11 @@ CalculiXLoadData toCalculiXLoad(const Load &load)
         loadData.value.y = UnitConverter::forceToN(load.value.y, load.value.unit);
         loadData.value.z = UnitConverter::forceToN(load.value.z, load.value.unit);
         loadData.value.unit = "N";
-    } else if (load.type == LoadType::Pressure) {
-        loadData.value.x = UnitConverter::stressToPa(load.value.x, load.value.unit);
-        loadData.value.unit = "Pa";
+    } else if (load.type == LoadType::Pressure || load.type == LoadType::Traction) {
+        loadData.value.x = UnitConverter::stressToMPa(load.value.x, load.value.unit);
+        loadData.value.y = UnitConverter::stressToMPa(load.value.y, load.value.unit);
+        loadData.value.z = UnitConverter::stressToMPa(load.value.z, load.value.unit);
+        loadData.value.unit = "MPa";
     } else if (load.type == LoadType::Gravity) {
         loadData.value.x = UnitConverter::accelerationToMPerS2(load.value.x, load.value.unit);
         loadData.value.y = UnitConverter::accelerationToMPerS2(load.value.y, load.value.unit);

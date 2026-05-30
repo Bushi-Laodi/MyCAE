@@ -19,6 +19,7 @@ struct CalculiXMaterialData
     double youngModulus = 0.0;
     double poissonRatio = 0.0;
     double density = 0.0;
+    double thermalExpansion = 0.0;
 };
 
 struct CalculiXBoundaryData
@@ -32,6 +33,7 @@ struct CalculiXBoundaryData
     QString faceGroupName;
     QString meshBoundaryName;
     DisplacementConstraint displacement;
+    QString symmetryNormal = "Z";
 };
 
 struct CalculiXLoadData

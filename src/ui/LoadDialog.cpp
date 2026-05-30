@@ -29,6 +29,8 @@ QString defaultFieldName(LoadType type)
         return "force";
     case LoadType::SurfaceForce:
         return "surfaceForce";
+    case LoadType::Traction:
+        return "traction";
     case LoadType::Pressure:
         return "pressure";
     case LoadType::Gravity:
@@ -50,6 +52,7 @@ bool isDefaultFieldName(const QString &fieldName)
         || normalized == defaultFieldName(LoadType::Velocity)
         || normalized == defaultFieldName(LoadType::Force)
         || normalized == defaultFieldName(LoadType::SurfaceForce)
+        || normalized == defaultFieldName(LoadType::Traction)
         || normalized == defaultFieldName(LoadType::Pressure)
         || normalized == defaultFieldName(LoadType::Gravity)
         || normalized == defaultFieldName(LoadType::BodyForce)
@@ -60,6 +63,7 @@ bool isVectorLoadType(LoadType type)
 {
     return type == LoadType::Force
         || type == LoadType::SurfaceForce
+        || type == LoadType::Traction
         || type == LoadType::Gravity
         || type == LoadType::BodyForce;
 }
@@ -73,6 +77,8 @@ QStringList unitOptions(LoadType type)
         return {"N", "kN"};
     case LoadType::SurfaceForce:
         return {"N", "kN"};
+    case LoadType::Traction:
+        return {"MPa", "N/mm^2"};
     case LoadType::Pressure:
         return {"Pa", "kPa", "MPa", "N/mm^2"};
     case LoadType::Gravity:
@@ -97,6 +103,9 @@ QString loadTypeLabel(LoadType type)
     if (type == LoadType::SurfaceForce) {
         return zh(u8"等效节点力（由面选择分配）");
     }
+    if (type == LoadType::Traction) {
+        return zh(u8"真实面力 / Surface traction");
+    }
     if (type == LoadType::Temperature) {
         return zh(u8"温度（暂不开放求解）");
     }
@@ -105,12 +114,18 @@ QString loadTypeLabel(LoadType type)
         return zh(u8"速度");
     case LoadType::Force:
         return zh(u8"集中力");
+    case LoadType::SurfaceForce:
+        return zh(u8"等效节点力（由面选择分配）");
+    case LoadType::Traction:
+        return zh(u8"真实面力 / Surface traction");
     case LoadType::Pressure:
         return zh(u8"压力载荷");
     case LoadType::Gravity:
         return zh(u8"重力");
     case LoadType::BodyForce:
         return zh(u8"体力");
+    case LoadType::Temperature:
+        return zh(u8"均匀温度变化 V1（暂不开放求解）");
     case LoadType::Unknown:
         return zh(u8"未知");
     }
@@ -119,7 +134,7 @@ QString loadTypeLabel(LoadType type)
 
 std::vector<LoadType> defaultLoadTypes()
 {
-    return {LoadType::Velocity, LoadType::Force, LoadType::SurfaceForce, LoadType::Pressure, LoadType::Gravity};
+    return {LoadType::Velocity, LoadType::Force, LoadType::SurfaceForce, LoadType::Traction, LoadType::Pressure, LoadType::Gravity};
 }
 }
 
@@ -158,6 +173,13 @@ void LoadDialog::setupUi()
     surfaceForceHintLabel->setWordWrap(true);
     surfaceForceHintLabel->setStyleSheet("color: #9a6700;");
     form->addRow(QString(), surfaceForceHintLabel);
+    auto *tractionHintLabel = new QLabel(
+        zh(u8"Traction V1 会按向量模长导出为 CalculiX *DLOAD 法向面载荷；不会降级为 *CLOAD，切向 traction 暂不支持。"),
+        this
+    );
+    tractionHintLabel->setWordWrap(true);
+    tractionHintLabel->setStyleSheet("color: #9a6700;");
+    form->addRow(QString(), tractionHintLabel);
 
     m_boundaryConditionIdCombo = new QComboBox(this);
     for (const LoadBoundaryConditionOption &option : m_options.boundaryConditions) {
@@ -201,7 +223,7 @@ void LoadDialog::setupUi()
     m_unitCombo->setEditable(false);
     form->addRow(zh(u8"单位:"), m_unitCombo);
 
-    connect(m_typeCombo, &QComboBox::currentTextChanged, this, [this, surfaceForceHintLabel]() {
+    connect(m_typeCombo, &QComboBox::currentTextChanged, this, [this, surfaceForceHintLabel, tractionHintLabel]() {
         const LoadType type = selectedLoadType(m_typeCombo);
         const QString currentDefault = defaultFieldName(type);
         if (isDefaultFieldName(m_fieldNameEdit->text())) {
@@ -218,6 +240,7 @@ void LoadDialog::setupUi()
             label->setVisible(vectorLoad);
         }
         surfaceForceHintLabel->setVisible(type == LoadType::SurfaceForce);
+        tractionHintLabel->setVisible(type == LoadType::Traction);
     });
     m_fieldNameEdit->setText(defaultFieldName(selectedLoadType(m_typeCombo)));
     updateUnitItems();
@@ -231,6 +254,7 @@ void LoadDialog::setupUi()
         label->setVisible(vectorLoad);
     }
     surfaceForceHintLabel->setVisible(selectedLoadType(m_typeCombo) == LoadType::SurfaceForce);
+    tractionHintLabel->setVisible(selectedLoadType(m_typeCombo) == LoadType::Traction);
 
     mainLayout->addLayout(form);
 

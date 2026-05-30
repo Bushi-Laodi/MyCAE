@@ -105,6 +105,42 @@ bool appendPressureLoad(
     return true;
 }
 
+bool appendTractionLoad(
+    CalculiXInputDeck &deck,
+    const CalculiXLoadData &load,
+    const CalculiXBoundaryExport &boundary,
+    QStringList &errors
+)
+{
+    if (boundary.surfaceFaces.empty()) {
+        errors.append("CalculiX export failed: traction load '" + load.name
+            + "' has no mapped element surface.");
+        return false;
+    }
+    if (load.value.kind != LoadValueKind::Vector3) {
+        errors.append("CalculiX export failed: traction load '" + load.name
+            + "' must use a vector value.");
+        return false;
+    }
+
+    const double magnitude = std::sqrt(
+        load.value.x * load.value.x
+        + load.value.y * load.value.y
+        + load.value.z * load.value.z
+    );
+    if (magnitude <= 0.0) {
+        errors.append("CalculiX export failed: traction load '" + load.name
+            + "' has zero magnitude.");
+        return false;
+    }
+
+    deck.appendLine("*DLOAD");
+    deck.appendLine(QString("%1, P, %2")
+        .arg(boundary.surfaceName)
+        .arg(calculixNumber(magnitude)));
+    return true;
+}
+
 bool appendGravityLoad(
     CalculiXInputDeck &deck,
     const CalculiXLoadData &load,
@@ -161,6 +197,8 @@ bool CalculiXLoadWriter::appendLoads(
 
         if (load.type == LoadType::Pressure) {
             wroteLoad = appendPressureLoad(deck, load, *boundary, errors) || wroteLoad;
+        } else if (load.type == LoadType::Traction) {
+            wroteLoad = appendTractionLoad(deck, load, *boundary, errors) || wroteLoad;
         } else if (load.type == LoadType::Force || load.type == LoadType::SurfaceForce) {
             wroteLoad = appendConcentratedLoad(deck, load, *boundary, errors) || wroteLoad;
         } else {

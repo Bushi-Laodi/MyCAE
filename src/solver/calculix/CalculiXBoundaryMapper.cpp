@@ -52,6 +52,26 @@ bool writesDisplacementConstraint(const CalculiXBoundaryData &boundary)
     return boundary.type == BoundaryConditionType::Displacement;
 }
 
+bool writesSymmetryConstraint(const CalculiXBoundaryData &boundary)
+{
+    return boundary.type == BoundaryConditionType::SymmetryStructural;
+}
+
+int symmetryDof(const CalculiXBoundaryData &boundary)
+{
+    const QString normal = boundary.symmetryNormal.trimmed().toUpper();
+    if (normal == "X") {
+        return 1;
+    }
+    if (normal == "Y") {
+        return 2;
+    }
+    if (normal == "Z") {
+        return 3;
+    }
+    return 0;
+}
+
 bool matchesBoundaryName(const QString &target, const MeshBoundary &meshBoundary)
 {
     return !target.isEmpty()
@@ -142,7 +162,8 @@ std::optional<CalculiXBoundaryExport> mapBoundary(
     const bool isLoadBoundary = hasLoadTarget(caseData, boundary.id);
     const bool isFixedBoundary = writesFixedConstraint(caseData, boundary);
     const bool isDisplacementBoundary = writesDisplacementConstraint(boundary);
-    if (!isLoadBoundary && !isFixedBoundary && !isDisplacementBoundary) {
+    const bool isSymmetryBoundary = writesSymmetryConstraint(boundary);
+    if (!isLoadBoundary && !isFixedBoundary && !isDisplacementBoundary && !isSymmetryBoundary) {
         warnings.append("CalculiX export warning: boundary '" + boundary.name
             + "' is ignored by the structural solver because type '" + toString(boundary.type)
             + "' is neither a load target nor a supported structural constraint.");
@@ -187,6 +208,8 @@ std::optional<CalculiXBoundaryExport> mapBoundary(
     boundaryExport.elementIds = elementIdsForSurfaceFaces(boundaryExport.surfaceFaces);
     boundaryExport.writesFixedConstraint = isFixedBoundary;
     boundaryExport.writesDisplacementConstraint = isDisplacementBoundary;
+    boundaryExport.writesSymmetryConstraint = isSymmetryBoundary;
+    boundaryExport.symmetryDof = symmetryDof(boundary);
     boundaryExport.displacement = boundary.displacement;
     return boundaryExport;
 }

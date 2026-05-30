@@ -144,6 +144,9 @@ QJsonObject boundaryConditionToJson(const BoundaryCondition &boundaryCondition)
     object.insert("type", toString(boundaryCondition.type));
     object.insert("target", target);
     object.insert("displacement", displacement);
+    object.insert("symmetryNormal", boundaryCondition.symmetryNormal.trimmed().isEmpty()
+        ? QStringLiteral("Z")
+        : boundaryCondition.symmetryNormal.trimmed().toUpper());
     object.insert("materialId", boundaryCondition.materialId);
     object.insert("enabled", boundaryCondition.enabled);
     return object;
@@ -269,6 +272,9 @@ QJsonDocument SimulationCaseJsonWriter::toJson(const SimulationCase &simulationC
     meshSetup.insert("algorithm", toString(simulationCase.meshSetup.algorithm));
     meshSetup.insert("minimumSize", simulationCase.meshSetup.minimumSize);
     meshSetup.insert("maximumSize", simulationCase.meshSetup.maximumSize);
+    meshSetup.insert("meshSizeUnit", simulationCase.meshSetup.meshSizeUnit.trimmed().isEmpty()
+        ? QStringLiteral("mm")
+        : simulationCase.meshSetup.meshSizeUnit);
     meshSetup.insert("autoSize", simulationCase.meshSetup.autoSize);
     meshSetup.insert("localFaceGroupName", simulationCase.meshSetup.localFaceGroupName);
     meshSetup.insert("autoImportAfterGeneration", simulationCase.meshSetup.autoImportAfterGeneration);

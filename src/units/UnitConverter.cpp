@@ -21,11 +21,11 @@ double factorFor(UnitQuantity quantity, const QString &unit)
 
     if (quantity == UnitQuantity::Stress) {
         static const QHash<QString, double> factors{
-            {"pa", 1.0},
-            {"kpa", 1.0e3},
-            {"mpa", 1.0e6},
-            {"gpa", 1.0e9},
-            {"n/mm^2", 1.0e6}
+            {"pa", 1.0e-6},
+            {"kpa", 1.0e-3},
+            {"mpa", 1.0},
+            {"gpa", 1.0e3},
+            {"n/mm^2", 1.0}
         };
         return factors.value(normalized, 1.0);
     }
@@ -53,9 +53,9 @@ double factorFor(UnitQuantity quantity, const QString &unit)
     }
     if (quantity == UnitQuantity::Length) {
         static const QHash<QString, double> factors{
-            {"m", 1.0},
-            {"mm", 1.0e-3},
-            {"cm", 1.0e-2}
+            {"mm", 1.0},
+            {"m", 1.0e3},
+            {"cm", 10.0}
         };
         return factors.value(normalized, 1.0);
     }
@@ -75,12 +75,42 @@ double UnitConverter::fromInternal(UnitQuantity quantity, double value, const QS
 
 double UnitConverter::stressToPa(double value, const QString &unit)
 {
+    return stressToMPa(value, unit) * 1.0e6;
+}
+
+double UnitConverter::lengthToMm(double value, const QString &unit)
+{
+    return toInternal(UnitQuantity::Length, value, unit);
+}
+
+double UnitConverter::lengthFromMm(double value, const QString &unit)
+{
+    return fromInternal(UnitQuantity::Length, value, unit);
+}
+
+double UnitConverter::stressToMPa(double value, const QString &unit)
+{
     return toInternal(UnitQuantity::Stress, value, unit);
+}
+
+double UnitConverter::stressFromMPa(double value, const QString &unit)
+{
+    return fromInternal(UnitQuantity::Stress, value, unit);
+}
+
+double UnitConverter::pressureToMPa(double value, const QString &unit)
+{
+    return stressToMPa(value, unit);
 }
 
 double UnitConverter::forceToN(double value, const QString &unit)
 {
     return toInternal(UnitQuantity::Force, value, unit);
+}
+
+double UnitConverter::forceFromN(double value, const QString &unit)
+{
+    return fromInternal(UnitQuantity::Force, value, unit);
 }
 
 double UnitConverter::densityToKgPerM3(double value, const QString &unit)

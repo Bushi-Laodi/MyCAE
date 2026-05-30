@@ -10,6 +10,7 @@ enum class DatBlock
 {
     None,
     Displacements,
+    ReactionForces,
     Stresses
 };
 
@@ -42,6 +43,32 @@ bool parseDisplacementLine(const QString &line, CalculiXNodeDisplacement &value)
     value.ux = ux;
     value.uy = uy;
     value.uz = uz;
+    return true;
+}
+
+bool parseReactionForceLine(const QString &line, CalculiXNodeReactionForce &value)
+{
+    const QStringList fields = splitFields(line);
+    if (fields.size() < 4) {
+        return false;
+    }
+
+    bool okId = false;
+    bool okX = false;
+    bool okY = false;
+    bool okZ = false;
+    const int nodeId = fields.at(0).toInt(&okId);
+    const double rf1 = fields.at(1).toDouble(&okX);
+    const double rf2 = fields.at(2).toDouble(&okY);
+    const double rf3 = fields.at(3).toDouble(&okZ);
+    if (!okId || !okX || !okY || !okZ) {
+        return false;
+    }
+
+    value.nodeId = nodeId;
+    value.rf1 = rf1;
+    value.rf2 = rf2;
+    value.rf3 = rf3;
     return true;
 }
 
@@ -109,6 +136,11 @@ CalculiXDatReadResult CalculiXDatResultReader::read(const QString &datFile) cons
             blockHasData = false;
             continue;
         }
+        if (lower.startsWith("forces ")) {
+            block = DatBlock::ReactionForces;
+            blockHasData = false;
+            continue;
+        }
         if (lower.startsWith("stresses ")) {
             block = DatBlock::Stresses;
             blockHasData = false;
@@ -129,6 +161,17 @@ CalculiXDatReadResult CalculiXDatResultReader::read(const QString &datFile) cons
             CalculiXNodeDisplacement displacement;
             if (parseDisplacementLine(trimmed, displacement)) {
                 readResult.result.displacements.push_back(displacement);
+                blockHasData = true;
+            } else if (blockHasData) {
+                block = DatBlock::None;
+            }
+            continue;
+        }
+
+        if (block == DatBlock::ReactionForces) {
+            CalculiXNodeReactionForce reactionForce;
+            if (parseReactionForceLine(trimmed, reactionForce)) {
+                readResult.result.reactionForces.push_back(reactionForce);
                 blockHasData = true;
             } else if (blockHasData) {
                 block = DatBlock::None;

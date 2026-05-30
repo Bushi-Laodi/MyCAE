@@ -3,6 +3,7 @@
 #include "occ/OCCBooleanBuilder.h"
 #include "occ/OCCGeometryFactory.h"
 #include "occ/OCCShapeIO.h"
+#include "units/UnitConverter.h"
 
 #include <Bnd_Box.hxx>
 #include <BRepBndLib.hxx>
@@ -53,6 +54,64 @@ QString sanitizedFileBase(const QString &name)
         fileBase.chop(1);
     }
     return fileBase.isEmpty() ? "geometry" : fileBase;
+}
+
+BoxGeometry internalBoxGeometry(BoxGeometry box)
+{
+    const QString unit = box.unit.trimmed().isEmpty() ? QStringLiteral("mm") : box.unit.trimmed();
+    box.centerX = UnitConverter::lengthToMm(box.centerX, unit);
+    box.centerY = UnitConverter::lengthToMm(box.centerY, unit);
+    box.centerZ = UnitConverter::lengthToMm(box.centerZ, unit);
+    box.length = UnitConverter::lengthToMm(box.length, unit);
+    box.width = UnitConverter::lengthToMm(box.width, unit);
+    box.height = UnitConverter::lengthToMm(box.height, unit);
+    box.unit = QStringLiteral("mm");
+    return box;
+}
+
+CylinderGeometry internalCylinderGeometry(CylinderGeometry cylinder)
+{
+    const QString unit = cylinder.unit.trimmed().isEmpty() ? QStringLiteral("mm") : cylinder.unit.trimmed();
+    cylinder.centerX = UnitConverter::lengthToMm(cylinder.centerX, unit);
+    cylinder.centerY = UnitConverter::lengthToMm(cylinder.centerY, unit);
+    cylinder.centerZ = UnitConverter::lengthToMm(cylinder.centerZ, unit);
+    cylinder.radius = UnitConverter::lengthToMm(cylinder.radius, unit);
+    cylinder.height = UnitConverter::lengthToMm(cylinder.height, unit);
+    cylinder.unit = QStringLiteral("mm");
+    return cylinder;
+}
+
+SphereGeometry internalSphereGeometry(SphereGeometry sphere)
+{
+    const QString unit = sphere.unit.trimmed().isEmpty() ? QStringLiteral("mm") : sphere.unit.trimmed();
+    sphere.centerX = UnitConverter::lengthToMm(sphere.centerX, unit);
+    sphere.centerY = UnitConverter::lengthToMm(sphere.centerY, unit);
+    sphere.centerZ = UnitConverter::lengthToMm(sphere.centerZ, unit);
+    sphere.radius = UnitConverter::lengthToMm(sphere.radius, unit);
+    sphere.unit = QStringLiteral("mm");
+    return sphere;
+}
+
+PlateWithHoleGeometry internalPlateWithHoleGeometry(PlateWithHoleGeometry plate)
+{
+    const QString unit = plate.unit.trimmed().isEmpty() ? QStringLiteral("mm") : plate.unit.trimmed();
+    plate.centerX = UnitConverter::lengthToMm(plate.centerX, unit);
+    plate.centerY = UnitConverter::lengthToMm(plate.centerY, unit);
+    plate.centerZ = UnitConverter::lengthToMm(plate.centerZ, unit);
+    plate.length = UnitConverter::lengthToMm(plate.length, unit);
+    plate.width = UnitConverter::lengthToMm(plate.width, unit);
+    plate.thickness = UnitConverter::lengthToMm(plate.thickness, unit);
+    plate.holeRadius = UnitConverter::lengthToMm(plate.holeRadius, unit);
+    plate.unit = QStringLiteral("mm");
+    return plate;
+}
+
+QJsonObject internalLengthObject(const QString &unit)
+{
+    QJsonObject object;
+    object.insert("lengthUnit", "mm");
+    object.insert("sourceUnit", unit.trimmed().isEmpty() ? QStringLiteral("mm") : unit.trimmed());
+    return object;
 }
 
 bool loadGeometryShape(const Project &project, const GeometryObject &geometry, TopoDS_Shape *shape, QString *errorMessage)
@@ -346,7 +405,7 @@ bool GeometryManager::createBox(const Project &project, const BoxGeometry &param
     try {
         OCCGeometryFactory factory;
         OCCShapeIO shapeIO;
-        const TopoDS_Shape shape = factory.createShape(createdBox);
+        const TopoDS_Shape shape = factory.createShape(internalBoxGeometry(createdBox));
 
         createdBox.occBrepSaved = shapeIO.saveBREP(
             shape,
@@ -445,7 +504,7 @@ bool GeometryManager::createCylinder(const Project &project, const CylinderGeome
     try {
         OCCGeometryFactory factory;
         OCCShapeIO shapeIO;
-        const TopoDS_Shape shape = factory.createShape(createdCylinder);
+        const TopoDS_Shape shape = factory.createShape(internalCylinderGeometry(createdCylinder));
 
         createdCylinder.occBrepSaved = shapeIO.saveBREP(
             shape,
@@ -520,7 +579,7 @@ bool GeometryManager::createSphere(
     try {
         OCCGeometryFactory factory;
         OCCShapeIO shapeIO;
-        const TopoDS_Shape shape = factory.createShape(createdSphere);
+        const TopoDS_Shape shape = factory.createShape(internalSphereGeometry(createdSphere));
 
         createdSphere.occBrepSaved = shapeIO.saveBREP(
             shape,
@@ -610,7 +669,7 @@ bool GeometryManager::createPlateWithHole(
     try {
         OCCGeometryFactory factory;
         OCCShapeIO shapeIO;
-        const TopoDS_Shape shape = factory.createShape(createdPlate);
+        const TopoDS_Shape shape = factory.createShape(internalPlateWithHoleGeometry(createdPlate));
 
         createdPlate.occBrepSaved = shapeIO.saveBREP(
             shape,
@@ -966,9 +1025,9 @@ bool GeometryManager::transformGeometry(
         if (!readBoxFile(absoluteProjectFilePath(project, geometry.jsonFile), &box, errorMessage)) {
             return false;
         }
-        box.centerX = newCenter.x;
-        box.centerY = newCenter.y;
-        box.centerZ = newCenter.z;
+        box.centerX = UnitConverter::lengthFromMm(newCenter.x, box.unit);
+        box.centerY = UnitConverter::lengthFromMm(newCenter.y, box.unit);
+        box.centerZ = UnitConverter::lengthFromMm(newCenter.z, box.unit);
         box.length *= parameters.uniformScale;
         box.width *= parameters.uniformScale;
         box.height *= parameters.uniformScale;
@@ -980,9 +1039,9 @@ bool GeometryManager::transformGeometry(
         if (!readCylinderFile(absoluteProjectFilePath(project, geometry.jsonFile), &cylinder, errorMessage)) {
             return false;
         }
-        cylinder.centerX = newCenter.x;
-        cylinder.centerY = newCenter.y;
-        cylinder.centerZ = newCenter.z;
+        cylinder.centerX = UnitConverter::lengthFromMm(newCenter.x, cylinder.unit);
+        cylinder.centerY = UnitConverter::lengthFromMm(newCenter.y, cylinder.unit);
+        cylinder.centerZ = UnitConverter::lengthFromMm(newCenter.z, cylinder.unit);
         cylinder.radius *= parameters.uniformScale;
         cylinder.height *= parameters.uniformScale;
         if (!writeCylinderFile(cylinder, errorMessage)) {
@@ -993,9 +1052,9 @@ bool GeometryManager::transformGeometry(
         if (!readSphereFile(absoluteProjectFilePath(project, geometry.jsonFile), &sphere, errorMessage)) {
             return false;
         }
-        sphere.centerX = newCenter.x;
-        sphere.centerY = newCenter.y;
-        sphere.centerZ = newCenter.z;
+        sphere.centerX = UnitConverter::lengthFromMm(newCenter.x, sphere.unit);
+        sphere.centerY = UnitConverter::lengthFromMm(newCenter.y, sphere.unit);
+        sphere.centerZ = UnitConverter::lengthFromMm(newCenter.z, sphere.unit);
         sphere.radius *= parameters.uniformScale;
         if (!writeSphereFile(sphere, errorMessage)) {
             return false;
@@ -1206,6 +1265,17 @@ bool GeometryManager::writeBoxFile(const BoxGeometry &box, QString *errorMessage
     object.insert("visible", true);
     object.insert("center", centerObject(box.centerX, box.centerY, box.centerZ));
     object.insert("dimensions", dimensions);
+    object.insert("internalModel", internalLengthObject(box.unit));
+    object.insert("internalCenter", centerObject(
+        UnitConverter::lengthToMm(box.centerX, box.unit),
+        UnitConverter::lengthToMm(box.centerY, box.unit),
+        UnitConverter::lengthToMm(box.centerZ, box.unit)));
+    QJsonObject internalDimensions;
+    internalDimensions.insert("length", UnitConverter::lengthToMm(box.length, box.unit));
+    internalDimensions.insert("width", UnitConverter::lengthToMm(box.width, box.unit));
+    internalDimensions.insert("height", UnitConverter::lengthToMm(box.height, box.unit));
+    internalDimensions.insert("unit", "mm");
+    object.insert("internalDimensions", internalDimensions);
     object.insert("occ", occ);
     object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
 
@@ -1294,6 +1364,16 @@ bool GeometryManager::writeCylinderFile(const CylinderGeometry &cylinder, QStrin
     object.insert("visible", true);
     object.insert("center", centerObject(cylinder.centerX, cylinder.centerY, cylinder.centerZ));
     object.insert("dimensions", dimensions);
+    object.insert("internalModel", internalLengthObject(cylinder.unit));
+    object.insert("internalCenter", centerObject(
+        UnitConverter::lengthToMm(cylinder.centerX, cylinder.unit),
+        UnitConverter::lengthToMm(cylinder.centerY, cylinder.unit),
+        UnitConverter::lengthToMm(cylinder.centerZ, cylinder.unit)));
+    QJsonObject internalDimensions;
+    internalDimensions.insert("radius", UnitConverter::lengthToMm(cylinder.radius, cylinder.unit));
+    internalDimensions.insert("height", UnitConverter::lengthToMm(cylinder.height, cylinder.unit));
+    internalDimensions.insert("unit", "mm");
+    object.insert("internalDimensions", internalDimensions);
     object.insert("occ", occ);
     object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
 
@@ -1380,6 +1460,15 @@ bool GeometryManager::writeSphereFile(const SphereGeometry &sphere, QString *err
     object.insert("visible", true);
     object.insert("center", centerObject(sphere.centerX, sphere.centerY, sphere.centerZ));
     object.insert("dimensions", dimensions);
+    object.insert("internalModel", internalLengthObject(sphere.unit));
+    object.insert("internalCenter", centerObject(
+        UnitConverter::lengthToMm(sphere.centerX, sphere.unit),
+        UnitConverter::lengthToMm(sphere.centerY, sphere.unit),
+        UnitConverter::lengthToMm(sphere.centerZ, sphere.unit)));
+    QJsonObject internalDimensions;
+    internalDimensions.insert("radius", UnitConverter::lengthToMm(sphere.radius, sphere.unit));
+    internalDimensions.insert("unit", "mm");
+    object.insert("internalDimensions", internalDimensions);
     object.insert("occ", occ);
     object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
 
@@ -1462,6 +1551,18 @@ bool GeometryManager::writePlateWithHoleFile(const PlateWithHoleGeometry &plate,
     object.insert("visible", true);
     object.insert("center", centerObject(plate.centerX, plate.centerY, plate.centerZ));
     object.insert("dimensions", dimensions);
+    object.insert("internalModel", internalLengthObject(plate.unit));
+    object.insert("internalCenter", centerObject(
+        UnitConverter::lengthToMm(plate.centerX, plate.unit),
+        UnitConverter::lengthToMm(plate.centerY, plate.unit),
+        UnitConverter::lengthToMm(plate.centerZ, plate.unit)));
+    QJsonObject internalDimensions;
+    internalDimensions.insert("length", UnitConverter::lengthToMm(plate.length, plate.unit));
+    internalDimensions.insert("width", UnitConverter::lengthToMm(plate.width, plate.unit));
+    internalDimensions.insert("thickness", UnitConverter::lengthToMm(plate.thickness, plate.unit));
+    internalDimensions.insert("holeRadius", UnitConverter::lengthToMm(plate.holeRadius, plate.unit));
+    internalDimensions.insert("unit", "mm");
+    object.insert("internalDimensions", internalDimensions);
     object.insert("occ", occ);
     object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
 

@@ -22,6 +22,7 @@ struct MeshSetup
     GmshMeshAlgorithm3D algorithm = GmshMeshAlgorithm3D::Default;
     double minimumSize = 0.0;
     double maximumSize = 1.0;
+    QString meshSizeUnit = "mm";
     bool autoSize = true;
     QString localFaceGroupName;
     bool autoImportAfterGeneration = true;

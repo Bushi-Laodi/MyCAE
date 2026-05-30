@@ -4,9 +4,9 @@ QString UnitSystem::internalUnit(UnitQuantity quantity)
 {
     switch (quantity) {
     case UnitQuantity::Length:
-        return "m";
+        return "mm";
     case UnitQuantity::Stress:
-        return "Pa";
+        return "MPa";
     case UnitQuantity::Force:
         return "N";
     case UnitQuantity::Density:

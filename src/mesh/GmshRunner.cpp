@@ -1,5 +1,7 @@
 #include "GmshRunner.h"
 
+#include "units/UnitConverter.h"
+
 #include <QFileInfo>
 #include <QDir>
 #include <QProcess>
@@ -125,11 +127,19 @@ GmshRunResult GmshRunner::generate3DMesh(
     if (!meshSetup.autoSize) {
         if (meshSetup.minimumSize > 0.0) {
             arguments.append(QStringLiteral("-clmin"));
-            arguments.append(QString::number(meshSetup.minimumSize, 'g', 12));
+            arguments.append(QString::number(
+                UnitConverter::lengthToMm(meshSetup.minimumSize, meshSetup.meshSizeUnit),
+                'g',
+                12
+            ));
         }
         if (meshSetup.maximumSize > 0.0) {
             arguments.append(QStringLiteral("-clmax"));
-            arguments.append(QString::number(meshSetup.maximumSize, 'g', 12));
+            arguments.append(QString::number(
+                UnitConverter::lengthToMm(meshSetup.maximumSize, meshSetup.meshSizeUnit),
+                'g',
+                12
+            ));
         }
     }
     const int algorithmValue = gmshOptionValue(meshSetup.algorithm);

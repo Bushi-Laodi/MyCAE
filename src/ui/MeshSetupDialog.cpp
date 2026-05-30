@@ -108,6 +108,10 @@ void MeshSetupDialog::setupUi()
     configureSizeSpinBox(m_maximumSizeSpin);
     form->addRow(zh(u8"最大尺寸:"), m_maximumSizeSpin);
 
+    m_meshSizeUnitCombo = new QComboBox(this);
+    m_meshSizeUnitCombo->addItems({"mm", "m"});
+    form->addRow(zh(u8"尺寸单位:"), m_meshSizeUnitCombo);
+
     connect(m_autoSizeCheckBox, &QCheckBox::toggled, this, [this]() {
         updateSizeControlState();
         updateSizePreview();
@@ -116,6 +120,12 @@ void MeshSetupDialog::setupUi()
         updateSizePreview();
     });
     connect(m_maximumSizeSpin, qOverload<double>(&QDoubleSpinBox::valueChanged), this, [this]() {
+        updateSizePreview();
+    });
+    connect(m_meshSizeUnitCombo, &QComboBox::currentTextChanged, this, [this](const QString &unit) {
+        const QString suffix = " " + unit;
+        m_minimumSizeSpin->setSuffix(suffix);
+        m_maximumSizeSpin->setSuffix(suffix);
         updateSizePreview();
     });
 
@@ -218,6 +228,9 @@ MeshSetup MeshSetupDialog::meshSetup() const
     setup.autoSize = m_autoSizeCheckBox->isChecked();
     setup.minimumSize = setup.autoSize ? 0.0 : m_minimumSizeSpin->value();
     setup.maximumSize = setup.autoSize ? 0.0 : m_maximumSizeSpin->value();
+    setup.meshSizeUnit = m_meshSizeUnitCombo->currentText().trimmed().isEmpty()
+        ? QStringLiteral("mm")
+        : m_meshSizeUnitCombo->currentText().trimmed();
     return setup;
 }
 
@@ -229,6 +242,11 @@ void MeshSetupDialog::setMeshSetup(const MeshSetup &meshSetup)
     m_autoSizeCheckBox->setChecked(meshSetup.autoSize);
     m_minimumSizeSpin->setValue(meshSetup.minimumSize);
     m_maximumSizeSpin->setValue(meshSetup.maximumSize);
+    const QString meshSizeUnit = meshSetup.meshSizeUnit.trimmed().isEmpty()
+        ? QStringLiteral("mm")
+        : meshSetup.meshSizeUnit.trimmed();
+    const int unitIndex = m_meshSizeUnitCombo->findText(meshSizeUnit);
+    m_meshSizeUnitCombo->setCurrentIndex(unitIndex >= 0 ? unitIndex : 0);
     updateSizeControlState();
     updateSizePreview();
 }
@@ -284,21 +302,24 @@ void MeshSetupDialog::updateSizePreview()
     const QString algorithm = m_algorithmCombo
         ? m_algorithmCombo->currentText()
         : displayName(GmshMeshAlgorithm3D::Default);
+    const QString unit = m_meshSizeUnitCombo ? m_meshSizeUnitCombo->currentText() : QStringLiteral("mm");
     if (m_autoSizeCheckBox->isChecked()) {
         m_sizePreviewLabel->setText(
-            zh(u8"当前设置：%1，3D 算法 %2，自动尺寸。Gmsh 会根据几何包围盒和曲率估算全局网格尺寸。")
+            zh(u8"当前设置：%1，3D 算法 %2，自动尺寸。网格内部长度单位为 %3。Gmsh 会根据几何包围盒和曲率估算全局网格尺寸。")
                 .arg(elementType)
                 .arg(algorithm)
+                .arg(unit)
         );
         return;
     }
 
     m_sizePreviewLabel->setText(
-        zh(u8"当前设置：%1，3D 算法 %2，手动尺寸。最小尺寸 %3，最大尺寸 %4。局部加密尺寸可在下方按面组覆盖，修改后需要重新生成网格。")
+        zh(u8"当前设置：%1，3D 算法 %2，手动尺寸。最小尺寸 %3 %5，最大尺寸 %4 %5。局部加密尺寸可在下方按面组覆盖，修改后需要重新生成网格。")
             .arg(elementType)
             .arg(algorithm)
             .arg(m_minimumSizeSpin->value(), 0, 'g', 8)
             .arg(m_maximumSizeSpin->value(), 0, 'g', 8)
+            .arg(unit)
     );
 }
 

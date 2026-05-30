@@ -123,6 +123,15 @@ void BoundaryConditionDialog::setupUi()
     }
     form->addRow(zh(u8"材料 ID:"), m_materialIdCombo);
 
+    m_symmetryNormalCombo = new QComboBox(this);
+    m_symmetryNormalCombo->addItem("X normal (Ux = 0)", "X");
+    m_symmetryNormalCombo->addItem("Y normal (Uy = 0)", "Y");
+    m_symmetryNormalCombo->addItem("Z normal (Uz = 0)", "Z");
+    form->addRow(zh(u8"对称法向:"), m_symmetryNormalCombo);
+    if (QWidget *label = form->labelForField(m_symmetryNormalCombo)) {
+        label->setObjectName("symmetryNormalLabel");
+    }
+
     m_uxCheck = new QCheckBox("Ux", this);
     m_uyCheck = new QCheckBox("Uy", this);
     m_uzCheck = new QCheckBox("Uz", this);
@@ -187,6 +196,11 @@ void BoundaryConditionDialog::setupUi()
             QMessageBox::warning(this, zh(u8"验证"), zh(u8"指定位移至少需要启用一个自由度。"));
             return;
         }
+        if (type == BoundaryConditionType::SymmetryStructural
+                && m_symmetryNormalCombo->currentData().toString().trimmed().isEmpty()) {
+            QMessageBox::warning(this, zh(u8"验证"), zh(u8"结构对称约束需要选择法向。"));
+            return;
+        }
         accept();
     });
     connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -212,6 +226,7 @@ BoundaryCondition BoundaryConditionDialog::boundaryCondition() const
     bc.displacement.uy = m_uySpin->value();
     bc.displacement.uz = m_uzSpin->value();
     bc.displacement.unit = m_displacementUnitCombo->currentText().trimmed();
+    bc.symmetryNormal = m_symmetryNormalCombo->currentData().toString();
     bc.materialId = m_materialIdCombo->currentText().trimmed();
     return bc;
 }
@@ -238,6 +253,8 @@ void BoundaryConditionDialog::setBoundaryCondition(const BoundaryCondition &bc)
     m_uySpin->setValue(bc.displacement.uy);
     m_uzSpin->setValue(bc.displacement.uz);
     setComboCurrentText(m_displacementUnitCombo, bc.displacement.unit);
+    const int normalIndex = m_symmetryNormalCombo->findData(bc.symmetryNormal.trimmed().toUpper());
+    m_symmetryNormalCombo->setCurrentIndex(normalIndex >= 0 ? normalIndex : 2);
     updateDisplacementEditors();
     setComboCurrentText(m_materialIdCombo, bc.materialId);
 }
@@ -263,6 +280,7 @@ void BoundaryConditionDialog::updateDisplacementEditors()
 {
     const auto type = static_cast<BoundaryConditionType>(m_typeCombo->currentData().toInt());
     const bool enabled = type == BoundaryConditionType::Displacement;
+    const bool symmetryEnabled = type == BoundaryConditionType::SymmetryStructural;
     for (QWidget *widget : {
              static_cast<QWidget *>(m_uxCheck),
              static_cast<QWidget *>(m_uyCheck),
@@ -276,6 +294,10 @@ void BoundaryConditionDialog::updateDisplacementEditors()
     }
     if (QWidget *label = findChild<QWidget *>("displacementUnitLabel")) {
         label->setVisible(enabled);
+    }
+    m_symmetryNormalCombo->setVisible(symmetryEnabled);
+    if (QWidget *label = findChild<QWidget *>("symmetryNormalLabel")) {
+        label->setVisible(symmetryEnabled);
     }
 }
 

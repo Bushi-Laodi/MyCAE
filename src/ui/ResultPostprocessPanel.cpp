@@ -100,7 +100,11 @@ ResultPostprocessPanel::ResultPostprocessPanel(QWidget *parent)
         CalculiXResultFields::Uy,
         CalculiXResultFields::Uz,
         CalculiXResultFields::DisplacementMagnitude,
-        CalculiXResultFields::VonMisesStress
+        CalculiXResultFields::VonMisesStress,
+        CalculiXResultFields::RFx,
+        CalculiXResultFields::RFy,
+        CalculiXResultFields::RFz,
+        CalculiXResultFields::ReactionForceMagnitude
     });
     form->addRow(zh(u8"结果场"), m_fieldComboBox);
 

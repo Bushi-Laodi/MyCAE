@@ -61,6 +61,7 @@ private:
     QComboBox *m_geometryNameCombo = nullptr;
     QComboBox *m_faceGroupNameCombo = nullptr;
     QComboBox *m_materialIdCombo = nullptr;
+    QComboBox *m_symmetryNormalCombo = nullptr;
     QCheckBox *m_uxCheck = nullptr;
     QCheckBox *m_uyCheck = nullptr;
     QCheckBox *m_uzCheck = nullptr;

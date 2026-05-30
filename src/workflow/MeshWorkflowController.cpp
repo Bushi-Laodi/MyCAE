@@ -13,6 +13,7 @@
 #include "mesh/MeshToVtkConverter.h"
 #include "mesh/MshReader.h"
 #include "project/ProjectModel.h"
+#include "units/UnitConverter.h"
 #include "ui/RenderView.h"
 
 #include <vtkUnstructuredGrid.h>
@@ -203,10 +204,20 @@ QString meshOptionLogSuffix(const MeshSetup &meshSetup)
 
     if (!meshSetup.autoSize) {
         if (meshSetup.minimumSize > 0.0) {
-            suffix += QString(" -clmin %1").arg(meshSetup.minimumSize, 0, 'g', 12);
+            suffix += QString(" -clmin %1").arg(
+                UnitConverter::lengthToMm(meshSetup.minimumSize, meshSetup.meshSizeUnit),
+                0,
+                'g',
+                12
+            );
         }
         if (meshSetup.maximumSize > 0.0) {
-            suffix += QString(" -clmax %1").arg(meshSetup.maximumSize, 0, 'g', 12);
+            suffix += QString(" -clmax %1").arg(
+                UnitConverter::lengthToMm(meshSetup.maximumSize, meshSetup.meshSizeUnit),
+                0,
+                'g',
+                12
+            );
         }
     }
     const int algorithmValue = gmshOptionValue(meshSetup.algorithm);
@@ -359,11 +370,15 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
         : gmshCaseResult.meshInputFile;
     const MeshSetup &meshSetup = projectModel.meshRepository().meshSetup();
     const GmshRunResult gmshResult = gmshRunner.generate3DMesh(gmshInputPath, meshAbsPath, meshSetup);
+    const QString meshSizeUnit = meshSetup.meshSizeUnit.trimmed().isEmpty()
+        ? QStringLiteral("mm")
+        : meshSetup.meshSizeUnit.trimmed();
 
     workflowResult.logMessages.append(zh(u8"几何名称：") + geometry.name);
     workflowResult.logMessages.append(zh(u8"几何类型：") + geometry.type);
     workflowResult.logMessages.append(zh(u8"网格单元类型：") + displayName(meshSetup.elementType));
     workflowResult.logMessages.append(zh(u8"Gmsh 3D 算法：") + displayName(meshSetup.algorithm));
+    workflowResult.logMessages.append(zh(u8"网格尺寸单位：") + meshSizeUnit + zh(u8"，传递给 Gmsh 前统一转换为 mm。"));
     workflowResult.logMessages.append(meshSetup.autoSize
         ? zh(u8"网格尺寸模式：自动")
         : zh(u8"网格尺寸模式：手动，min=%1，max=%2")
@@ -414,6 +429,7 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     meshObject.meshAutoSize = meshSetup.autoSize;
     meshObject.meshMinimumSize = meshSetup.minimumSize;
     meshObject.meshMaximumSize = meshSetup.maximumSize;
+    meshObject.meshSizeUnit = meshSizeUnit;
     meshObject.meshAlgorithm = toString(meshSetup.algorithm);
     meshObject.localMeshControls = localMeshControlTexts(projectModel, geometry.name);
 

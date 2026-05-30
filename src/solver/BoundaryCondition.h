@@ -49,6 +49,7 @@ struct BoundaryCondition
     BoundaryConditionType type = BoundaryConditionType::Unknown;
     BoundaryTarget target;
     DisplacementConstraint displacement;
+    QString symmetryNormal = "Z";
     QString materialId;
     bool enabled = true;
 };

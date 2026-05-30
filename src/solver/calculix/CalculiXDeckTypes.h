@@ -24,5 +24,7 @@ struct CalculiXBoundaryExport
     std::vector<CalculiXElementSurfaceFace> surfaceFaces;
     bool writesFixedConstraint = false;
     bool writesDisplacementConstraint = false;
+    bool writesSymmetryConstraint = false;
+    int symmetryDof = 0;
     DisplacementConstraint displacement;
 };

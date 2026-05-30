@@ -1,6 +1,7 @@
 #include "solver/calculix/CalculiXDeckSectionWriter.h"
 
 #include "solver/calculix/CalculiXDeckFormatting.h"
+#include "units/UnitConverter.h"
 
 #include <QStringList>
 
@@ -73,6 +74,7 @@ void CalculiXDeckSectionWriter::appendHeading(
 {
     deck.appendLine("*HEADING");
     deck.appendLine("MyCAE CalculiX input deck: " + calculixSafeName(caseData.caseName, "simulation_case"));
+    deck.appendComment("Unit system: length=mm, force=N, stress=MPa (N/mm^2).");
     deck.appendComment(QString("Nodes: %1, tetra4 elements: %2, tetra10 elements: %3, surface triangles: %4")
         .arg(caseData.meshData.nodeCount())
         .arg(caseData.meshData.tetra4Count())
@@ -101,6 +103,10 @@ void CalculiXDeckSectionWriter::appendMaterial(
     deck.appendLine(QString("%1, %2")
         .arg(calculixNumber(material.youngModulus))
         .arg(calculixNumber(material.poissonRatio)));
+    if (material.thermalExpansion > 0.0) {
+        deck.appendLine("*EXPANSION");
+        deck.appendLine(calculixNumber(material.thermalExpansion));
+    }
     if (material.density > 0.0) {
         deck.appendLine("*DENSITY");
         deck.appendLine(calculixNumber(material.density));
@@ -173,18 +179,30 @@ bool CalculiXDeckSectionWriter::appendFixedConstraints(
             if (displacement.uxEnabled) {
                 deck.appendLine(QString("%1, 1, 1, %2")
                     .arg(boundary.nodeSetName)
-                    .arg(calculixNumber(displacement.ux)));
+                    .arg(calculixNumber(UnitConverter::lengthToMm(displacement.ux, displacement.unit))));
             }
             if (displacement.uyEnabled) {
                 deck.appendLine(QString("%1, 2, 2, %2")
                     .arg(boundary.nodeSetName)
-                    .arg(calculixNumber(displacement.uy)));
+                    .arg(calculixNumber(UnitConverter::lengthToMm(displacement.uy, displacement.unit))));
             }
             if (displacement.uzEnabled) {
                 deck.appendLine(QString("%1, 3, 3, %2")
                     .arg(boundary.nodeSetName)
-                    .arg(calculixNumber(displacement.uz)));
+                    .arg(calculixNumber(UnitConverter::lengthToMm(displacement.uz, displacement.unit))));
             }
+            wroteConstraint = true;
+        }
+        if (boundary.writesSymmetryConstraint) {
+            if (boundary.symmetryDof < 1 || boundary.symmetryDof > 3) {
+                errors.append("CalculiX export failed: structural symmetry boundary '" + boundary.boundaryName
+                    + "' has invalid normal axis.");
+                return false;
+            }
+            deck.appendLine("*BOUNDARY");
+            deck.appendLine(QString("%1, %2, %2, 0.0")
+                .arg(boundary.nodeSetName)
+                .arg(boundary.symmetryDof));
             wroteConstraint = true;
         }
     }
@@ -202,6 +220,8 @@ void CalculiXDeckSectionWriter::appendResultRequests(CalculiXInputDeck &deck) co
     deck.appendLine("S");
     deck.appendLine("*NODE PRINT, NSET=NALL");
     deck.appendLine("U");
+    deck.appendLine("*NODE PRINT, NSET=NALL");
+    deck.appendLine("RF");
     deck.appendLine("*EL PRINT, ELSET=EALL");
     deck.appendLine("S");
     deck.appendLine("*END STEP");
