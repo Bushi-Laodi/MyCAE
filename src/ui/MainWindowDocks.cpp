@@ -5,6 +5,7 @@
 #include "ui/ProjectTreePanel.h"
 #include "ui/PropertyPanel.h"
 #include "ui/RenderView.h"
+#include "ui/RenderSettingsPanel.h"
 #include "ui/ResultPostprocessPanel.h"
 
 #include <QDockWidget>
@@ -225,6 +226,15 @@ MainWindowDockWidgets MainWindowDockBuilder::build(QMainWindow *window, const Ma
     );
     window->addDockWidget(Qt::RightDockWidgetArea, postprocessDock);
     window->tabifyDockWidget(propertyDock, postprocessDock);
+
+    auto *renderSettingsDock = new QDockWidget(zh(u8"渲染设置"), window);
+    renderSettingsDock->setMinimumWidth(300);
+    widgets.renderSettingsPanel = new RenderSettingsPanel(renderSettingsDock);
+    renderSettingsDock->setWidget(
+        createDockScrollArea(widgets.renderSettingsPanel, renderSettingsDock, "renderSettings.scrollArea", 300)
+    );
+    window->addDockWidget(Qt::RightDockWidgetArea, renderSettingsDock);
+    window->tabifyDockWidget(propertyDock, renderSettingsDock);
 
     auto *logDock = new QDockWidget(zh(u8"日志"), window);
     widgets.logPanel = new LogPanel(logDock);

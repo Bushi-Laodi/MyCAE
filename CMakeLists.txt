@@ -239,6 +239,7 @@ qt_add_executable(MyCAE
     src/picking/PickSelection.h
     src/render/RenderHighlightController.cpp
     src/render/RenderHighlightController.h
+    src/render/RenderDisplaySettings.h
     src/render/VtkFaceGeometry.cpp
     src/render/VtkFaceGeometry.h
     src/render/VtkFaceReferenceResolver.cpp
@@ -417,6 +418,8 @@ qt_add_executable(MyCAE
     src/ui/ResultPostprocessPanel.h
     src/ui/ResultPostprocessText.cpp
     src/ui/ResultPostprocessText.h
+    src/ui/RenderSettingsPanel.cpp
+    src/ui/RenderSettingsPanel.h
     src/ui/SampleValidationDialog.cpp
     src/ui/SampleValidationDialog.h
     src/ui/SelectionInteractionController.cpp

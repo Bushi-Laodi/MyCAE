@@ -6,6 +6,7 @@
 #include "picking/PickController.h"
 #include "project/ProjectModel.h"
 #include "project/ProjectManager.h"
+#include "render/RenderDisplaySettings.h"
 #include "result/ResultAnimationController.h"
 #include "solver/plugin/SolverPluginManager.h"
 #include "ui/ActionRegistry.h"
@@ -85,6 +86,9 @@ private:
     void validateSamples();
     void refreshDiagnosticsPanel();
     void refreshResultViews();
+    void applyRenderDisplaySettings(const RenderDisplaySettings &settings);
+    void resetRenderDisplaySettings();
+    void syncRenderSettingsPanel();
     void handleUndoStackFaceGroupsChanged(const QString &selectionId);
     void handleFacePicked(const PickSelection &selection);
     void handleResultProbePicked(const ResultProbe &probe);

@@ -120,6 +120,8 @@ VtkRenderCanvas::~VtkRenderCanvas()
     m_highlightActors.clear();
     m_geometrySceneActors.clear();
     m_primaryActor = nullptr;
+    m_resultActor = nullptr;
+    m_undeformedOverlayActor = nullptr;
     m_currentResultGrid = nullptr;
     m_currentPolyData = nullptr;
     m_renderer = nullptr;
@@ -164,6 +166,7 @@ void VtkRenderCanvas::showBoxGeometry(const BoxGeometry &box)
     actor->GetProperty()->SetEdgeColor(0.18, 0.24, 0.32);
     actor->GetProperty()->SetEdgeVisibility(effectiveGeometryEdgesVisible());
     actor->GetProperty()->SetLineWidth(1.5);
+    actor->GetProperty()->SetOpacity(m_renderSettings.primaryOpacity);
 
     resetSceneState();
     m_currentPolyData = polyData;
@@ -190,6 +193,7 @@ void VtkRenderCanvas::showOccShape(const TopoDS_Shape &shape, const QString &geo
     actor->GetProperty()->SetEdgeColor(0.12, 0.18, 0.24);
     actor->GetProperty()->SetEdgeVisibility(effectiveGeometryEdgesVisible());
     actor->GetProperty()->SetLineWidth(1.2);
+    actor->GetProperty()->SetOpacity(m_renderSettings.primaryOpacity);
 
     resetSceneState();
     m_currentPolyData = polyData;
@@ -232,14 +236,14 @@ void VtkRenderCanvas::showGeometryScene(
         const bool selected = item.name == primaryName;
         if (selected) {
             actor->GetProperty()->SetColor(1.0, 0.82, 0.18);
-            actor->GetProperty()->SetOpacity(0.96);
+            actor->GetProperty()->SetOpacity(m_renderSettings.primaryOpacity);
             actor->GetProperty()->SetLineWidth(1.8);
             m_currentPolyData = polyData;
             m_primaryActor = actor;
             m_activeGeometryName = item.name;
         } else {
             actor->GetProperty()->SetColor(0.62, 0.78, 0.95);
-            actor->GetProperty()->SetOpacity(0.38);
+            actor->GetProperty()->SetOpacity(std::min(m_renderSettings.primaryOpacity, 0.38));
         }
 
         m_geometrySceneActors.push_back(actor);
@@ -267,9 +271,9 @@ void VtkRenderCanvas::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid)
     actor->SetMapper(mapper);
     actor->GetProperty()->SetColor(0.42, 0.72, 0.54);
     actor->GetProperty()->SetEdgeColor(0.08, 0.16, 0.11);
-    actor->GetProperty()->EdgeVisibilityOn();
+    actor->GetProperty()->SetEdgeVisibility(m_renderSettings.meshEdgesVisible);
     actor->GetProperty()->SetLineWidth(0.8);
-    actor->GetProperty()->SetOpacity(m_meshTransparent ? 0.38 : 1.0);
+    actor->GetProperty()->SetOpacity(m_renderSettings.primaryOpacity);
 
     resetSceneState();
     m_renderer->RemoveAllViewProps();
@@ -282,17 +286,92 @@ void VtkRenderCanvas::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid)
 
 void VtkRenderCanvas::setMeshTransparent(bool transparent)
 {
-    if (m_meshTransparent == transparent) {
-        return;
-    }
-
-    m_meshTransparent = transparent;
-    applyMeshOpacity();
+    setPrimaryOpacity(transparent ? 0.38 : 1.0);
 }
 
 bool VtkRenderCanvas::meshTransparent() const
 {
-    return m_meshTransparent;
+    return m_renderSettings.primaryOpacity < 0.99;
+}
+
+void VtkRenderCanvas::setRenderDisplaySettings(const RenderDisplaySettings &settings)
+{
+    m_renderSettings = settings;
+    m_renderSettings.primaryOpacity = clampedOpacity(settings.primaryOpacity);
+    m_renderSettings.resultOpacity = clampedOpacity(settings.resultOpacity);
+    m_renderSettings.undeformedOverlayOpacity = clampedOpacity(settings.undeformedOverlayOpacity);
+    m_renderSettings.highlightOpacity = clampedOpacity(settings.highlightOpacity);
+    applyRenderDisplaySettings();
+}
+
+RenderDisplaySettings VtkRenderCanvas::renderDisplaySettings() const
+{
+    return m_renderSettings;
+}
+
+void VtkRenderCanvas::resetRenderDisplaySettings()
+{
+    setRenderDisplaySettings(RenderDisplaySettings{});
+}
+
+void VtkRenderCanvas::setPrimaryOpacity(double opacity)
+{
+    const double clamped = clampedOpacity(opacity);
+    if (std::abs(m_renderSettings.primaryOpacity - clamped) <= 1.0e-12) {
+        return;
+    }
+    m_renderSettings.primaryOpacity = clamped;
+    applyRenderDisplaySettings();
+}
+
+double VtkRenderCanvas::primaryOpacity() const
+{
+    return m_renderSettings.primaryOpacity;
+}
+
+void VtkRenderCanvas::setResultOpacity(double opacity)
+{
+    const double clamped = clampedOpacity(opacity);
+    if (std::abs(m_renderSettings.resultOpacity - clamped) <= 1.0e-12) {
+        return;
+    }
+    m_renderSettings.resultOpacity = clamped;
+    applyRenderDisplaySettings();
+}
+
+double VtkRenderCanvas::resultOpacity() const
+{
+    return m_renderSettings.resultOpacity;
+}
+
+void VtkRenderCanvas::setUndeformedOverlayOpacity(double opacity)
+{
+    const double clamped = clampedOpacity(opacity);
+    if (std::abs(m_renderSettings.undeformedOverlayOpacity - clamped) <= 1.0e-12) {
+        return;
+    }
+    m_renderSettings.undeformedOverlayOpacity = clamped;
+    applyRenderDisplaySettings();
+}
+
+double VtkRenderCanvas::undeformedOverlayOpacity() const
+{
+    return m_renderSettings.undeformedOverlayOpacity;
+}
+
+void VtkRenderCanvas::setHighlightOpacity(double opacity)
+{
+    const double clamped = clampedOpacity(opacity);
+    if (std::abs(m_renderSettings.highlightOpacity - clamped) <= 1.0e-12) {
+        return;
+    }
+    m_renderSettings.highlightOpacity = clamped;
+    applyRenderDisplaySettings();
+}
+
+double VtkRenderCanvas::highlightOpacity() const
+{
+    return m_renderSettings.highlightOpacity;
 }
 
 void VtkRenderCanvas::showResultGrid(
@@ -340,7 +419,7 @@ void VtkRenderCanvas::showResultGrid(
     actor->GetProperty()->SetEdgeColor(0.08, 0.10, 0.12);
     actor->GetProperty()->SetEdgeVisibility(showMeshEdges);
     actor->GetProperty()->SetLineWidth(0.45);
-    actor->GetProperty()->SetOpacity(0.96);
+    actor->GetProperty()->SetOpacity(m_renderSettings.resultOpacity);
 
     vtkNew<vtkScalarBarActor> scalarBar;
     scalarBar->SetLookupTable(lookupTable);
@@ -354,6 +433,7 @@ void VtkRenderCanvas::showResultGrid(
     resetSceneState();
     m_currentResultGrid = grid;
     m_primaryActor = actor;
+    m_resultActor = actor;
     m_scalarBarActor = scalarBar;
     m_renderer->RemoveAllViewProps();
     if (overlayGrid) {
@@ -363,10 +443,11 @@ void VtkRenderCanvas::showResultGrid(
         vtkNew<vtkActor> overlayActor;
         overlayActor->SetMapper(overlayMapper);
         overlayActor->GetProperty()->SetColor(0.88, 0.88, 0.88);
-        overlayActor->GetProperty()->SetOpacity(0.18);
+        overlayActor->GetProperty()->SetOpacity(m_renderSettings.undeformedOverlayOpacity);
         overlayActor->GetProperty()->SetEdgeColor(0.15, 0.15, 0.15);
         overlayActor->GetProperty()->EdgeVisibilityOn();
         overlayActor->GetProperty()->SetLineWidth(0.35);
+        m_undeformedOverlayActor = overlayActor;
         m_renderer->AddActor(overlayActor);
     }
     m_renderer->AddActor(m_primaryActor);
@@ -385,22 +466,22 @@ void VtkRenderCanvas::showResultGrid(
 
 void VtkRenderCanvas::setGeometryEdgesVisible(bool visible)
 {
-    if (m_geometryEdgesVisible == visible) {
+    if (m_renderSettings.geometryEdgesVisible == visible) {
         return;
     }
 
-    m_geometryEdgesVisible = visible;
-    applyPrimaryGeometryEdgeVisibility();
+    m_renderSettings.geometryEdgesVisible = visible;
+    applyRenderDisplaySettings();
 }
 
 bool VtkRenderCanvas::geometryEdgesVisible() const
 {
-    return m_geometryEdgesVisible;
+    return m_renderSettings.geometryEdgesVisible;
 }
 
 void VtkRenderCanvas::setOrientationMarkerVisible(bool visible)
 {
-    m_orientationMarkerVisible = visible;
+    m_renderSettings.orientationMarkerVisible = visible;
     if (m_orientationMarker) {
         m_orientationMarker->SetEnabled(visible ? 1 : 0);
     }
@@ -409,7 +490,7 @@ void VtkRenderCanvas::setOrientationMarkerVisible(bool visible)
 
 bool VtkRenderCanvas::orientationMarkerVisible() const
 {
-    return m_orientationMarkerVisible;
+    return m_renderSettings.orientationMarkerVisible;
 }
 
 void VtkRenderCanvas::setPickMode(PickMode mode)
@@ -438,11 +519,13 @@ void VtkRenderCanvas::clearHighlight()
 void VtkRenderCanvas::highlightFaceGroup(const FaceGroup &faceGroup, const VtkHighlightStyle &style)
 {
     clearHighlight();
+    VtkHighlightStyle effectiveStyle = style;
+    effectiveStyle.opacity = m_renderSettings.highlightOpacity;
     vtkSmartPointer<vtkActor> actor = VtkHighlightActorFactory::createFaceHighlightActor(
         m_currentPolyData,
         faceGroup.faceIndices,
         faceGroup.faceReferences,
-        style
+        effectiveStyle
     );
     if (actor) {
         m_highlightActors.push_back(actor);
@@ -454,7 +537,10 @@ void VtkRenderCanvas::highlightFaceGroup(const FaceGroup &faceGroup, const VtkHi
 void VtkRenderCanvas::highlightFaceIndices(const std::vector<int> &faceIndices)
 {
     clearHighlight();
-    vtkSmartPointer<vtkActor> actor = VtkHighlightActorFactory::createFaceHighlightActor(m_currentPolyData, faceIndices);
+    VtkHighlightStyle style;
+    style.opacity = m_renderSettings.highlightOpacity;
+    vtkSmartPointer<vtkActor> actor =
+        VtkHighlightActorFactory::createFaceHighlightActor(m_currentPolyData, faceIndices, {}, style);
     if (actor) {
         m_highlightActors.push_back(actor);
         m_renderer->AddActor(actor);
@@ -604,6 +690,8 @@ void VtkRenderCanvas::resetSceneState()
     m_currentPolyData = nullptr;
     m_currentResultGrid = nullptr;
     m_primaryActor = nullptr;
+    m_resultActor = nullptr;
+    m_undeformedOverlayActor = nullptr;
     m_primaryActorIsMesh = false;
     m_primaryActorUsesGeometryEdges = false;
     m_geometrySceneActors.clear();
@@ -631,13 +719,13 @@ void VtkRenderCanvas::initializeOrientationMarker()
     m_orientationMarker->SetOrientationMarker(axes);
     m_orientationMarker->SetInteractor(interactor);
     m_orientationMarker->SetViewport(0.015, 0.015, 0.18, 0.18);
-    m_orientationMarker->SetEnabled(m_orientationMarkerVisible ? 1 : 0);
+    m_orientationMarker->SetEnabled(m_renderSettings.orientationMarkerVisible ? 1 : 0);
     m_orientationMarker->InteractiveOff();
 }
 
 bool VtkRenderCanvas::effectiveGeometryEdgesVisible() const
 {
-    return m_geometryEdgesVisible || m_pickMode == PickMode::Face;
+    return m_renderSettings.geometryEdgesVisible || m_pickMode == PickMode::Face;
 }
 
 void VtkRenderCanvas::applyPrimaryGeometryEdgeVisibility()
@@ -661,14 +749,55 @@ void VtkRenderCanvas::applyGeometrySceneEdgeVisibility()
     }
 }
 
-void VtkRenderCanvas::applyMeshOpacity()
+void VtkRenderCanvas::applyRenderDisplaySettings()
 {
-    if (!m_primaryActor || !m_primaryActorIsMesh) {
-        return;
+    if (m_primaryActor) {
+        if (m_resultActor.GetPointer() == m_primaryActor.GetPointer()) {
+            m_primaryActor->GetProperty()->SetOpacity(m_renderSettings.resultOpacity);
+        } else {
+            m_primaryActor->GetProperty()->SetOpacity(m_renderSettings.primaryOpacity);
+        }
+        if (m_primaryActorIsMesh) {
+            m_primaryActor->GetProperty()->SetEdgeVisibility(m_renderSettings.meshEdgesVisible);
+        }
     }
 
-    m_primaryActor->GetProperty()->SetOpacity(m_meshTransparent ? 0.38 : 1.0);
+    if (m_resultActor) {
+        m_resultActor->GetProperty()->SetOpacity(m_renderSettings.resultOpacity);
+    }
+    if (m_undeformedOverlayActor) {
+        m_undeformedOverlayActor->GetProperty()->SetOpacity(m_renderSettings.undeformedOverlayOpacity);
+    }
+
+    const bool geometryEdgesVisible = effectiveGeometryEdgesVisible();
+    for (vtkActor *actor : m_geometrySceneActors) {
+        if (!actor) {
+            continue;
+        }
+        actor->GetProperty()->SetEdgeVisibility(geometryEdgesVisible);
+        actor->GetProperty()->SetOpacity(
+            actor == m_primaryActor.GetPointer()
+                ? m_renderSettings.primaryOpacity
+                : std::min(m_renderSettings.primaryOpacity, 0.38)
+        );
+    }
+
+    if (m_primaryActor && m_primaryActorUsesGeometryEdges) {
+        m_primaryActor->GetProperty()->SetEdgeVisibility(geometryEdgesVisible);
+    }
+    if (m_orientationMarker) {
+        m_orientationMarker->SetEnabled(m_renderSettings.orientationMarkerVisible ? 1 : 0);
+    }
+
     requestRender();
+}
+
+double VtkRenderCanvas::clampedOpacity(double value) const
+{
+    if (std::isnan(value)) {
+        return 1.0;
+    }
+    return std::clamp(value, 0.10, 1.0);
 }
 
 void VtkRenderCanvas::handlePickAtRenderWindowPosition(int x, int y)

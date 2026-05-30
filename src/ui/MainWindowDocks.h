@@ -7,6 +7,7 @@ class LogPanel;
 class ProjectTreePanel;
 class PropertyPanel;
 class QMainWindow;
+class RenderSettingsPanel;
 class RenderView;
 class ResultPostprocessPanel;
 class QString;
@@ -20,6 +21,7 @@ struct MainWindowDockWidgets
     DiagnosticPanel *diagnosticPanel = nullptr;
     PropertyPanel *propertyPanel = nullptr;
     ResultPostprocessPanel *resultPostprocessPanel = nullptr;
+    RenderSettingsPanel *renderSettingsPanel = nullptr;
     LogPanel *logPanel = nullptr;
     RenderView *renderView = nullptr;
 };

@@ -234,10 +234,10 @@ MainWindowActions MainWindowActionBuilder::build(
         makeMeshCommand(context, MeshCommandType::Show)
     );
 
-    actions.showMeshTransparent = new QAction(zh(u8"网格透明显示"), window);
+    actions.showMeshTransparent = new QAction(zh(u8"主模型半透明"), window);
     actions.showMeshTransparent->setCheckable(true);
-    actions.showMeshTransparent->setChecked(true);
-    actions.showMeshTransparent->setStatusTip(zh(u8"切换网格模型的半透明显示，便于观察内部单元和背面轮廓"));
+    actions.showMeshTransparent->setChecked(false);
+    actions.showMeshTransparent->setStatusTip(zh(u8"在 100% 和 38% 主模型不透明度之间快速切换"));
     actionRegistry.registerActionCommand(
         CommandToggleMeshTransparency,
         actions.showMeshTransparent,

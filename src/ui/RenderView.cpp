@@ -131,6 +131,73 @@ bool RenderView::meshTransparent() const
     return m_canvas ? m_canvas->meshTransparent() : false;
 }
 
+void RenderView::setRenderDisplaySettings(const RenderDisplaySettings &settings)
+{
+    if (m_canvas) {
+        m_canvas->setRenderDisplaySettings(settings);
+    }
+}
+
+RenderDisplaySettings RenderView::renderDisplaySettings() const
+{
+    return m_canvas ? m_canvas->renderDisplaySettings() : RenderDisplaySettings{};
+}
+
+void RenderView::resetRenderDisplaySettings()
+{
+    if (m_canvas) {
+        m_canvas->resetRenderDisplaySettings();
+    }
+}
+
+void RenderView::setPrimaryOpacity(double opacity)
+{
+    if (m_canvas) {
+        m_canvas->setPrimaryOpacity(opacity);
+    }
+}
+
+double RenderView::primaryOpacity() const
+{
+    return m_canvas ? m_canvas->primaryOpacity() : RenderDisplaySettings{}.primaryOpacity;
+}
+
+void RenderView::setResultOpacity(double opacity)
+{
+    if (m_canvas) {
+        m_canvas->setResultOpacity(opacity);
+    }
+}
+
+double RenderView::resultOpacity() const
+{
+    return m_canvas ? m_canvas->resultOpacity() : RenderDisplaySettings{}.resultOpacity;
+}
+
+void RenderView::setUndeformedOverlayOpacity(double opacity)
+{
+    if (m_canvas) {
+        m_canvas->setUndeformedOverlayOpacity(opacity);
+    }
+}
+
+double RenderView::undeformedOverlayOpacity() const
+{
+    return m_canvas ? m_canvas->undeformedOverlayOpacity() : RenderDisplaySettings{}.undeformedOverlayOpacity;
+}
+
+void RenderView::setHighlightOpacity(double opacity)
+{
+    if (m_canvas) {
+        m_canvas->setHighlightOpacity(opacity);
+    }
+}
+
+double RenderView::highlightOpacity() const
+{
+    return m_canvas ? m_canvas->highlightOpacity() : RenderDisplaySettings{}.highlightOpacity;
+}
+
 void RenderView::showResultGrid(
     vtkSmartPointer<vtkUnstructuredGrid> grid,
     vtkSmartPointer<vtkUnstructuredGrid> overlayGrid,

@@ -2,6 +2,7 @@
 
 #include "picking/PickMode.h"
 #include "picking/PickSelection.h"
+#include "render/RenderDisplaySettings.h"
 #include "render/VtkHighlightActorFactory.h"
 #include "result/ResultExtrema.h"
 #include "result/ResultProbe.h"
@@ -39,6 +40,17 @@ public:
     void showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const QString &title, const QString &subtitle);
     void setMeshTransparent(bool transparent);
     bool meshTransparent() const;
+    void setRenderDisplaySettings(const RenderDisplaySettings &settings);
+    RenderDisplaySettings renderDisplaySettings() const;
+    void resetRenderDisplaySettings();
+    void setPrimaryOpacity(double opacity);
+    double primaryOpacity() const;
+    void setResultOpacity(double opacity);
+    double resultOpacity() const;
+    void setUndeformedOverlayOpacity(double opacity);
+    double undeformedOverlayOpacity() const;
+    void setHighlightOpacity(double opacity);
+    double highlightOpacity() const;
     void showResultGrid(
         vtkSmartPointer<vtkUnstructuredGrid> grid,
         vtkSmartPointer<vtkUnstructuredGrid> overlayGrid,

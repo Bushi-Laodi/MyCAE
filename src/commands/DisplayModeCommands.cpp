@@ -3,6 +3,8 @@
 #include "commands/CommandUtilities.h"
 #include "ui/RenderView.h"
 
+#include <QString>
+
 namespace
 {
 class ToggleGeometryEdgesCommand final : public AppCommand
@@ -74,11 +76,12 @@ public:
             return;
         }
 
-        const bool enabled = !m_context.renderView->meshTransparent();
-        m_context.renderView->setMeshTransparent(enabled);
+        const bool makeTransparent = m_context.renderView->primaryOpacity() >= 0.99;
+        m_context.renderView->setMeshTransparent(makeTransparent);
+        const int percent = makeTransparent ? 38 : 100;
         writeLogMessages(
             m_context,
-            {enabled ? "Mesh transparent display enabled." : "Mesh transparent display disabled."}
+            {QString::fromUtf8(u8"主模型不透明度已设置为 %1%。").arg(percent)}
         );
     }
 

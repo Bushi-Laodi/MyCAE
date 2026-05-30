@@ -12,6 +12,7 @@
 #include "ui/MainWindowToolBarBuilder.h"
 #include "ui/MainWindowViewController.h"
 #include "ui/RecentProjectController.h"
+#include "ui/RenderSettingsPanel.h"
 #include "ui/ResultPostprocessPanel.h"
 #include "ui/SelectionInteractionController.h"
 
@@ -145,6 +146,25 @@ void MainWindow::createDockWidgets()
     callbacks.resultDeleteRequested = [this]() { deleteSelectedResultHistory(); };
 
     m_docks = MainWindowDockBuilder::build(this, callbacks);
+    if (m_docks.renderSettingsPanel && m_docks.renderView) {
+        m_docks.renderSettingsPanel->setSettings(m_docks.renderView->renderDisplaySettings());
+        connect(
+            m_docks.renderSettingsPanel,
+            &RenderSettingsPanel::settingsChanged,
+            this,
+            [this](const RenderDisplaySettings &settings) {
+                applyRenderDisplaySettings(settings);
+            }
+        );
+        connect(
+            m_docks.renderSettingsPanel,
+            &RenderSettingsPanel::resetRequested,
+            this,
+            [this]() {
+                resetRenderDisplaySettings();
+            }
+        );
+    }
 }
 
 void MainWindow::installLifecycle()
@@ -276,6 +296,33 @@ void MainWindow::refreshResultViews()
     viewController().refreshResultViews();
 }
 
+void MainWindow::applyRenderDisplaySettings(const RenderDisplaySettings &settings)
+{
+    if (m_docks.renderView) {
+        m_docks.renderView->setRenderDisplaySettings(settings);
+    }
+    updateActionStates();
+}
+
+void MainWindow::resetRenderDisplaySettings()
+{
+    const RenderDisplaySettings defaults;
+    if (m_docks.renderView) {
+        m_docks.renderView->setRenderDisplaySettings(defaults);
+    }
+    if (m_docks.renderSettingsPanel) {
+        m_docks.renderSettingsPanel->setSettings(defaults);
+    }
+    updateActionStates();
+}
+
+void MainWindow::syncRenderSettingsPanel()
+{
+    if (m_docks.renderSettingsPanel && m_docks.renderView) {
+        m_docks.renderSettingsPanel->setSettings(m_docks.renderView->renderDisplaySettings());
+    }
+}
+
 void MainWindow::handleUndoStackFaceGroupsChanged(const QString &selectionId)
 {
     faceGroupRestoreController().restoreAfterUndoStackChange(selectionId);
@@ -331,6 +378,7 @@ void MainWindow::updateActionStates()
         m_docks.renderView,
         m_docks.resultPostprocessPanel
     );
+    syncRenderSettingsPanel();
 }
 
 WorkflowCommandContext MainWindow::workflowCommandContext()
