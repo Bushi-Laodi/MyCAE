@@ -94,6 +94,12 @@ LoadType selectedLoadType(const QComboBox *combo)
 
 QString loadTypeLabel(LoadType type)
 {
+    if (type == LoadType::SurfaceForce) {
+        return zh(u8"节点等效力 / 等效面力");
+    }
+    if (type == LoadType::Temperature) {
+        return zh(u8"温度（暂不开放求解）");
+    }
     switch (type) {
     case LoadType::SurfaceForce:
         return zh(u8"面力");

@@ -144,6 +144,7 @@ SectionAssignmentDialogOptions sectionAssignmentDialogOptions(const ProjectModel
 {
     SectionAssignmentDialogOptions options;
     const SolverRepository &solverRepository = projectModel.solverRepository();
+    options.projectRootPath = projectModel.project().rootPath;
 
     for (const Material &material : solverRepository.materials()) {
         if (isStructuralMaterial(material)) {
@@ -175,11 +176,18 @@ SectionAssignmentDialogOptions sectionAssignmentDialogOptions(const ProjectModel
         options.defaultGeometryName = options.geometries.front().name;
     }
     if (options.defaultMeshName.isEmpty() && !options.defaultGeometryName.isEmpty()) {
+        const MeshObject *latestMesh = nullptr;
         for (const MeshObject &mesh : options.meshes) {
             if (mesh.sourceGeometryName == options.defaultGeometryName) {
-                options.defaultMeshName = mesh.name;
-                break;
+                if (!latestMesh
+                        || mesh.createdAt > latestMesh->createdAt
+                        || (mesh.createdAt == latestMesh->createdAt && mesh.name > latestMesh->name)) {
+                    latestMesh = &mesh;
+                }
             }
+        }
+        if (latestMesh) {
+            options.defaultMeshName = latestMesh->name;
         }
     }
     if (options.defaultMeshName.isEmpty() && options.meshes.size() == 1) {

@@ -81,6 +81,55 @@ QString absoluteProjectPath(const ProjectModel &projectModel, const QString &pat
         : QDir(projectModel.project().rootPath).filePath(path);
 }
 
+const MeshObject *latestMeshForGeometry(const ProjectModel &projectModel, const QString &geometryName)
+{
+    const MeshObject *latestMesh = nullptr;
+    for (const MeshObject &meshObject : projectModel.meshRepository().meshObjects()) {
+        if (meshObject.sourceGeometryName != geometryName) {
+            continue;
+        }
+        if (!latestMesh
+                || meshObject.createdAt > latestMesh->createdAt
+                || (meshObject.createdAt == latestMesh->createdAt && meshObject.name > latestMesh->name)) {
+            latestMesh = &meshObject;
+        }
+    }
+    return latestMesh;
+}
+
+bool readMeshDataForMeshObject(
+    const ProjectModel &projectModel,
+    const MeshObject &meshObject,
+    MeshData &meshData,
+    QString &meshAbsPath,
+    MeshWorkflowResult &result
+)
+{
+    meshAbsPath = absoluteProjectPath(projectModel, meshObject.mshFile);
+    result.logMessages.append(zh(u8"当前读取网格：") + meshObject.name);
+    result.logMessages.append(zh(u8"MSH 路径：") + meshAbsPath);
+
+    if (meshObject.mshFile.trimmed().isEmpty() || !QFileInfo::exists(meshAbsPath)) {
+        result.logMessages.append(zh(u8"MSH 文件不存在。"));
+        return false;
+    }
+
+    meshData = MeshData{};
+    meshData.name = meshObject.name;
+    meshData.sourceGeometryName = meshObject.sourceGeometryName;
+    meshData.mshFilePath = meshAbsPath;
+
+    QString errorMessage;
+    if (!MshReader::readMsh2(meshAbsPath, meshData, &errorMessage)) {
+        result.logMessages.append(zh(u8"无法读取 MSH：") + errorMessage);
+        return false;
+    }
+    meshData.name = meshObject.name;
+    meshData.sourceGeometryName = meshObject.sourceGeometryName;
+    meshData.mshFilePath = meshAbsPath;
+    return true;
+}
+
 void appendGmshRunLog(
     MeshWorkflowResult &workflowResult,
     const GmshRunner &gmshRunner,
@@ -405,6 +454,80 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
 MeshWorkflowResult MeshWorkflowController::readMeshInfo(ProjectModel &projectModel) const
 {
     MeshWorkflowResult workflowResult;
+    {
+        if (!projectModel.hasProject()) {
+            workflowResult.logMessages.append(zh(u8"读取网格失败：请先创建或打开工程。"));
+            return workflowResult;
+        }
+
+        MeshObject *targetMesh = nullptr;
+        if (projectModel.selection().kind == SelectionKind::Mesh) {
+            for (MeshObject &meshObject : projectModel.meshObjects()) {
+                if (meshObject.name == projectModel.selection().id) {
+                    targetMesh = &meshObject;
+                    break;
+                }
+            }
+            if (!targetMesh) {
+                workflowResult.logMessages.append(zh(u8"读取网格失败：当前选择的网格对象不存在：") + projectModel.selection().id);
+                return workflowResult;
+            }
+        } else if (const GeometryObject *selectedGeometry = projectModel.geometryForSelection()) {
+            const MeshObject *latestMesh = latestMeshForGeometry(projectModel, selectedGeometry->name);
+            if (!latestMesh) {
+                workflowResult.logMessages.append(zh(u8"读取网格失败：当前几何没有关联的网格：") + selectedGeometry->name);
+                return workflowResult;
+            }
+            for (MeshObject &meshObject : projectModel.meshObjects()) {
+                if (meshObject.name == latestMesh->name) {
+                    targetMesh = &meshObject;
+                    break;
+                }
+            }
+            workflowResult.logMessages.append(
+                zh(u8"当前选择是几何体，已选择该几何下最新网格进行质量更新：") + latestMesh->name
+            );
+        } else {
+            workflowResult.logMessages.append(zh(u8"读取网格失败：请先选择一个网格对象；或选择已有网格的几何体。"));
+            return workflowResult;
+        }
+
+        if (!targetMesh) {
+            workflowResult.logMessages.append(zh(u8"读取网格失败：无法确定要更新的网格对象。"));
+            return workflowResult;
+        }
+
+        MeshData meshData;
+        QString meshAbsPath;
+        if (!readMeshDataForMeshObject(projectModel, *targetMesh, meshData, meshAbsPath, workflowResult)) {
+            if (!workflowResult.logMessages.isEmpty()) {
+                workflowResult.logMessages.last().prepend(zh(u8"读取网格失败："));
+            }
+            return workflowResult;
+        }
+
+        workflowResult.logMessages.append(zh(u8"读取网格成功。"));
+        workflowResult.logMessages.append(zh(u8"节点数：%1").arg(meshData.nodeCount()));
+        workflowResult.logMessages.append(zh(u8"四面体数：%1").arg(meshData.tetraCount()));
+        const MeshQualityReport qualityReport = MeshQualityChecker::check(meshData);
+        appendQualityLog(workflowResult, qualityReport);
+
+        applyQualityReport(*targetMesh, qualityReport);
+        targetMesh->nodeCount = meshData.nodeCount();
+        targetMesh->tetraCount = meshData.tetraCount();
+        targetMesh->tetra4Count = meshData.tetra4Count();
+        targetMesh->tetra10Count = meshData.tetra10Count();
+        targetMesh->surfaceTriangleCount = meshData.surfaceTriangleCount();
+
+        QString saveError;
+        if (!MeshManager(projectModel.project().rootPath).saveMeshObject(*targetMesh, &saveError)) {
+            workflowResult.logMessages.append(zh(u8"保存网格质量结果失败：") + saveError);
+        } else {
+            workflowResult.meshTreeChanged = true;
+            workflowResult.logMessages.append(zh(u8"质量结果已写入：") + targetMesh->name);
+        }
+        return workflowResult;
+    }
     const GeometryObject *selectedGeometry = selectedGeometryOrLog(projectModel, workflowResult);
     if (!selectedGeometry) {
         return workflowResult;

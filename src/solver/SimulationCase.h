@@ -199,8 +199,7 @@ inline bool isStructuralConstraint(const BoundaryCondition &boundaryCondition, c
         return false;
     }
     if (boundaryCondition.type == BoundaryConditionType::FixedSupport
-            || boundaryCondition.type == BoundaryConditionType::Displacement
-            || boundaryCondition.type == BoundaryConditionType::SymmetryStructural) {
+            || boundaryCondition.type == BoundaryConditionType::Displacement) {
         return true;
     }
     if (hasStructuralLoadForBoundary(loads, boundaryCondition.id)) {

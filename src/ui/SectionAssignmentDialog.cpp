@@ -1,9 +1,15 @@
 #include "SectionAssignmentDialog.h"
 
+#include "mesh/MeshData.h"
+#include "mesh/MshReader.h"
+
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QFormLayout>
+#include <QDir>
+#include <QFileInfo>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QPushButton>
@@ -11,6 +17,7 @@
 #include <QStringList>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <utility>
 
 namespace
@@ -54,6 +61,71 @@ void addEditableElementSetDefaults(QComboBox *combo)
 {
     combo->setEditable(true);
     combo->addItem("EALL");
+}
+
+QString absolutePath(const QString &rootPath, const QString &path)
+{
+    return QFileInfo(path).isAbsolute() ? path : QDir(rootPath).filePath(path);
+}
+
+const MeshObject *findMeshByName(const QVector<MeshObject> &meshes, const QString &meshName)
+{
+    for (const MeshObject &mesh : meshes) {
+        if (mesh.name == meshName) {
+            return &mesh;
+        }
+    }
+    return nullptr;
+}
+
+QString physicalVolumeDisplayName(const MeshPhysicalGroup &physicalGroup)
+{
+    const QString name = physicalGroup.name.trimmed();
+    return name.isEmpty()
+        ? QString("PhysicalVolume_%1").arg(physicalGroup.tag)
+        : name;
+}
+
+QStringList sectionElementSetNamesForMesh(
+    const SectionAssignmentDialogOptions &options,
+    const MeshObject &mesh,
+    QString *readWarning
+)
+{
+    QStringList names;
+    const QString meshPath = absolutePath(options.projectRootPath, mesh.mshFile);
+    if (mesh.mshFile.trimmed().isEmpty() || !QFileInfo::exists(meshPath)) {
+        if (readWarning) {
+            *readWarning = QString::fromUtf8(u8"当前网格没有可读取的 MSH 文件，只能使用 EALL。");
+        }
+        return names;
+    }
+
+    MeshData meshData;
+    meshData.name = mesh.name;
+    meshData.sourceGeometryName = mesh.sourceGeometryName;
+    QString errorMessage;
+    if (!MshReader::readMsh2(meshPath, meshData, &errorMessage)) {
+        if (readWarning) {
+            *readWarning = QString::fromUtf8(u8"读取 MSH 失败，只能使用 EALL：") + errorMessage;
+        }
+        return names;
+    }
+
+    for (const MeshPhysicalGroup &physicalGroup : meshData.physicalGroups) {
+        if (physicalGroup.dimension != 3) {
+            continue;
+        }
+        names.append(physicalVolumeDisplayName(physicalGroup));
+        if (!physicalGroup.name.trimmed().isEmpty()) {
+            names.append(QString("tag_%1").arg(physicalGroup.tag));
+        }
+    }
+    names.removeDuplicates();
+    std::sort(names.begin(), names.end(), [](const QString &left, const QString &right) {
+        return QString::localeAwareCompare(left, right) < 0;
+    });
+    return names;
 }
 }
 
@@ -105,9 +177,10 @@ void SectionAssignmentDialog::setupUi()
         for (const MeshObject &mesh : m_options.meshes) {
             if (mesh.name == meshName && !mesh.sourceGeometryName.trimmed().isEmpty()) {
                 setComboCurrentData(m_geometryCombo, mesh.sourceGeometryName);
-                return;
+                break;
             }
         }
+        refreshElementSetOptionsForSelectedMesh();
     });
     form->addRow(zh(u8"网格:"), m_meshCombo);
 
@@ -115,6 +188,12 @@ void SectionAssignmentDialog::setupUi()
     addEditableElementSetDefaults(m_elementSetCombo);
     m_elementSetCombo->setCurrentText("EALL");
     form->addRow(zh(u8"单元集:"), m_elementSetCombo);
+
+    m_elementSetHintLabel = new QLabel(this);
+    m_elementSetHintLabel->setWordWrap(true);
+    m_elementSetHintLabel->setStyleSheet("color: #64748b;");
+    form->addRow(QString(), m_elementSetHintLabel);
+    refreshElementSetOptionsForSelectedMesh();
 
     m_enabledCheck = new QCheckBox(zh(u8"启用"), this);
     m_enabledCheck->setChecked(true);
@@ -148,6 +227,51 @@ void SectionAssignmentDialog::setupUi()
     mainLayout->addWidget(buttonBox);
 }
 
+void SectionAssignmentDialog::refreshElementSetOptionsForSelectedMesh()
+{
+    if (!m_elementSetCombo) {
+        return;
+    }
+
+    const QString previousText = m_elementSetCombo->currentText().trimmed();
+    m_elementSetCombo->blockSignals(true);
+    m_elementSetCombo->clear();
+    addEditableElementSetDefaults(m_elementSetCombo);
+
+    QString hint;
+    if (const MeshObject *mesh = findMeshByName(m_options.meshes, selectedData(m_meshCombo))) {
+        const QStringList names = sectionElementSetNamesForMesh(m_options, *mesh, &hint);
+        for (const QString &name : names) {
+            if (m_elementSetCombo->findText(name, Qt::MatchFixedString) < 0) {
+                m_elementSetCombo->addItem(name);
+            }
+        }
+        if (hint.isEmpty()) {
+            hint = names.isEmpty()
+                ? zh(u8"当前网格未检测到 3D Physical Volume；材料分区只能使用 EALL，表示全部体单元。")
+                : zh(u8"已从当前 MSH 检测到 3D Physical Volume，可直接选择作为材料分区单元集。");
+        }
+    } else {
+        hint = zh(u8"请先选择网格；未选择网格时只能使用 EALL。");
+    }
+
+    if (!previousText.isEmpty()) {
+        const int existingIndex = m_elementSetCombo->findText(previousText, Qt::MatchFixedString);
+        if (existingIndex >= 0) {
+            m_elementSetCombo->setCurrentIndex(existingIndex);
+        } else {
+            m_elementSetCombo->setCurrentText(previousText);
+        }
+    } else {
+        m_elementSetCombo->setCurrentText("EALL");
+    }
+    m_elementSetCombo->blockSignals(false);
+
+    if (m_elementSetHintLabel) {
+        m_elementSetHintLabel->setText(hint);
+    }
+}
+
 SectionAssignment SectionAssignmentDialog::sectionAssignment() const
 {
     SectionAssignment sectionAssignment;
@@ -171,6 +295,7 @@ void SectionAssignmentDialog::setSectionAssignment(const SectionAssignment &sect
     setComboCurrentData(m_materialCombo, sectionAssignment.materialId);
     setComboCurrentData(m_geometryCombo, sectionAssignment.geometryName);
     setComboCurrentData(m_meshCombo, sectionAssignment.meshName);
+    refreshElementSetOptionsForSelectedMesh();
     m_elementSetCombo->setCurrentText(sectionAssignment.elementSetName.trimmed().isEmpty()
         ? QString("EALL")
         : sectionAssignment.elementSetName);

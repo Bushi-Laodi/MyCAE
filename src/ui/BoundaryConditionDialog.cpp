@@ -59,8 +59,7 @@ std::vector<BoundaryConditionType> defaultBoundaryTypes()
         BoundaryConditionType::VelocityInlet,
         BoundaryConditionType::PressureInlet,
         BoundaryConditionType::PressureOutlet,
-        BoundaryConditionType::Symmetry,
-        BoundaryConditionType::SymmetryStructural
+        BoundaryConditionType::Symmetry
     };
 }
 }

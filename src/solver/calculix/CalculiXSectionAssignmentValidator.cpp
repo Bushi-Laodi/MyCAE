@@ -53,7 +53,17 @@ bool physicalGroupMatches(const MeshPhysicalGroup &physicalGroup, const QString 
     const QString target = elementSetName.trimmed();
     bool targetIsNumber = false;
     const int targetTag = target.toInt(&targetIsNumber);
+    bool physicalVolumeTagOk = false;
+    const int physicalVolumeTag = target.startsWith("PhysicalVolume_", Qt::CaseInsensitive)
+        ? target.mid(QString("PhysicalVolume_").size()).toInt(&physicalVolumeTagOk)
+        : -1;
+    bool tagAliasOk = false;
+    const int tagAlias = target.startsWith("tag_", Qt::CaseInsensitive)
+        ? target.mid(QString("tag_").size()).toInt(&tagAliasOk)
+        : -1;
     return (targetIsNumber && physicalGroup.tag == targetTag)
+        || (physicalVolumeTagOk && physicalGroup.tag == physicalVolumeTag)
+        || (tagAliasOk && physicalGroup.tag == tagAlias)
         || physicalGroup.name.compare(target, Qt::CaseInsensitive) == 0;
 }
 

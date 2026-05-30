@@ -12,6 +12,7 @@
 
 class QCheckBox;
 class QComboBox;
+class QLabel;
 class QLineEdit;
 
 struct SectionAssignmentDialogOptions
@@ -19,6 +20,7 @@ struct SectionAssignmentDialogOptions
     QVector<Material> solidMaterials;
     QVector<GeometryObject> geometries;
     QVector<MeshObject> meshes;
+    QString projectRootPath;
     QString defaultGeometryName;
     QString defaultMeshName;
 };
@@ -48,6 +50,7 @@ public:
 
 private:
     void setupUi();
+    void refreshElementSetOptionsForSelectedMesh();
     void setComboCurrentData(QComboBox *combo, const QString &value);
     QString selectedData(const QComboBox *combo) const;
     QString generatedId() const;
@@ -59,5 +62,6 @@ private:
     QComboBox *m_geometryCombo = nullptr;
     QComboBox *m_meshCombo = nullptr;
     QComboBox *m_elementSetCombo = nullptr;
+    QLabel *m_elementSetHintLabel = nullptr;
     QCheckBox *m_enabledCheck = nullptr;
 };

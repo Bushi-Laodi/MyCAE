@@ -155,6 +155,55 @@ bool vectorIsZero(const LoadValue &value)
     return value.x == 0.0 && value.y == 0.0 && value.z == 0.0;
 }
 
+QString normalizedPropertyName(QString name)
+{
+    name = name.trimmed().toLower();
+    QString normalized;
+    normalized.reserve(name.size());
+    for (const QChar ch : name) {
+        if (ch.isLetterOrNumber()) {
+            normalized.append(ch);
+        }
+    }
+    return normalized;
+}
+
+bool isYoungModulusProperty(const QString &propertyName)
+{
+    const QString normalized = normalizedPropertyName(propertyName);
+    return normalized == "youngmodulus"
+        || normalized == "youngsmodulus"
+        || normalized == "elasticmodulus"
+        || normalized == "e";
+}
+
+bool isDensityProperty(const QString &propertyName)
+{
+    const QString normalized = normalizedPropertyName(propertyName);
+    return normalized == "density" || normalized == "rho";
+}
+
+void validateStructuralMaterialUnits(SolverPreflightResult &preflight, const std::vector<Material> &materials)
+{
+    for (const Material &material : materials) {
+        if (material.hasDensity && !UnitConverter::isKnownUnit(UnitQuantity::Density, material.densityUnit)) {
+            addPreflightError(preflight, "material density has unknown unit: "
+                + material.name + ", unit=" + material.densityUnit + ".");
+        }
+        for (const MaterialProperty &property : material.extraProperties) {
+            if (isYoungModulusProperty(property.name)
+                    && !UnitConverter::isKnownUnit(UnitQuantity::Stress, property.unit)) {
+                addPreflightError(preflight, "material elastic modulus has unknown unit: "
+                    + material.name + ", property=" + property.name + ", unit=" + property.unit + ".");
+            } else if (isDensityProperty(property.name)
+                    && !UnitConverter::isKnownUnit(UnitQuantity::Density, property.unit)) {
+                addPreflightError(preflight, "material density property has unknown unit: "
+                    + material.name + ", property=" + property.name + ", unit=" + property.unit + ".");
+            }
+        }
+    }
+}
+
 void validateStructuralLoad(SolverPreflightResult &preflight, const Load &load)
 {
     if (load.type == LoadType::BodyForce || load.type == LoadType::Temperature) {
@@ -168,7 +217,7 @@ void validateStructuralLoad(SolverPreflightResult &preflight, const Load &load)
             addPreflightError(preflight, "pressure load must use a scalar value: " + load.name + ".");
         }
         if (!UnitConverter::isKnownUnit(UnitQuantity::Stress, load.value.unit)) {
-            addPreflightWarning(preflight, "pressure load has an unknown unit and will be treated as Pa: "
+            addPreflightError(preflight, "pressure load has unknown unit: "
                 + load.name + ", unit=" + load.value.unit + ".");
         }
     } else if (load.type == LoadType::Force || load.type == LoadType::SurfaceForce) {
@@ -176,15 +225,19 @@ void validateStructuralLoad(SolverPreflightResult &preflight, const Load &load)
             addPreflightWarning(preflight, "force load vector is zero: " + load.name + ".");
         }
         if (!UnitConverter::isKnownUnit(UnitQuantity::Force, load.value.unit)) {
-            addPreflightWarning(preflight, "force load has an unknown unit and will be treated as N: "
+            addPreflightError(preflight, "force load has unknown unit: "
                 + load.name + ", unit=" + load.value.unit + ".");
+        }
+        if (load.type == LoadType::SurfaceForce) {
+            addPreflightWarning(preflight, "SurfaceForce is currently exported as node-equivalent distributed CLOAD, not a true CalculiX surface traction: "
+                + load.name + ".");
         }
     } else if (load.type == LoadType::Gravity) {
         if (load.value.kind != LoadValueKind::Vector3 || vectorIsZero(load.value)) {
             addPreflightError(preflight, "gravity load must use a non-zero vector value: " + load.name + ".");
         }
         if (!UnitConverter::isKnownUnit(UnitQuantity::Acceleration, load.value.unit)) {
-            addPreflightWarning(preflight, "gravity load has an unknown unit and will be treated as m/s^2: "
+            addPreflightError(preflight, "gravity load has unknown unit: "
                 + load.name + ", unit=" + load.value.unit + ".");
         }
     }
@@ -351,6 +404,13 @@ SolverPreflightResult validateCalculiXPreflight(
     validateMeshPreflight(preflight, projectModel, meshName);
 
     const StructuralCase &structuralCase = simulationCase.structuralCase;
+    validateStructuralMaterialUnits(preflight, structuralCase.materials);
+    for (const BoundaryCondition &boundaryCondition : simulationCase.boundaryConditions) {
+        if (boundaryCondition.enabled && boundaryCondition.type == BoundaryConditionType::SymmetryStructural) {
+            addPreflightError(preflight, "structural symmetry boundary is not supported by CalculiX export yet: "
+                + boundaryCondition.name + ". Please use FixedSupport or Displacement constraints.");
+        }
+    }
     if (const MeshObject *meshObject = projectModel.findMeshByName(meshName)) {
         MeshData meshData;
         if (readMeshDataForPreflight(preflight, projectModel, *meshObject, meshData)) {
