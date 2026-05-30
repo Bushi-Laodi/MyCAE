@@ -229,7 +229,7 @@ void validateStructuralLoad(SolverPreflightResult &preflight, const Load &load)
                 + load.name + ", unit=" + load.value.unit + ".");
         }
         if (load.type == LoadType::SurfaceForce) {
-            addPreflightWarning(preflight, "SurfaceForce is currently exported as node-equivalent distributed CLOAD, not a true CalculiX surface traction: "
+            addPreflightWarning(preflight, "SurfaceForce 当前按目标边界节点平均分配为 *CLOAD；不是真实 surface traction: "
                 + load.name + ".");
         }
     } else if (load.type == LoadType::Gravity) {

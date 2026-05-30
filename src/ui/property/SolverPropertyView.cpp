@@ -66,7 +66,7 @@ QString loadTypeText(LoadType type)
     case LoadType::Velocity:
         return zh(u8"速度");
     case LoadType::Force:
-        return zh(u8"集中力 / 面力");
+        return zh(u8"集中力");
     case LoadType::Pressure:
         return zh(u8"压力");
     case LoadType::Gravity:
@@ -74,7 +74,7 @@ QString loadTypeText(LoadType type)
     case LoadType::BodyForce:
         return zh(u8"体力");
     case LoadType::SurfaceForce:
-        return zh(u8"面力");
+        return zh(u8"等效节点力");
     case LoadType::Temperature:
         return zh(u8"温度");
     case LoadType::Unknown:

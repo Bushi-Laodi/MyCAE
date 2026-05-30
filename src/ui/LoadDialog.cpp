@@ -95,20 +95,16 @@ LoadType selectedLoadType(const QComboBox *combo)
 QString loadTypeLabel(LoadType type)
 {
     if (type == LoadType::SurfaceForce) {
-        return zh(u8"节点等效力 / 等效面力");
+        return zh(u8"等效节点力（由面选择分配）");
     }
     if (type == LoadType::Temperature) {
         return zh(u8"温度（暂不开放求解）");
     }
     switch (type) {
-    case LoadType::SurfaceForce:
-        return zh(u8"面力");
-    case LoadType::Temperature:
-        return zh(u8"温度");
     case LoadType::Velocity:
         return zh(u8"速度");
     case LoadType::Force:
-        return zh(u8"集中力 / 面力");
+        return zh(u8"集中力");
     case LoadType::Pressure:
         return zh(u8"压力载荷");
     case LoadType::Gravity:
@@ -155,6 +151,13 @@ void LoadDialog::setupUi()
     }
     m_typeCombo->setEnabled(loadTypes.size() > 1);
     form->addRow(zh(u8"类型:"), m_typeCombo);
+    auto *surfaceForceHintLabel = new QLabel(
+        zh(u8"SurfaceForce 当前会按目标边界节点平均分配为 *CLOAD，不是真正的 CalculiX 表面力。"),
+        this
+    );
+    surfaceForceHintLabel->setWordWrap(true);
+    surfaceForceHintLabel->setStyleSheet("color: #9a6700;");
+    form->addRow(QString(), surfaceForceHintLabel);
 
     m_boundaryConditionIdCombo = new QComboBox(this);
     for (const LoadBoundaryConditionOption &option : m_options.boundaryConditions) {
@@ -198,7 +201,7 @@ void LoadDialog::setupUi()
     m_unitCombo->setEditable(false);
     form->addRow(zh(u8"单位:"), m_unitCombo);
 
-    connect(m_typeCombo, &QComboBox::currentTextChanged, this, [this]() {
+    connect(m_typeCombo, &QComboBox::currentTextChanged, this, [this, surfaceForceHintLabel]() {
         const LoadType type = selectedLoadType(m_typeCombo);
         const QString currentDefault = defaultFieldName(type);
         if (isDefaultFieldName(m_fieldNameEdit->text())) {
@@ -214,6 +217,7 @@ void LoadDialog::setupUi()
         if (QWidget *label = findChild<QWidget *>("loadZLabel")) {
             label->setVisible(vectorLoad);
         }
+        surfaceForceHintLabel->setVisible(type == LoadType::SurfaceForce);
     });
     m_fieldNameEdit->setText(defaultFieldName(selectedLoadType(m_typeCombo)));
     updateUnitItems();
@@ -226,6 +230,7 @@ void LoadDialog::setupUi()
     if (QWidget *label = findChild<QWidget *>("loadZLabel")) {
         label->setVisible(vectorLoad);
     }
+    surfaceForceHintLabel->setVisible(selectedLoadType(m_typeCombo) == LoadType::SurfaceForce);
 
     mainLayout->addLayout(form);
 
