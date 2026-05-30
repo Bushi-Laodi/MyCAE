@@ -37,6 +37,8 @@ public:
         bool resetCamera = true
     );
     void showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const QString &title, const QString &subtitle);
+    void setMeshTransparent(bool transparent);
+    bool meshTransparent() const;
     void showResultGrid(
         vtkSmartPointer<vtkUnstructuredGrid> grid,
         vtkSmartPointer<vtkUnstructuredGrid> overlayGrid,

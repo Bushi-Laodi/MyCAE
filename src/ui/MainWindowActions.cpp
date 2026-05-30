@@ -41,6 +41,7 @@ constexpr auto CommandCheckGmsh = "mesh.checkGmsh";
 constexpr auto CommandGenerateMesh = "mesh.generate";
 constexpr auto CommandReadMeshInfo = "mesh.readInfo";
 constexpr auto CommandShowMesh = "mesh.show";
+constexpr auto CommandToggleMeshTransparency = "display.meshTransparency.toggle";
 constexpr auto CommandPickFace = "picking.face";
 constexpr auto CommandClearPick = "picking.clear";
 constexpr auto CommandCreateFaceGroupFromPick = "picking.faceGroup.createFromPick";
@@ -231,6 +232,17 @@ MainWindowActions MainWindowActionBuilder::build(
         actions.showMesh,
         window,
         makeMeshCommand(context, MeshCommandType::Show)
+    );
+
+    actions.showMeshTransparent = new QAction(zh(u8"网格透明显示"), window);
+    actions.showMeshTransparent->setCheckable(true);
+    actions.showMeshTransparent->setChecked(true);
+    actions.showMeshTransparent->setStatusTip(zh(u8"切换网格模型的半透明显示，便于观察内部单元和背面轮廓"));
+    actionRegistry.registerActionCommand(
+        CommandToggleMeshTransparency,
+        actions.showMeshTransparent,
+        window,
+        makeToggleMeshTransparencyCommand(context)
     );
 
     actions.pickFace = new QAction(zh(u8"拾取面"), window);

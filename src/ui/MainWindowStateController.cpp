@@ -66,6 +66,10 @@ void MainWindowStateController::update(
     if (actions.showMesh) {
         actions.showMesh->setEnabled(hasProject && capabilities.canShowMesh);
     }
+    if (actions.showMeshTransparent) {
+        actions.showMeshTransparent->setEnabled(renderView != nullptr);
+        actions.showMeshTransparent->setChecked(renderView && renderView->meshTransparent());
+    }
     if (actions.pickFace) {
         actions.pickFace->setEnabled(hasProject);
         actions.pickFace->setChecked(pickController.mode() == PickMode::Face);

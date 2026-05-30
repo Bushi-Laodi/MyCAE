@@ -46,6 +46,8 @@ public:
         bool resetCamera = true
     );
     void showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid);
+    void setMeshTransparent(bool transparent);
+    bool meshTransparent() const;
     void showResultGrid(
         vtkSmartPointer<vtkUnstructuredGrid> grid,
         vtkSmartPointer<vtkUnstructuredGrid> overlayGrid,
@@ -87,6 +89,7 @@ private:
     void initializeOrientationMarker();
     void applyPrimaryGeometryEdgeVisibility();
     void applyGeometrySceneEdgeVisibility();
+    void applyMeshOpacity();
     bool effectiveGeometryEdgesVisible() const;
     void handlePickAtRenderWindowPosition(int x, int y);
     bool pickResultAtRenderWindowPosition(int x, int y, ResultProbe &probe);
@@ -106,6 +109,8 @@ private:
     QString m_activeGeometryName;
     PickMode m_pickMode = PickMode::None;
     bool m_geometryEdgesVisible = false;
+    bool m_meshTransparent = true;
+    bool m_primaryActorIsMesh = false;
     bool m_orientationMarkerVisible = true;
     bool m_primaryActorUsesGeometryEdges = false;
     bool m_renderQueued = false;

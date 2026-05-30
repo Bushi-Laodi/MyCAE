@@ -269,13 +269,30 @@ void VtkRenderCanvas::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid)
     actor->GetProperty()->SetEdgeColor(0.08, 0.16, 0.11);
     actor->GetProperty()->EdgeVisibilityOn();
     actor->GetProperty()->SetLineWidth(0.8);
-    actor->GetProperty()->SetOpacity(0.78);
+    actor->GetProperty()->SetOpacity(m_meshTransparent ? 0.38 : 1.0);
 
     resetSceneState();
     m_renderer->RemoveAllViewProps();
     m_renderer->AddActor(actor);
+    m_primaryActor = actor;
+    m_primaryActorIsMesh = true;
     resetCamera();
     requestRender();
+}
+
+void VtkRenderCanvas::setMeshTransparent(bool transparent)
+{
+    if (m_meshTransparent == transparent) {
+        return;
+    }
+
+    m_meshTransparent = transparent;
+    applyMeshOpacity();
+}
+
+bool VtkRenderCanvas::meshTransparent() const
+{
+    return m_meshTransparent;
 }
 
 void VtkRenderCanvas::showResultGrid(
@@ -587,6 +604,7 @@ void VtkRenderCanvas::resetSceneState()
     m_currentPolyData = nullptr;
     m_currentResultGrid = nullptr;
     m_primaryActor = nullptr;
+    m_primaryActorIsMesh = false;
     m_primaryActorUsesGeometryEdges = false;
     m_geometrySceneActors.clear();
     m_highlightActors.clear();
@@ -641,6 +659,16 @@ void VtkRenderCanvas::applyGeometrySceneEdgeVisibility()
             actor->GetProperty()->SetEdgeVisibility(visible);
         }
     }
+}
+
+void VtkRenderCanvas::applyMeshOpacity()
+{
+    if (!m_primaryActor || !m_primaryActorIsMesh) {
+        return;
+    }
+
+    m_primaryActor->GetProperty()->SetOpacity(m_meshTransparent ? 0.38 : 1.0);
+    requestRender();
 }
 
 void VtkRenderCanvas::handlePickAtRenderWindowPosition(int x, int y)

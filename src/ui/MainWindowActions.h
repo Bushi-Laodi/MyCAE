@@ -35,6 +35,7 @@ struct MainWindowActions
     QAction *generateMesh = nullptr;
     QAction *readMeshInfo = nullptr;
     QAction *showMesh = nullptr;
+    QAction *showMeshTransparent = nullptr;
     QAction *pickFace = nullptr;
     QAction *clearPick = nullptr;
     QAction *createFaceGroupFromPick = nullptr;

@@ -58,11 +58,43 @@ public:
 private:
     WorkflowCommandContext m_context;
 };
+
+class ToggleMeshTransparencyCommand final : public AppCommand
+{
+public:
+    explicit ToggleMeshTransparencyCommand(WorkflowCommandContext context)
+        : m_context(context)
+    {
+    }
+
+    void execute() override
+    {
+        if (!m_context.renderView) {
+            writeLogMessages(m_context, {"Display mode command failed: render view is not available."});
+            return;
+        }
+
+        const bool enabled = !m_context.renderView->meshTransparent();
+        m_context.renderView->setMeshTransparent(enabled);
+        writeLogMessages(
+            m_context,
+            {enabled ? "Mesh transparent display enabled." : "Mesh transparent display disabled."}
+        );
+    }
+
+private:
+    WorkflowCommandContext m_context;
+};
 }
 
 std::unique_ptr<AppCommand> makeToggleGeometryEdgesCommand(WorkflowCommandContext context)
 {
     return std::make_unique<ToggleGeometryEdgesCommand>(context);
+}
+
+std::unique_ptr<AppCommand> makeToggleMeshTransparencyCommand(WorkflowCommandContext context)
+{
+    return std::make_unique<ToggleMeshTransparencyCommand>(context);
 }
 
 std::unique_ptr<AppCommand> makeToggleOrientationMarkerCommand(WorkflowCommandContext context)

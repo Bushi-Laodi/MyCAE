@@ -97,6 +97,7 @@ void MainWindowMenuBuilder::build(
     simulationMenu->addAction(actions.generateMesh);
     simulationMenu->addAction(actions.readMeshInfo);
     simulationMenu->addAction(actions.showMesh);
+    simulationMenu->addAction(actions.showMeshTransparent);
     simulationMenu->addSeparator();
     if (solverPluginManager.pluginDescriptors().empty()) {
         QAction *noSolverAction = simulationMenu->addAction(zh(u8"未找到求解器插件"));

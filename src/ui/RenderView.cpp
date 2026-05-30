@@ -119,6 +119,18 @@ void RenderView::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid, const Q
     }
 }
 
+void RenderView::setMeshTransparent(bool transparent)
+{
+    if (m_canvas) {
+        m_canvas->setMeshTransparent(transparent);
+    }
+}
+
+bool RenderView::meshTransparent() const
+{
+    return m_canvas ? m_canvas->meshTransparent() : false;
+}
+
 void RenderView::showResultGrid(
     vtkSmartPointer<vtkUnstructuredGrid> grid,
     vtkSmartPointer<vtkUnstructuredGrid> overlayGrid,
