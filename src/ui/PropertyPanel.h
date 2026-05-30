@@ -11,6 +11,7 @@
 #include <QWidget>
 #include <QString>
 
+#include <functional>
 #include <vector>
 
 class QLabel;
@@ -23,10 +24,18 @@ struct GeometryObject;
 struct MeshObject;
 struct ResultObject;
 
+struct PropertyPanelMeshCallbacks
+{
+    std::function<void(const MeshObject &)> highlightQualityIssues;
+    std::function<void()> clearHighlight;
+};
+
 class PropertyPanel final : public QWidget
 {
 public:
     explicit PropertyPanel(QWidget *parent = nullptr);
+
+    void setMeshCallbacks(PropertyPanelMeshCallbacks callbacks);
 
     void showEmptySelection();
     void showBoxGeometry(const BoxGeometry &box);
@@ -86,4 +95,5 @@ private:
 
     // Dynamic content area for solver data
     QWidget *m_dynamicArea = nullptr;
+    PropertyPanelMeshCallbacks m_meshCallbacks;
 };

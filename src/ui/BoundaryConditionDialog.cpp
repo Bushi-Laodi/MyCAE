@@ -41,6 +41,8 @@ QString boundaryTypeLabel(BoundaryConditionType type)
         return zh(u8"压力出口");
     case BoundaryConditionType::Symmetry:
         return zh(u8"对称");
+    case BoundaryConditionType::SymmetryStructural:
+        return zh(u8"结构对称约束");
     case BoundaryConditionType::Unknown:
         return zh(u8"未知");
     }
@@ -57,7 +59,8 @@ std::vector<BoundaryConditionType> defaultBoundaryTypes()
         BoundaryConditionType::VelocityInlet,
         BoundaryConditionType::PressureInlet,
         BoundaryConditionType::PressureOutlet,
-        BoundaryConditionType::Symmetry
+        BoundaryConditionType::Symmetry,
+        BoundaryConditionType::SymmetryStructural
     };
 }
 }

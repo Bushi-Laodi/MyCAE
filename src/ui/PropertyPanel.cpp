@@ -21,6 +21,8 @@
 #include <QString>
 #include <QVBoxLayout>
 
+#include <utility>
+
 namespace
 {
 QString zh(const char *text)
@@ -118,6 +120,11 @@ PropertyPanel::PropertyPanel(QWidget *parent)
 
     m_dynamicArea = createDetailsSection(m_mainLayout, this);
     m_mainLayout->addStretch();
+}
+
+void PropertyPanel::setMeshCallbacks(PropertyPanelMeshCallbacks callbacks)
+{
+    m_meshCallbacks = std::move(callbacks);
 }
 
 void PropertyPanel::clearAll()
@@ -305,7 +312,16 @@ void PropertyPanel::showMeshObject(const MeshObject &meshObject)
     m_createdAtValue->setText(meshObject.createdAt);
 
     resetDynamicArea();
-    MeshPropertyView::populate(m_dynamicArea, meshObject);
+    MeshPropertyActions actions;
+    if (m_meshCallbacks.highlightQualityIssues) {
+        actions.highlightQualityIssues = [callbacks = m_meshCallbacks, meshObject]() {
+            if (callbacks.highlightQualityIssues) {
+                callbacks.highlightQualityIssues(meshObject);
+            }
+        };
+    }
+    actions.clearHighlight = m_meshCallbacks.clearHighlight;
+    MeshPropertyView::populate(m_dynamicArea, meshObject, actions);
 }
 
 void PropertyPanel::showFaceGroup(const FaceGroup &faceGroup)

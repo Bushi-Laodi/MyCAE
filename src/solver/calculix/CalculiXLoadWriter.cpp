@@ -161,7 +161,7 @@ bool CalculiXLoadWriter::appendLoads(
 
         if (load.type == LoadType::Pressure) {
             wroteLoad = appendPressureLoad(deck, load, *boundary, errors) || wroteLoad;
-        } else if (load.type == LoadType::Force || load.type == LoadType::BodyForce) {
+        } else if (load.type == LoadType::Force || load.type == LoadType::SurfaceForce) {
             wroteLoad = appendConcentratedLoad(deck, load, *boundary, errors) || wroteLoad;
         } else {
             errors.append("CalculiX export failed: load '" + load.name

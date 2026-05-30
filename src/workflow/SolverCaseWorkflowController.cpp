@@ -17,6 +17,7 @@
 #include "solver/export/SolverCaseWriter.h"
 #include "solver/plugin/SolverPlugin.h"
 #include "solver/plugin/SolverPluginManager.h"
+#include "units/UnitConverter.h"
 #include "workflow/ProjectWorkflowController.h"
 
 #include <QDateTime>
@@ -147,6 +148,46 @@ bool loadReferencesExistingBoundary(const Load &load, const std::vector<Boundary
         }
     }
     return false;
+}
+
+bool vectorIsZero(const LoadValue &value)
+{
+    return value.x == 0.0 && value.y == 0.0 && value.z == 0.0;
+}
+
+void validateStructuralLoad(SolverPreflightResult &preflight, const Load &load)
+{
+    if (load.type == LoadType::BodyForce || load.type == LoadType::Temperature) {
+        addPreflightError(preflight, "CalculiX load type is not supported yet: "
+            + load.name + " (" + toString(load.type) + ").");
+        return;
+    }
+
+    if (load.type == LoadType::Pressure) {
+        if (load.value.kind != LoadValueKind::Scalar) {
+            addPreflightError(preflight, "pressure load must use a scalar value: " + load.name + ".");
+        }
+        if (!UnitConverter::isKnownUnit(UnitQuantity::Stress, load.value.unit)) {
+            addPreflightWarning(preflight, "pressure load has an unknown unit and will be treated as Pa: "
+                + load.name + ", unit=" + load.value.unit + ".");
+        }
+    } else if (load.type == LoadType::Force || load.type == LoadType::SurfaceForce) {
+        if (load.value.kind == LoadValueKind::Vector3 && vectorIsZero(load.value)) {
+            addPreflightWarning(preflight, "force load vector is zero: " + load.name + ".");
+        }
+        if (!UnitConverter::isKnownUnit(UnitQuantity::Force, load.value.unit)) {
+            addPreflightWarning(preflight, "force load has an unknown unit and will be treated as N: "
+                + load.name + ", unit=" + load.value.unit + ".");
+        }
+    } else if (load.type == LoadType::Gravity) {
+        if (load.value.kind != LoadValueKind::Vector3 || vectorIsZero(load.value)) {
+            addPreflightError(preflight, "gravity load must use a non-zero vector value: " + load.name + ".");
+        }
+        if (!UnitConverter::isKnownUnit(UnitQuantity::Acceleration, load.value.unit)) {
+            addPreflightWarning(preflight, "gravity load has an unknown unit and will be treated as m/s^2: "
+                + load.name + ", unit=" + load.value.unit + ".");
+        }
+    }
 }
 
 void validateMeshPreflight(
@@ -335,6 +376,7 @@ SolverPreflightResult validateCalculiXPreflight(
             addPreflightError(preflight, "load target boundary is missing for load: "
                 + load.name + ". 载荷引用的边界已丢失，请重新选择载荷作用面。");
         }
+        validateStructuralLoad(preflight, load);
     }
 
     validateBoundaryTargets(

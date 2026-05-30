@@ -1,6 +1,8 @@
 #include "MeshToVtkConverter.h"
 
 #include <vtkNew.h>
+#include <vtkIntArray.h>
+#include <vtkCellData.h>
 #include <vtkPoints.h>
 #include <vtkQuadraticTetra.h>
 #include <vtkSmartPointer.h>
@@ -47,6 +49,9 @@ vtkSmartPointer<vtkUnstructuredGrid> MeshToVtkConverter::toUnstructuredGrid(
     auto grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
     grid->SetPoints(points);
 
+    vtkNew<vtkIntArray> elementIds;
+    elementIds->SetName("MyCAE_ElementId");
+
     for (const TetraElement &element : meshData.tetraElements) {
         const auto node1 = nodeIdToVtkId.find(element.node1);
         const auto node2 = nodeIdToVtkId.find(element.node2);
@@ -68,6 +73,7 @@ vtkSmartPointer<vtkUnstructuredGrid> MeshToVtkConverter::toUnstructuredGrid(
         tetra->GetPointIds()->SetId(2, node3->second);
         tetra->GetPointIds()->SetId(3, node4->second);
         grid->InsertNextCell(tetra->GetCellType(), tetra->GetPointIds());
+        elementIds->InsertNextValue(element.id);
     }
 
     for (const Tetra10Element &element : meshData.tetra10Elements) {
@@ -96,6 +102,7 @@ vtkSmartPointer<vtkUnstructuredGrid> MeshToVtkConverter::toUnstructuredGrid(
             tetra->GetPointIds()->SetId(index, node->second);
         }
         grid->InsertNextCell(tetra->GetCellType(), tetra->GetPointIds());
+        elementIds->InsertNextValue(element.id);
     }
 
     if (grid->GetNumberOfPoints() == 0 || grid->GetNumberOfCells() == 0) {
@@ -105,5 +112,6 @@ vtkSmartPointer<vtkUnstructuredGrid> MeshToVtkConverter::toUnstructuredGrid(
         return nullptr;
     }
 
+    grid->GetCellData()->AddArray(elementIds);
     return grid;
 }

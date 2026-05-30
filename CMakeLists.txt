@@ -248,6 +248,11 @@ qt_add_executable(MyCAE
     src/render/VtkHighlightActorFactory.h
     src/render/VtkPickAdapter.cpp
     src/render/VtkPickAdapter.h
+    src/units/UnitConverter.cpp
+    src/units/UnitConverter.h
+    src/units/UnitSystem.cpp
+    src/units/UnitSystem.h
+    src/units/UnitValue.h
     src/result/ResultAnimationController.cpp
     src/result/ResultAnimationController.h
     src/result/ResultCsvExporter.cpp

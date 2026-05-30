@@ -52,6 +52,8 @@ QString boundaryConditionTypeText(BoundaryConditionType type)
         return zh(u8"压力出口");
     case BoundaryConditionType::Symmetry:
         return zh(u8"对称");
+    case BoundaryConditionType::SymmetryStructural:
+        return zh(u8"结构对称");
     case BoundaryConditionType::Unknown:
         return zh(u8"未知");
     }
@@ -71,6 +73,10 @@ QString loadTypeText(LoadType type)
         return zh(u8"重力");
     case LoadType::BodyForce:
         return zh(u8"体力");
+    case LoadType::SurfaceForce:
+        return zh(u8"面力");
+    case LoadType::Temperature:
+        return zh(u8"温度");
     case LoadType::Unknown:
         return zh(u8"未知");
     }

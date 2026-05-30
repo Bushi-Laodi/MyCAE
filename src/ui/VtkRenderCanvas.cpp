@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <unordered_set>
 #include <vector>
 #include <QResizeEvent>
 #include <QShowEvent>
@@ -25,6 +26,7 @@
 #include <vtkCubeSource.h>
 #include <vtkDataArray.h>
 #include <vtkDataSetMapper.h>
+#include <vtkExtractCells.h>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkIdList.h>
 #include <vtkIntArray.h>
@@ -123,6 +125,7 @@ VtkRenderCanvas::~VtkRenderCanvas()
     m_resultActor = nullptr;
     m_undeformedOverlayActor = nullptr;
     m_currentResultGrid = nullptr;
+    m_currentMeshGrid = nullptr;
     m_currentPolyData = nullptr;
     m_renderer = nullptr;
     m_renderWindow = nullptr;
@@ -280,6 +283,7 @@ void VtkRenderCanvas::showMeshGrid(vtkSmartPointer<vtkUnstructuredGrid> grid)
     m_renderer->AddActor(actor);
     m_primaryActor = actor;
     m_primaryActorIsMesh = true;
+    m_currentMeshGrid = grid;
     resetCamera();
     requestRender();
 }
@@ -432,6 +436,7 @@ void VtkRenderCanvas::showResultGrid(
 
     resetSceneState();
     m_currentResultGrid = grid;
+    m_currentMeshGrid = grid;
     m_primaryActor = actor;
     m_resultActor = actor;
     m_scalarBarActor = scalarBar;
@@ -545,6 +550,56 @@ void VtkRenderCanvas::highlightFaceIndices(const std::vector<int> &faceIndices)
         m_highlightActors.push_back(actor);
         m_renderer->AddActor(actor);
     }
+    requestRender();
+}
+
+void VtkRenderCanvas::highlightMeshElements(const std::vector<int> &elementIds)
+{
+    clearHighlight();
+    if (elementIds.empty()) {
+        return;
+    }
+
+    vtkUnstructuredGrid *grid = m_currentMeshGrid ? m_currentMeshGrid.GetPointer() : m_currentResultGrid.GetPointer();
+    if (!grid || grid->GetNumberOfCells() <= 0) {
+        return;
+    }
+
+    const std::unordered_set<int> requestedIds(elementIds.begin(), elementIds.end());
+    vtkDataArray *elementIdArray = grid->GetCellData() ? grid->GetCellData()->GetArray("MyCAE_ElementId") : nullptr;
+
+    vtkNew<vtkIdList> cellIds;
+    for (vtkIdType cellId = 0; cellId < grid->GetNumberOfCells(); ++cellId) {
+        const int elementId = elementIdArray
+            ? static_cast<int>(elementIdArray->GetTuple1(cellId))
+            : static_cast<int>(cellId + 1);
+        if (requestedIds.find(elementId) != requestedIds.end()) {
+            cellIds->InsertNextId(cellId);
+        }
+    }
+    if (cellIds->GetNumberOfIds() == 0) {
+        return;
+    }
+
+    vtkNew<vtkExtractCells> extractor;
+    extractor->SetInputData(grid);
+    extractor->SetCellList(cellIds);
+    extractor->Update();
+
+    vtkNew<vtkDataSetMapper> mapper;
+    mapper->SetInputConnection(extractor->GetOutputPort());
+    mapper->ScalarVisibilityOff();
+
+    vtkNew<vtkActor> actor;
+    actor->SetMapper(mapper);
+    actor->GetProperty()->SetColor(1.0, 0.34, 0.12);
+    actor->GetProperty()->SetOpacity(m_renderSettings.highlightOpacity);
+    actor->GetProperty()->SetEdgeColor(0.72, 0.08, 0.02);
+    actor->GetProperty()->EdgeVisibilityOn();
+    actor->GetProperty()->SetLineWidth(2.0);
+
+    m_highlightActors.push_back(actor);
+    m_renderer->AddActor(actor);
     requestRender();
 }
 
@@ -688,6 +743,7 @@ void VtkRenderCanvas::resetCamera()
 void VtkRenderCanvas::resetSceneState()
 {
     m_currentPolyData = nullptr;
+    m_currentMeshGrid = nullptr;
     m_currentResultGrid = nullptr;
     m_primaryActor = nullptr;
     m_resultActor = nullptr;

@@ -48,5 +48,6 @@ private:
     QDoubleSpinBox *m_kinematicViscositySpin = nullptr;
 
     QDoubleSpinBox *m_youngModulusSpin = nullptr;
+    QComboBox *m_youngModulusUnitCombo = nullptr;
     QDoubleSpinBox *m_poissonRatioSpin = nullptr;
 };

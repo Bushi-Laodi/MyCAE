@@ -2,6 +2,7 @@
 
 #include "RenderView.h"
 #include "commands/WorkflowCommandContext.h"
+#include "mesh/MeshObject.h"
 #include "ui/FaceGroupRestoreController.h"
 #include "ui/MainWindowDocks.h"
 #include "ui/MainWindowLifecycleController.h"
@@ -11,6 +12,7 @@
 #include "ui/MainWindowToolController.h"
 #include "ui/MainWindowToolBarBuilder.h"
 #include "ui/MainWindowViewController.h"
+#include "ui/PropertyPanel.h"
 #include "ui/RecentProjectController.h"
 #include "ui/RenderSettingsPanel.h"
 #include "ui/ResultPostprocessPanel.h"
@@ -20,11 +22,41 @@
 #include <QShowEvent>
 #include <QStatusBar>
 
+#include <algorithm>
+#include <vector>
+
 namespace
 {
 QString zh(const char *text)
 {
     return QString::fromUtf8(text);
+}
+
+void appendElementIds(std::vector<int> &target, const QStringList &source)
+{
+    for (const QString &text : source) {
+        bool ok = false;
+        const int elementId = text.toInt(&ok);
+        if (ok) {
+            target.push_back(elementId);
+        }
+    }
+}
+
+std::vector<int> meshQualityIssueElementIds(const MeshObject &meshObject)
+{
+    std::vector<int> elementIds;
+    elementIds.reserve(
+        meshObject.invalidElementIds.size()
+        + meshObject.degenerateElementIds.size()
+        + meshObject.highAspectRatioElementIds.size()
+    );
+    appendElementIds(elementIds, meshObject.invalidElementIds);
+    appendElementIds(elementIds, meshObject.degenerateElementIds);
+    appendElementIds(elementIds, meshObject.highAspectRatioElementIds);
+    std::sort(elementIds.begin(), elementIds.end());
+    elementIds.erase(std::unique(elementIds.begin(), elementIds.end()), elementIds.end());
+    return elementIds;
 }
 }
 
@@ -146,6 +178,24 @@ void MainWindow::createDockWidgets()
     callbacks.resultDeleteRequested = [this]() { deleteSelectedResultHistory(); };
 
     m_docks = MainWindowDockBuilder::build(this, callbacks);
+    if (m_docks.propertyPanel && m_docks.renderView) {
+        m_docks.propertyPanel->setMeshCallbacks(PropertyPanelMeshCallbacks{
+            [this](const MeshObject &meshObject) {
+                const std::vector<int> elementIds = meshQualityIssueElementIds(meshObject);
+                if (elementIds.empty()) {
+                    writeLog(zh(u8"当前网格没有可高亮的质量问题单元。"));
+                    return;
+                }
+                m_docks.renderView->highlightMeshElements(elementIds);
+                writeLog(zh(u8"已高亮网格质量问题单元：%1 个").arg(static_cast<int>(elementIds.size())));
+            },
+            [this]() {
+                if (m_docks.renderView) {
+                    m_docks.renderView->clearHighlight();
+                }
+            }
+        });
+    }
     if (m_docks.renderSettingsPanel && m_docks.renderView) {
         m_docks.renderSettingsPanel->setSettings(m_docks.renderView->renderDisplaySettings());
         connect(

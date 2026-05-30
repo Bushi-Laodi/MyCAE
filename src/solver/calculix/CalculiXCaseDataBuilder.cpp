@@ -6,6 +6,7 @@
 #include "solver/SimulationCase.h"
 #include "solver/calculix/CalculiXMeshBoundaryResolver.h"
 #include "solver/calculix/CalculiXSectionAssignmentValidator.h"
+#include "units/UnitConverter.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -45,13 +46,23 @@ double materialPropertyValue(const Material &material, const QStringList &aliase
     return fallback;
 }
 
+double materialStressPropertyPa(const Material &material, const QStringList &aliases, double fallback = 0.0)
+{
+    for (const MaterialProperty &property : material.extraProperties) {
+        if (propertyMatches(normalizedPropertyName(property.name), aliases)) {
+            return UnitConverter::stressToPa(property.value, property.unit);
+        }
+    }
+    return fallback;
+}
+
 CalculiXMaterialData toCalculiXMaterial(const Material &material)
 {
     CalculiXMaterialData materialData;
     materialData.id = material.id;
     materialData.name = material.name;
     materialData.domain = material.domain;
-    materialData.youngModulus = materialPropertyValue(
+    materialData.youngModulus = materialStressPropertyPa(
         material,
         {"youngModulus", "youngsModulus", "elasticModulus", "E"}
     );
@@ -60,7 +71,7 @@ CalculiXMaterialData toCalculiXMaterial(const Material &material)
         {"poissonRatio", "poissonsRatio", "nu"}
     );
     materialData.density = material.hasDensity
-        ? material.density
+        ? UnitConverter::densityToKgPerM3(material.density, material.densityUnit)
         : materialPropertyValue(material, {"density", "rho"});
     return materialData;
 }
@@ -89,6 +100,20 @@ CalculiXLoadData toCalculiXLoad(const Load &load)
     loadData.boundaryConditionId = load.boundaryConditionId;
     loadData.fieldName = load.fieldName;
     loadData.value = load.value;
+    if (load.type == LoadType::Force || load.type == LoadType::SurfaceForce) {
+        loadData.value.x = UnitConverter::forceToN(load.value.x, load.value.unit);
+        loadData.value.y = UnitConverter::forceToN(load.value.y, load.value.unit);
+        loadData.value.z = UnitConverter::forceToN(load.value.z, load.value.unit);
+        loadData.value.unit = "N";
+    } else if (load.type == LoadType::Pressure) {
+        loadData.value.x = UnitConverter::stressToPa(load.value.x, load.value.unit);
+        loadData.value.unit = "Pa";
+    } else if (load.type == LoadType::Gravity) {
+        loadData.value.x = UnitConverter::accelerationToMPerS2(load.value.x, load.value.unit);
+        loadData.value.y = UnitConverter::accelerationToMPerS2(load.value.y, load.value.unit);
+        loadData.value.z = UnitConverter::accelerationToMPerS2(load.value.z, load.value.unit);
+        loadData.value.unit = "m/s^2";
+    }
     return loadData;
 }
 

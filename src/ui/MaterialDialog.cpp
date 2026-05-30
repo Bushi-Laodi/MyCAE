@@ -1,5 +1,7 @@
 #include "MaterialDialog.h"
 
+#include "units/UnitConverter.h"
+
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
@@ -25,6 +27,16 @@ double materialPropertyValue(const Material &material, const QString &propertyNa
     for (const MaterialProperty &property : material.extraProperties) {
         if (property.name.compare(propertyName, Qt::CaseInsensitive) == 0) {
             return property.value;
+        }
+    }
+    return fallback;
+}
+
+QString materialPropertyUnit(const Material &material, const QString &propertyName, const QString &fallback = {})
+{
+    for (const MaterialProperty &property : material.extraProperties) {
+        if (property.name.compare(propertyName, Qt::CaseInsensitive) == 0) {
+            return property.unit.trimmed().isEmpty() ? fallback : property.unit;
         }
     }
     return fallback;
@@ -107,10 +119,14 @@ void MaterialDialog::setupUi()
     m_youngModulusSpin = new QDoubleSpinBox(this);
     m_youngModulusSpin->setRange(0.0, 1e15);
     m_youngModulusSpin->setDecimals(3);
-    m_youngModulusSpin->setSingleStep(1e9);
-    m_youngModulusSpin->setValue(2.1e11);
-    m_youngModulusSpin->setSuffix(" Pa");
+    m_youngModulusSpin->setSingleStep(1.0);
+    m_youngModulusSpin->setValue(210.0);
     form->addRow(zh(u8"杨氏模量:"), m_youngModulusSpin);
+
+    m_youngModulusUnitCombo = new QComboBox(this);
+    m_youngModulusUnitCombo->addItems({"Pa", "MPa", "GPa"});
+    m_youngModulusUnitCombo->setCurrentText("GPa");
+    form->addRow(zh(u8"杨氏模量单位:"), m_youngModulusUnitCombo);
 
     m_poissonRatioSpin = new QDoubleSpinBox(this);
     m_poissonRatioSpin->setRange(0.0, 0.499999);
@@ -147,6 +163,7 @@ void MaterialDialog::onDomainChanged(int index)
     m_hasKinematicViscosityCheck->setEnabled(!solid);
     m_kinematicViscositySpin->setEnabled(!solid && m_hasKinematicViscosityCheck->isChecked());
     m_youngModulusSpin->setEnabled(solid);
+    m_youngModulusUnitCombo->setEnabled(solid);
     m_poissonRatioSpin->setEnabled(solid);
 }
 
@@ -168,7 +185,7 @@ Material MaterialDialog::material() const
     mat.kinematicViscosity = m_kinematicViscositySpin->value();
 
     if (mat.domain == MaterialDomain::Solid) {
-        mat.extraProperties.push_back({"youngModulus", m_youngModulusSpin->value(), "Pa"});
+        mat.extraProperties.push_back({"youngModulus", m_youngModulusSpin->value(), m_youngModulusUnitCombo->currentText()});
         mat.extraProperties.push_back({"poissonRatio", m_poissonRatioSpin->value(), ""});
     }
 
@@ -200,7 +217,12 @@ void MaterialDialog::setMaterial(const Material &mat)
     m_hasKinematicViscosityCheck->setChecked(mat.hasKinematicViscosity);
     m_kinematicViscositySpin->setValue(mat.kinematicViscosity);
 
-    m_youngModulusSpin->setValue(materialPropertyValue(mat, "youngModulus", 2.1e11));
+    const QString youngUnit = materialPropertyUnit(mat, "youngModulus", "GPa");
+    const int unitIndex = m_youngModulusUnitCombo->findText(youngUnit, Qt::MatchFixedString);
+    if (unitIndex >= 0) {
+        m_youngModulusUnitCombo->setCurrentIndex(unitIndex);
+    }
+    m_youngModulusSpin->setValue(materialPropertyValue(mat, "youngModulus", youngUnit == "GPa" ? 210.0 : 2.1e11));
     m_poissonRatioSpin->setValue(materialPropertyValue(mat, "poissonRatio", 0.3));
     onDomainChanged(m_domainCombo->currentIndex());
 }

@@ -71,6 +71,9 @@ BoundaryConditionType boundaryConditionTypeFromString(const QString &value)
     if (value.compare("symmetry", Qt::CaseInsensitive) == 0) {
         return BoundaryConditionType::Symmetry;
     }
+    if (value.compare("symmetryStructural", Qt::CaseInsensitive) == 0) {
+        return BoundaryConditionType::SymmetryStructural;
+    }
     return BoundaryConditionType::Unknown;
 }
 
@@ -82,6 +85,9 @@ LoadType loadTypeFromString(const QString &value)
     if (value.compare("force", Qt::CaseInsensitive) == 0) {
         return LoadType::Force;
     }
+    if (value.compare("surfaceForce", Qt::CaseInsensitive) == 0) {
+        return LoadType::SurfaceForce;
+    }
     if (value.compare("pressure", Qt::CaseInsensitive) == 0) {
         return LoadType::Pressure;
     }
@@ -90,6 +96,9 @@ LoadType loadTypeFromString(const QString &value)
     }
     if (value.compare("bodyForce", Qt::CaseInsensitive) == 0) {
         return LoadType::BodyForce;
+    }
+    if (value.compare("temperature", Qt::CaseInsensitive) == 0) {
+        return LoadType::Temperature;
     }
     return LoadType::Unknown;
 }

@@ -4,7 +4,9 @@
 
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QPushButton>
 #include <QString>
 #include <QVBoxLayout>
 
@@ -67,6 +69,7 @@ QString issueSummaryText(const MeshObject &meshObject)
     if (!meshObject.qualityChecked) {
         return zh(u8"尚未检查");
     }
+
     QStringList issues;
     if (meshObject.invalidTetraCount > 0) {
         issues.append(zh(u8"无效单元 %1").arg(meshObject.invalidTetraCount));
@@ -77,7 +80,7 @@ QString issueSummaryText(const MeshObject &meshObject)
     if (meshObject.highAspectRatioTetraCount > 0) {
         issues.append(zh(u8"高长宽比单元 %1").arg(meshObject.highAspectRatioTetraCount));
     }
-    return issues.isEmpty() ? zh(u8"未发现明显质量问题") : issues.join("；");
+    return issues.isEmpty() ? zh(u8"未发现明显质量问题") : issues.join(zh(u8"；"));
 }
 
 QString qualityStatusText(const MeshObject &meshObject)
@@ -87,14 +90,28 @@ QString qualityStatusText(const MeshObject &meshObject)
     }
     return meshObject.qualityStatus.trimmed().isEmpty() ? zh(u8"已检查") : meshObject.qualityStatus;
 }
+
+bool hasQualityIssueIds(const MeshObject &meshObject)
+{
+    return !meshObject.invalidElementIds.isEmpty()
+        || !meshObject.degenerateElementIds.isEmpty()
+        || !meshObject.highAspectRatioElementIds.isEmpty();
+}
 }
 
-void MeshPropertyView::populate(QWidget *parent, const MeshObject &meshObject)
+void MeshPropertyView::populate(
+    QWidget *parent,
+    const MeshObject &meshObject,
+    const MeshPropertyActions &actions
+)
 {
     auto *dynamicLayout = new QVBoxLayout(parent);
 
     QFormLayout *sizeForm = addSection(dynamicLayout, parent, zh(u8"尺寸参数"));
-    sizeForm->addRow(zh(u8"状态:"), valueLabel(meshObject.stale ? zh(u8"已过期，需要重新生成") : zh(u8"有效"), parent));
+    sizeForm->addRow(
+        zh(u8"状态:"),
+        valueLabel(meshObject.stale ? zh(u8"已过期，需要重新生成") : zh(u8"有效"), parent)
+    );
     if (meshObject.stale && !meshObject.staleReason.isEmpty()) {
         sizeForm->addRow(zh(u8"过期原因:"), valueLabel(meshObject.staleReason, parent));
     }
@@ -120,4 +137,30 @@ void MeshPropertyView::populate(QWidget *parent, const MeshObject &meshObject)
     qualityForm->addRow(zh(u8"近零体积:"), valueLabel(QString::number(meshObject.degenerateTetraCount), parent));
     qualityForm->addRow(zh(u8"高长宽比:"), valueLabel(QString::number(meshObject.highAspectRatioTetraCount), parent));
     qualityForm->addRow(zh(u8"提示:"), valueLabel(warningsText(meshObject), parent));
+
+    if ((actions.highlightQualityIssues || actions.clearHighlight) && hasQualityIssueIds(meshObject)) {
+        auto *buttonRow = new QWidget(parent);
+        auto *buttonLayout = new QHBoxLayout(buttonRow);
+        buttonLayout->setContentsMargins(0, 0, 0, 0);
+
+        auto *highlightButton = new QPushButton(zh(u8"高亮质量问题"), buttonRow);
+        highlightButton->setEnabled(static_cast<bool>(actions.highlightQualityIssues));
+        QObject::connect(highlightButton, &QPushButton::clicked, buttonRow, [actions]() {
+            if (actions.highlightQualityIssues) {
+                actions.highlightQualityIssues();
+            }
+        });
+        buttonLayout->addWidget(highlightButton);
+
+        auto *clearButton = new QPushButton(zh(u8"清除高亮"), buttonRow);
+        clearButton->setEnabled(static_cast<bool>(actions.clearHighlight));
+        QObject::connect(clearButton, &QPushButton::clicked, buttonRow, [actions]() {
+            if (actions.clearHighlight) {
+                actions.clearHighlight();
+            }
+        });
+        buttonLayout->addWidget(clearButton);
+        buttonLayout->addStretch(1);
+        qualityForm->addRow(zh(u8"可视化:"), buttonRow);
+    }
 }

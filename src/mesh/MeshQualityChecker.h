@@ -5,6 +5,8 @@
 #include <QString>
 #include <QStringList>
 
+#include <vector>
+
 struct MeshQualityReport
 {
     bool checked = false;
@@ -26,6 +28,9 @@ struct MeshQualityReport
     double averageAspectRatio = 0.0;
     QString status;
     QStringList warnings;
+    std::vector<int> invalidElementIds;
+    std::vector<int> degenerateElementIds;
+    std::vector<int> highAspectRatioElementIds;
 };
 
 class MeshQualityChecker

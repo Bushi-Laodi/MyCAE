@@ -25,6 +25,12 @@ QString geometryFileStem(const QString &geometryName)
     return result.isEmpty() ? QString("geometry") : result;
 }
 
+QString meshFileStem(const QString &meshName)
+{
+    QString result = geometryFileStem(meshName);
+    return result.isEmpty() ? QString("mesh") : result;
+}
+
 QJsonArray stringListToJson(const QStringList &values)
 {
     QJsonArray array;
@@ -102,9 +108,12 @@ bool MeshManager::saveMeshObject(const MeshObject &meshObject, QString *errorMes
     qualityObject.insert("degenerateTetraCount", meshObject.degenerateTetraCount);
     qualityObject.insert("highAspectRatioTetraCount", meshObject.highAspectRatioTetraCount);
     qualityObject.insert("warnings", stringListToJson(meshObject.qualityWarnings));
+    qualityObject.insert("invalidElementIds", stringListToJson(meshObject.invalidElementIds));
+    qualityObject.insert("degenerateElementIds", stringListToJson(meshObject.degenerateElementIds));
+    qualityObject.insert("highAspectRatioElementIds", stringListToJson(meshObject.highAspectRatioElementIds));
     object.insert("quality", qualityObject);
 
-    QFile file(meshJsonPathForGeometry(meshObject.sourceGeometryName));
+    QFile file(meshJsonPathForMeshName(meshObject.name));
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
         if (errorMessage) {
             *errorMessage = "Failed to write mesh object file: " + file.errorString();
@@ -125,7 +134,7 @@ bool MeshManager::loadMeshObjects(std::vector<MeshObject> &meshObjects, QString 
         return true;
     }
 
-    const QFileInfoList files = meshDir.entryInfoList(QStringList{"*_mesh.json"}, QDir::Files, QDir::Name);
+    const QFileInfoList files = meshDir.entryInfoList(QStringList{"*.json"}, QDir::Files, QDir::Name);
     for (const QFileInfo &fileInfo : files) {
         MeshObject meshObject;
         if (!readMeshObject(fileInfo.absoluteFilePath(), meshObject, errorMessage)) {
@@ -140,6 +149,11 @@ bool MeshManager::loadMeshObjects(std::vector<MeshObject> &meshObjects, QString 
 QString MeshManager::meshJsonPathForGeometry(const QString &geometryName) const
 {
     return QDir(meshDirectory()).filePath(geometryFileStem(geometryName) + "_mesh.json");
+}
+
+QString MeshManager::meshJsonPathForMeshName(const QString &meshName) const
+{
+    return QDir(meshDirectory()).filePath(meshFileStem(meshName) + ".json");
 }
 
 QString MeshManager::meshMshPathForGeometry(const QString &geometryName) const
@@ -207,6 +221,9 @@ bool MeshManager::readMeshObject(const QString &filePath, MeshObject &meshObject
     meshObject.degenerateTetraCount = qualityObject.value("degenerateTetraCount").toInt();
     meshObject.highAspectRatioTetraCount = qualityObject.value("highAspectRatioTetraCount").toInt();
     meshObject.qualityWarnings = stringListFromJson(qualityObject.value("warnings"));
+    meshObject.invalidElementIds = stringListFromJson(qualityObject.value("invalidElementIds"));
+    meshObject.degenerateElementIds = stringListFromJson(qualityObject.value("degenerateElementIds"));
+    meshObject.highAspectRatioElementIds = stringListFromJson(qualityObject.value("highAspectRatioElementIds"));
 
     return true;
 }

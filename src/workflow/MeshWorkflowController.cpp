@@ -21,6 +21,8 @@
 #include <QDir>
 #include <QFileInfo>
 
+#include <algorithm>
+
 namespace
 {
 QString zh(const char *text)
@@ -39,6 +41,37 @@ QString makeSafeFileBaseName(const QString &name)
         }
     }
     return result.isEmpty() ? QString("geometry") : result;
+}
+
+QString nextMeshNameForGeometry(const ProjectModel &projectModel, const QString &geometryName)
+{
+    const QString baseName = geometryName + "_Mesh";
+    bool baseNameExists = false;
+    int maxSuffix = 0;
+
+    for (const MeshObject &meshObject : projectModel.meshRepository().meshObjects()) {
+        if (meshObject.sourceGeometryName != geometryName) {
+            continue;
+        }
+        if (meshObject.name == baseName) {
+            baseNameExists = true;
+            continue;
+        }
+        if (!meshObject.name.startsWith(baseName + "_")) {
+            continue;
+        }
+
+        bool ok = false;
+        const int suffix = meshObject.name.mid(baseName.size() + 1).toInt(&ok);
+        if (ok) {
+            maxSuffix = std::max(maxSuffix, suffix);
+        }
+    }
+
+    if (!baseNameExists && maxSuffix == 0) {
+        return baseName;
+    }
+    return QString("%1_%2").arg(baseName).arg(maxSuffix + 1, 3, 10, QChar('0'));
 }
 
 QString absoluteProjectPath(const ProjectModel &projectModel, const QString &path)
@@ -87,8 +120,15 @@ bool readMeshDataForGeometry(
     MeshWorkflowResult &result
 )
 {
-    const QString meshRelativePath = QDir("mesh").filePath(makeSafeFileBaseName(geometry.name) + ".msh");
-    meshAbsPath = QDir(projectModel.project().rootPath).filePath(meshRelativePath);
+    QString meshRelativePath = QDir("mesh").filePath(makeSafeFileBaseName(geometry.name) + ".msh");
+    const QVector<MeshObject> &meshObjects = projectModel.meshRepository().meshObjects();
+    for (auto it = meshObjects.crbegin(); it != meshObjects.crend(); ++it) {
+        if (it->sourceGeometryName == geometry.name && !it->mshFile.trimmed().isEmpty()) {
+            meshRelativePath = it->mshFile;
+            break;
+        }
+    }
+    meshAbsPath = absoluteProjectPath(projectModel, meshRelativePath);
 
     result.logMessages.append(zh(u8"MSH 文件：") + meshAbsPath);
     if (!QFileInfo::exists(meshAbsPath)) {
@@ -241,8 +281,9 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
         return workflowResult;
     }
 
-    const QString safeGeometryName = makeSafeFileBaseName(geometry.name);
-    const QString meshRelativePath = QDir("mesh").filePath(safeGeometryName + ".msh");
+    const QString meshName = nextMeshNameForGeometry(projectModel, geometry.name);
+    const QString safeMeshName = makeSafeFileBaseName(meshName);
+    const QString meshRelativePath = QDir("mesh").filePath(safeMeshName + ".msh");
     const QString meshAbsPath = QDir(projectModel.project().rootPath).filePath(meshRelativePath);
 
     const GmshCaseWriter gmshCaseWriter;
@@ -302,7 +343,7 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     }
 
     MeshObject meshObject;
-    meshObject.name = geometry.name + "_Mesh";
+    meshObject.name = meshName;
     meshObject.sourceGeometryName = geometry.name;
     meshObject.sourceGeometryType = geometry.type;
     meshObject.sourceStepFile = geometry.stepFile;
@@ -332,24 +373,14 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
         return workflowResult;
     }
 
-    bool replaced = false;
     QVector<MeshObject> &meshObjects = projectModel.meshRepository().meshObjects();
-    for (MeshObject &existingMesh : meshObjects) {
-        if (existingMesh.sourceGeometryName == meshObject.sourceGeometryName) {
-            existingMesh = meshObject;
-            replaced = true;
-            break;
-        }
-    }
-    if (!replaced) {
-        meshObjects.append(meshObject);
-    }
+    meshObjects.append(meshObject);
     projectModel.meshRepository().replaceMeshBoundariesForMesh(meshObject.name, meshBoundaries);
     projectModel.setSelection(Selection::item(SelectionKind::Mesh, meshObject.name, meshObject.name));
 
     workflowResult.meshTreeChanged = true;
     workflowResult.simulationCaseChanged = true;
-    workflowResult.logMessages.append(zh(u8"网格对象已保存：mesh/") + safeGeometryName + "_mesh.json");
+    workflowResult.logMessages.append(zh(u8"网格对象已保存：mesh/") + safeMeshName + ".json");
     workflowResult.logMessages.append(meshObject.meshAutoSize
         ? zh(u8"网格尺寸参数：自动尺寸")
         : zh(u8"网格尺寸参数：手动 min=%1，max=%2")

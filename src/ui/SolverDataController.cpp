@@ -129,7 +129,7 @@ LoadDialogOptions structuralLoadDialogOptions(const ProjectModel &projectModel)
     } else if (options.boundaryConditions.size() == 1) {
         options.defaultBoundaryConditionId = options.boundaryConditions.front().id;
     }
-    options.allowedTypes = {LoadType::Pressure, LoadType::Force, LoadType::Gravity};
+    options.allowedTypes = {LoadType::Pressure, LoadType::Force, LoadType::SurfaceForce, LoadType::Gravity};
     return options;
 }
 

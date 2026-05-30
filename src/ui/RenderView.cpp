@@ -314,6 +314,13 @@ void RenderView::highlightFaceIndices(const std::vector<int> &faceIndices)
     }
 }
 
+void RenderView::highlightMeshElements(const std::vector<int> &elementIds)
+{
+    if (m_canvas) {
+        m_canvas->highlightMeshElements(elementIds);
+    }
+}
+
 void RenderView::highlightResultPosition(double x, double y, double z)
 {
     if (m_canvas) {

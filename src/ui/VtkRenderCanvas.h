@@ -81,6 +81,7 @@ public:
     void clearHighlight();
     void highlightFaceGroup(const FaceGroup &faceGroup, const VtkHighlightStyle &style = VtkHighlightStyle{});
     void highlightFaceIndices(const std::vector<int> &faceIndices);
+    void highlightMeshElements(const std::vector<int> &elementIds);
     void highlightResultPosition(double x, double y, double z);
     void highlightResultExtrema(const ResultExtremeMarker &minimum, const ResultExtremeMarker &maximum);
     QString activeGeometryName() const;
@@ -114,6 +115,7 @@ private:
     vtkSmartPointer<vtkCallbackCommand> m_leftButtonReleaseCallback;
     vtkSmartPointer<vtkOrientationMarkerWidget> m_orientationMarker;
     vtkSmartPointer<vtkPolyData> m_currentPolyData;
+    vtkSmartPointer<vtkUnstructuredGrid> m_currentMeshGrid;
     vtkSmartPointer<vtkUnstructuredGrid> m_currentResultGrid;
     vtkSmartPointer<vtkActor> m_primaryActor;
     vtkSmartPointer<vtkActor> m_resultActor;

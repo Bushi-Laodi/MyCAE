@@ -37,4 +37,7 @@ struct MeshObject
     int degenerateTetraCount = 0;
     int highAspectRatioTetraCount = 0;
     QStringList qualityWarnings;
+    QStringList invalidElementIds;
+    QStringList degenerateElementIds;
+    QStringList highAspectRatioElementIds;
 };

@@ -8,6 +8,16 @@ QString zh(const char *text)
 {
     return QString::fromUtf8(text);
 }
+
+QStringList elementIdsToTextList(const std::vector<int> &elementIds)
+{
+    QStringList values;
+    values.reserve(static_cast<int>(elementIds.size()));
+    for (const int elementId : elementIds) {
+        values.append(QString::number(elementId));
+    }
+    return values;
+}
 }
 
 void MeshQualityService::applyReport(MeshObject &meshObject, const MeshQualityReport &report)
@@ -31,6 +41,9 @@ void MeshQualityService::applyReport(MeshObject &meshObject, const MeshQualityRe
     meshObject.degenerateTetraCount = report.degenerateTetraCount;
     meshObject.highAspectRatioTetraCount = report.highAspectRatioTetraCount;
     meshObject.qualityWarnings = report.warnings;
+    meshObject.invalidElementIds = elementIdsToTextList(report.invalidElementIds);
+    meshObject.degenerateElementIds = elementIdsToTextList(report.degenerateElementIds);
+    meshObject.highAspectRatioElementIds = elementIdsToTextList(report.highAspectRatioElementIds);
 }
 
 QStringList MeshQualityService::logMessages(const MeshQualityReport &report)

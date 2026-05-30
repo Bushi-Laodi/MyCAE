@@ -80,6 +80,12 @@ bool cornerNodes(
 }
 
 template <typename Tetra>
+int tetraElementId(const Tetra &tetra)
+{
+    return tetra.id;
+}
+
+template <typename Tetra>
 void accumulateTetraQuality(
     const Tetra &tetra,
     const QHash<int, MeshNode> &nodesById,
@@ -94,6 +100,7 @@ void accumulateTetraQuality(
     std::array<Vec3, 4> corners;
     if (!cornerNodes(tetra, nodesById, corners)) {
         ++report.invalidTetraCount;
+        report.invalidElementIds.push_back(tetraElementId(tetra));
         return;
     }
 
@@ -128,6 +135,7 @@ void accumulateTetraQuality(
         : 1.0e-18;
     if (shortestEdge <= 0.0 || volume <= localVolumeTolerance) {
         ++report.degenerateTetraCount;
+        report.degenerateElementIds.push_back(tetraElementId(tetra));
     }
 
     const double aspectRatio = shortestEdge > 0.0
@@ -135,6 +143,7 @@ void accumulateTetraQuality(
         : std::numeric_limits<double>::infinity();
     if (aspectRatio > 20.0) {
         ++report.highAspectRatioTetraCount;
+        report.highAspectRatioElementIds.push_back(tetraElementId(tetra));
     }
     if (qIsFinite(aspectRatio)) {
         report.maximumAspectRatio = std::max(report.maximumAspectRatio, aspectRatio);

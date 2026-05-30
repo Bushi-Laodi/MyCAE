@@ -75,6 +75,7 @@ public:
     void clearHighlight();
     void highlightFaceGroup(const FaceGroup &faceGroup, const VtkHighlightStyle &style = VtkHighlightStyle{});
     void highlightFaceIndices(const std::vector<int> &faceIndices);
+    void highlightMeshElements(const std::vector<int> &elementIds);
     void highlightResultPosition(double x, double y, double z);
     void highlightResultExtrema(const ResultExtremeMarker &minimum, const ResultExtremeMarker &maximum);
     QString activeGeometryName() const;

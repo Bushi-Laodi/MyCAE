@@ -18,6 +18,7 @@ enum class BoundaryConditionType
     PressureInlet,
     PressureOutlet,
     Symmetry,
+    SymmetryStructural,
     Unknown
 };
 
@@ -82,6 +83,8 @@ inline QString toString(BoundaryConditionType type)
         return "pressureOutlet";
     case BoundaryConditionType::Symmetry:
         return "symmetry";
+    case BoundaryConditionType::SymmetryStructural:
+        return "symmetryStructural";
     case BoundaryConditionType::Unknown:
         return "unknown";
     }

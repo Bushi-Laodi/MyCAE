@@ -27,12 +27,16 @@ QString defaultFieldName(LoadType type)
         return "U";
     case LoadType::Force:
         return "force";
+    case LoadType::SurfaceForce:
+        return "surfaceForce";
     case LoadType::Pressure:
         return "pressure";
     case LoadType::Gravity:
         return "gravity";
     case LoadType::BodyForce:
         return "bodyForce";
+    case LoadType::Temperature:
+        return "temperature";
     case LoadType::Unknown:
         return {};
     }
@@ -45,14 +49,17 @@ bool isDefaultFieldName(const QString &fieldName)
     return normalized.isEmpty()
         || normalized == defaultFieldName(LoadType::Velocity)
         || normalized == defaultFieldName(LoadType::Force)
+        || normalized == defaultFieldName(LoadType::SurfaceForce)
         || normalized == defaultFieldName(LoadType::Pressure)
         || normalized == defaultFieldName(LoadType::Gravity)
-        || normalized == defaultFieldName(LoadType::BodyForce);
+        || normalized == defaultFieldName(LoadType::BodyForce)
+        || normalized == defaultFieldName(LoadType::Temperature);
 }
 
 bool isVectorLoadType(LoadType type)
 {
     return type == LoadType::Force
+        || type == LoadType::SurfaceForce
         || type == LoadType::Gravity
         || type == LoadType::BodyForce;
 }
@@ -64,12 +71,16 @@ QStringList unitOptions(LoadType type)
         return {"m/s", "mm/s"};
     case LoadType::Force:
         return {"N", "kN"};
+    case LoadType::SurfaceForce:
+        return {"N", "kN"};
     case LoadType::Pressure:
         return {"Pa", "kPa", "MPa", "N/mm^2"};
     case LoadType::Gravity:
         return {"m/s^2", "mm/s^2"};
     case LoadType::BodyForce:
         return {"N", "N/m^3", "N/mm^3", "m/s^2"};
+    case LoadType::Temperature:
+        return {"K", "C"};
     case LoadType::Unknown:
         return {};
     }
@@ -84,6 +95,10 @@ LoadType selectedLoadType(const QComboBox *combo)
 QString loadTypeLabel(LoadType type)
 {
     switch (type) {
+    case LoadType::SurfaceForce:
+        return zh(u8"面力");
+    case LoadType::Temperature:
+        return zh(u8"温度");
     case LoadType::Velocity:
         return zh(u8"速度");
     case LoadType::Force:
@@ -102,7 +117,7 @@ QString loadTypeLabel(LoadType type)
 
 std::vector<LoadType> defaultLoadTypes()
 {
-    return {LoadType::Velocity, LoadType::Force, LoadType::Pressure, LoadType::Gravity};
+    return {LoadType::Velocity, LoadType::Force, LoadType::SurfaceForce, LoadType::Pressure, LoadType::Gravity};
 }
 }
 

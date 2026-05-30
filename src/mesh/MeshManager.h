@@ -15,6 +15,7 @@ public:
     bool loadMeshObjects(std::vector<MeshObject> &meshObjects, QString *errorMessage = nullptr) const;
 
     QString meshJsonPathForGeometry(const QString &geometryName) const;
+    QString meshJsonPathForMeshName(const QString &meshName) const;
     QString meshMshPathForGeometry(const QString &geometryName) const;
 
 private:
