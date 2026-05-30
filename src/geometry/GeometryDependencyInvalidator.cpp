@@ -7,24 +7,15 @@
 #include "result/ResultManager.h"
 #include "result/ResultObject.h"
 
-QStringList GeometryDependencyInvalidator::markGeometryChanged(
+namespace
+{
+QStringList markMeshesAndResultsStale(
     ProjectModel &projectModel,
     const QString &geometryName,
     const QString &reason
-) const
+)
 {
     QStringList messages;
-    if (!projectModel.hasProject() || geometryName.trimmed().isEmpty()) {
-        return messages;
-    }
-
-    for (FaceGroup &faceGroup : projectModel.faceGroups()) {
-        if (faceGroup.geometryName == geometryName) {
-            faceGroup.needsReview = true;
-            faceGroup.reviewReason = reason;
-            messages.append("Face group marked for review: " + faceGroup.id);
-        }
-    }
 
     QStringList staleMeshNames;
     MeshManager meshManager(projectModel.project().rootPath);
@@ -62,4 +53,42 @@ QStringList GeometryDependencyInvalidator::markGeometryChanged(
     }
 
     return messages;
+}
+}
+
+QStringList GeometryDependencyInvalidator::markGeometryChanged(
+    ProjectModel &projectModel,
+    const QString &geometryName,
+    const QString &reason
+) const
+{
+    QStringList messages;
+    if (!projectModel.hasProject() || geometryName.trimmed().isEmpty()) {
+        return messages;
+    }
+
+    for (FaceGroup &faceGroup : projectModel.faceGroups()) {
+        if (faceGroup.geometryName == geometryName) {
+            faceGroup.needsReview = true;
+            faceGroup.reviewReason = reason;
+            messages.append("Face group marked for review: " + faceGroup.id);
+        }
+    }
+
+    messages.append(markMeshesAndResultsStale(projectModel, geometryName, reason));
+
+    return messages;
+}
+
+QStringList GeometryDependencyInvalidator::markMeshControlsChanged(
+    ProjectModel &projectModel,
+    const QString &geometryName,
+    const QString &reason
+) const
+{
+    if (!projectModel.hasProject() || geometryName.trimmed().isEmpty()) {
+        return {};
+    }
+
+    return markMeshesAndResultsStale(projectModel, geometryName, reason);
 }

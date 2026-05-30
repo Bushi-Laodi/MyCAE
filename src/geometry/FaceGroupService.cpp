@@ -2,9 +2,11 @@
 
 #include "geometry/FaceGroupReferenceService.h"
 #include "geometry/FaceReferenceUtils.h"
+#include "geometry/GeometryDependencyInvalidator.h"
 #include "project/ProjectModel.h"
 
 #include <algorithm>
+#include <cmath>
 
 FaceGroupServiceResult FaceGroupService::createOrReplacePickedFaces(
     ProjectModel &projectModel,
@@ -206,8 +208,12 @@ FaceGroupServiceResult FaceGroupService::setLocalMeshSize(
         return result;
     }
 
-    faceGroup->localMeshSize = localMeshSize;
-    faceGroup->localMeshEnabled = localMeshSize > 0.0;
+    const bool oldEnabled = faceGroup->localMeshEnabled && faceGroup->localMeshSize > 0.0;
+    const double oldSize = oldEnabled ? faceGroup->localMeshSize : 0.0;
+    const double normalizedSize = localMeshSize > 0.0 ? localMeshSize : 0.0;
+
+    faceGroup->localMeshSize = normalizedSize;
+    faceGroup->localMeshEnabled = normalizedSize > 0.0;
     result.success = true;
     result.faceGroupId = faceGroup->id;
     result.logMessages.append(
@@ -215,6 +221,16 @@ FaceGroupServiceResult FaceGroupService::setLocalMeshSize(
             ? QString("Local mesh size set for %1: %2").arg(faceGroup->id).arg(faceGroup->localMeshSize)
             : QString("Local mesh disabled for %1.").arg(faceGroup->id)
     );
+
+    if (std::abs(oldSize - normalizedSize) > 1.0e-12 || oldEnabled != faceGroup->localMeshEnabled) {
+        const QString reason = "Face group local mesh size changed: " + faceGroup->id;
+        result.logMessages.append(
+            GeometryDependencyInvalidator().markMeshControlsChanged(projectModel, faceGroup->geometryName, reason)
+        );
+        result.logMessages.append(
+            "Local mesh size changed; existing mesh/results were marked stale. Regenerate mesh to apply."
+        );
+    }
     return result;
 }
 

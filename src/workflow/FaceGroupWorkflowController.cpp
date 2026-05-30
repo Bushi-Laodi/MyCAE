@@ -68,7 +68,14 @@ FaceGroupWorkflowResult FaceGroupWorkflowController::setLocalMeshSize(
     double localMeshSize
 ) const
 {
-    return handleServiceResult(FaceGroupService::setLocalMeshSize(m_projectModel, faceGroupId, localMeshSize), true);
+    const FaceGroupServiceResult serviceResult =
+        FaceGroupService::setLocalMeshSize(m_projectModel, faceGroupId, localMeshSize);
+    FaceGroupWorkflowResult result = handleServiceResult(serviceResult, true);
+    if (serviceResult.success) {
+        m_projectWorkflow.refreshMeshTree();
+        m_projectWorkflow.refreshResultTree();
+    }
+    return result;
 }
 
 FaceGroupWorkflowResult FaceGroupWorkflowController::setPhysicalGroupEnabled(

@@ -1,6 +1,7 @@
 #include "workflow/MeshWorkflowController.h"
 
 #include "geometry/FaceGroup.h"
+#include "geometry/FaceGroupService.h"
 #include "geometry/GeometryObject.h"
 #include "mesh/GmshCaseWriter.h"
 #include "mesh/GmshRunner.h"
@@ -139,6 +140,33 @@ QStringList localMeshControlTexts(const ProjectModel &projectModel, const QStrin
     return controls;
 }
 
+void appendLocalMeshRefinementLog(
+    const ProjectModel &projectModel,
+    const QString &geometryName,
+    MeshWorkflowResult &workflowResult
+)
+{
+    for (const FaceGroup &faceGroup : projectModel.solverRepository().faceGroups()) {
+        if (faceGroup.geometryName != geometryName || !faceGroup.localMeshEnabled || faceGroup.localMeshSize <= 0.0) {
+            continue;
+        }
+        const QString displayName = FaceGroups::displayName(faceGroup);
+        const int faceCount = static_cast<int>(faceGroup.faceIndices.size());
+        if (faceGroup.faceIndices.empty()) {
+            workflowResult.logMessages.append(
+                QString("Local mesh refinement skipped: %1 has no faces.").arg(displayName)
+            );
+            continue;
+        }
+        workflowResult.logMessages.append(
+            QString("Local mesh refinement: %1, size=%2, faces=%3")
+                .arg(displayName)
+                .arg(faceGroup.localMeshSize, 0, 'g', 12)
+                .arg(faceCount)
+        );
+    }
+}
+
 void applyQualityReport(MeshObject &meshObject, const MeshQualityReport &qualityReport)
 {
     MeshQualityService::applyReport(meshObject, qualityReport);
@@ -172,6 +200,27 @@ MeshWorkflowResult MeshWorkflowController::checkGmsh() const
     return workflowResult;
 }
 
+MeshWorkflowResult MeshWorkflowController::setLocalMeshSize(
+    ProjectModel &projectModel,
+    const QString &faceGroupId,
+    double localMeshSize
+) const
+{
+    MeshWorkflowResult workflowResult;
+    const FaceGroupServiceResult serviceResult =
+        FaceGroupService::setLocalMeshSize(projectModel, faceGroupId, localMeshSize);
+    workflowResult.logMessages.append(serviceResult.logMessages);
+    if (!serviceResult.success) {
+        return workflowResult;
+    }
+
+    workflowResult.faceGroupTreeChanged = true;
+    workflowResult.meshTreeChanged = true;
+    workflowResult.resultTreeChanged = true;
+    workflowResult.simulationCaseChanged = true;
+    return workflowResult;
+}
+
 MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectModel) const
 {
     MeshWorkflowResult workflowResult;
@@ -198,6 +247,7 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
 
     const GmshCaseWriter gmshCaseWriter;
     const GmshCaseWriterResult gmshCaseResult = gmshCaseWriter.prepareFaceGroupExport(projectModel, geometry);
+    appendLocalMeshRefinementLog(projectModel, geometry.name, workflowResult);
     workflowResult.logMessages.append(gmshCaseResult.logMessages);
     for (const QString &warning : gmshCaseResult.warnings) {
         workflowResult.logMessages.append(zh(u8"Gmsh 算例警告：") + warning);

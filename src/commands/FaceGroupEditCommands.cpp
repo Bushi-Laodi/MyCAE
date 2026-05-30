@@ -244,19 +244,24 @@ private:
         const QString &faceGroupId
     ) const
     {
+        const FaceGroup *faceGroup = m_context.projectModel.findFaceGroupById(faceGroupId);
+        if (!faceGroup) {
+            return {false, {}, {"Set local mesh size failed: face group not found."}};
+        }
+
         bool accepted = false;
         const double value = QInputDialog::getDouble(
             m_context.window,
-            "Set Local Mesh Size",
-            "Local mesh size (0 disables local mesh):",
-            0.0,
+            QString::fromUtf8(u8"设置局部网格尺寸"),
+            QString::fromUtf8(u8"局部加密尺寸（数值越小网格越密，0 表示禁用，重新生成网格后生效）"),
+            faceGroup->localMeshEnabled && faceGroup->localMeshSize > 0.0 ? faceGroup->localMeshSize : 0.0,
             0.0,
             1.0e9,
             6,
             &accepted
         );
         if (!accepted) {
-            return {false, {}, {"Set local mesh size canceled."}};
+            return {false, {}, {QString::fromUtf8(u8"设置局部网格尺寸已取消。")}};
         }
         return workflow.setLocalMeshSize(faceGroupId, value);
     }

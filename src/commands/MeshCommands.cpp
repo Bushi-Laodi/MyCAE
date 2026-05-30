@@ -1,6 +1,8 @@
 #include "commands/MeshCommands.h"
 
 #include "commands/CommandUtilities.h"
+#include "geometry/FaceGroup.h"
+#include "geometry/GeometryObject.h"
 #include "project/ProjectModel.h"
 #include "ui/MeshSetupDialog.h"
 #include "workflow/MeshWorkflowController.h"
@@ -12,6 +14,32 @@
 
 namespace
 {
+void appendWorkflowResult(MeshWorkflowResult &target, const MeshWorkflowResult &source)
+{
+    target.meshTreeChanged = target.meshTreeChanged || source.meshTreeChanged;
+    target.faceGroupTreeChanged = target.faceGroupTreeChanged || source.faceGroupTreeChanged;
+    target.resultTreeChanged = target.resultTreeChanged || source.resultTreeChanged;
+    target.simulationCaseChanged = target.simulationCaseChanged || source.simulationCaseChanged;
+    target.logMessages.append(source.logMessages);
+}
+
+MeshSetupDialogOptions meshSetupOptionsForSelection(const ProjectModel &projectModel)
+{
+    MeshSetupDialogOptions options;
+    const GeometryObject *geometry = projectModel.geometryForSelection();
+    if (!geometry) {
+        return options;
+    }
+
+    options.geometryName = geometry->name;
+    for (const FaceGroup &faceGroup : projectModel.solverRepository().faceGroups()) {
+        if (faceGroup.geometryName == geometry->name) {
+            options.faceGroups.push_back(faceGroup);
+        }
+    }
+    return options;
+}
+
 class MeshCommand final : public AppCommand
 {
 public:
@@ -33,19 +61,26 @@ public:
             break;
         case MeshCommandType::Generate:
             if (m_context.projectModel.hasProject()) {
-                const std::optional<MeshSetup> meshSetup =
+                const std::optional<MeshSetupDialogResult> meshSetupResult =
                     MeshSetupDialog::editMeshSetup(
                         m_context.window,
-                        m_context.projectModel.meshRepository().meshSetup()
+                        m_context.projectModel.meshRepository().meshSetup(),
+                        meshSetupOptionsForSelection(m_context.projectModel)
                     );
-                if (!meshSetup) {
+                if (!meshSetupResult) {
                     result.logMessages.append("Generate mesh canceled.");
                     break;
                 }
-                m_context.projectModel.meshRepository().meshSetup() = *meshSetup;
+                m_context.projectModel.meshRepository().meshSetup() = meshSetupResult->meshSetup;
                 meshSetupChanged = true;
+                for (const LocalMeshSizeChange &change : meshSetupResult->localMeshSizeChanges) {
+                    appendWorkflowResult(
+                        result,
+                        meshWorkflow.setLocalMeshSize(m_context.projectModel, change.faceGroupId, change.localMeshSize)
+                    );
+                }
             }
-            result = meshWorkflow.generateMesh(m_context.projectModel);
+            appendWorkflowResult(result, meshWorkflow.generateMesh(m_context.projectModel));
             break;
         case MeshCommandType::ReadInfo:
             result = meshWorkflow.readMeshInfo(m_context.projectModel);
@@ -58,8 +93,14 @@ public:
         writeLogMessages(m_context, result.logMessages);
 
         ProjectWorkflowController projectWorkflow = makeProjectWorkflow(m_context);
+        if (result.faceGroupTreeChanged) {
+            projectWorkflow.refreshFaceGroupTree();
+        }
         if (result.meshTreeChanged) {
             projectWorkflow.refreshMeshTree();
+        }
+        if (result.resultTreeChanged) {
+            projectWorkflow.refreshResultTree();
         }
         if (meshSetupChanged) {
             result.simulationCaseChanged = true;
