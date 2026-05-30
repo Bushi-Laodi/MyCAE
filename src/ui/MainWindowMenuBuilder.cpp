@@ -47,38 +47,54 @@ void MainWindowMenuBuilder::build(
     actions.recentProjectsMenu->addSeparator();
     actions.recentProjectsMenu->addAction(actions.clearRecentProjects);
     fileMenu->addSeparator();
+    fileMenu->addAction(actions.projectResources);
+    fileMenu->addAction(actions.exportScreenshot);
+    fileMenu->addSeparator();
     fileMenu->addAction(actions.exit);
 
     auto *editMenu = window->menuBar()->addMenu(zh(u8"编辑"));
     editMenu->addAction(actions.undo);
     editMenu->addAction(actions.redo);
 
+    auto *viewMenu = window->menuBar()->addMenu(zh(u8"视图"));
+    viewMenu->addAction(actions.showGeometryEdges);
+    viewMenu->addAction(actions.showOrientationMarker);
+    viewMenu->addAction(actions.showMeshTransparent);
+    viewMenu->addSeparator();
+    viewMenu->addAction(actions.clearDiagnostics);
+
     auto *geometryMenu = window->menuBar()->addMenu(zh(u8"几何"));
     geometryMenu->addAction(actions.createBox);
     geometryMenu->addAction(actions.createCylinder);
     geometryMenu->addAction(actions.createSphere);
     geometryMenu->addAction(actions.importStep);
+    geometryMenu->addSeparator();
     geometryMenu->addAction(actions.createBoolean);
     geometryMenu->addAction(actions.transformGeometry);
     geometryMenu->addAction(actions.deleteGeometry);
-    geometryMenu->addSeparator();
-    geometryMenu->addAction(actions.showGeometryEdges);
-    geometryMenu->addAction(actions.showOrientationMarker);
-    geometryMenu->addAction(actions.pickFace);
-    geometryMenu->addAction(actions.clearPick);
-    auto *faceGroupMenu = geometryMenu->addMenu(zh(u8"面组"));
-    faceGroupMenu->addAction(actions.createFaceGroupFromPick);
-    faceGroupMenu->addAction(actions.addPickedFacesToFaceGroup);
-    faceGroupMenu->addAction(actions.removePickedFacesFromFaceGroup);
-    faceGroupMenu->addAction(actions.clearFaceGroupFaces);
-    faceGroupMenu->addSeparator();
-    faceGroupMenu->addAction(actions.renameFaceGroup);
-    faceGroupMenu->addAction(actions.deleteFaceGroup);
-    faceGroupMenu->addSeparator();
-    faceGroupMenu->addAction(actions.setFaceGroupLocalMeshSize);
-    faceGroupMenu->addAction(actions.toggleFaceGroupPhysicalGroup);
 
-    auto *caseMenu = window->menuBar()->addMenu(zh(u8"工况"));
+    auto *selectionMenu = window->menuBar()->addMenu(zh(u8"选择与分组"));
+    selectionMenu->addAction(actions.pickFace);
+    selectionMenu->addAction(actions.clearPick);
+    selectionMenu->addSeparator();
+    selectionMenu->addAction(actions.createFaceGroupFromPick);
+    selectionMenu->addAction(actions.addPickedFacesToFaceGroup);
+    selectionMenu->addAction(actions.removePickedFacesFromFaceGroup);
+    selectionMenu->addAction(actions.clearFaceGroupFaces);
+    selectionMenu->addSeparator();
+    selectionMenu->addAction(actions.renameFaceGroup);
+    selectionMenu->addAction(actions.deleteFaceGroup);
+    selectionMenu->addSeparator();
+    selectionMenu->addAction(actions.setFaceGroupLocalMeshSize);
+    selectionMenu->addAction(actions.toggleFaceGroupPhysicalGroup);
+
+    auto *meshMenu = window->menuBar()->addMenu(zh(u8"网格"));
+    meshMenu->addAction(actions.checkGmsh);
+    meshMenu->addAction(actions.generateMesh);
+    meshMenu->addAction(actions.readMeshInfo);
+    meshMenu->addAction(actions.showMesh);
+
+    auto *caseMenu = window->menuBar()->addMenu(zh(u8"仿真设置"));
     auto *structuralCaseMenu = caseMenu->addMenu(zh(u8"结构工况"));
     structuralCaseMenu->addAction(actions.createStructuralMaterial);
     structuralCaseMenu->addAction(actions.createSectionAssignment);
@@ -92,21 +108,15 @@ void MainWindowMenuBuilder::build(
     caseMenu->addAction(actions.editSolverData);
     caseMenu->addAction(actions.deleteSolverData);
 
-    auto *simulationMenu = window->menuBar()->addMenu(zh(u8"仿真"));
-    simulationMenu->addAction(actions.checkGmsh);
-    simulationMenu->addAction(actions.generateMesh);
-    simulationMenu->addAction(actions.readMeshInfo);
-    simulationMenu->addAction(actions.showMesh);
-    simulationMenu->addAction(actions.showMeshTransparent);
-    simulationMenu->addSeparator();
+    auto *solverMenu = window->menuBar()->addMenu(zh(u8"求解"));
     if (solverPluginManager.pluginDescriptors().empty()) {
-        QAction *noSolverAction = simulationMenu->addAction(zh(u8"未找到求解器插件"));
+        QAction *noSolverAction = solverMenu->addAction(zh(u8"未找到求解器插件"));
         noSolverAction->setEnabled(false);
     } else {
         for (const SolverPluginDescriptor &descriptor : solverPluginManager.pluginDescriptors()) {
             const QString pluginId = descriptor.id;
             QAction *runSolverAction =
-                simulationMenu->addAction(SolverPluginDescriptorFormatter::menuText(descriptor));
+                solverMenu->addAction(SolverPluginDescriptorFormatter::menuText(descriptor));
             runSolverAction->setProperty("solverUsable", descriptor.isUsable());
             actions.runSolvers.append(runSolverAction);
             runSolverAction->setStatusTip(SolverPluginDescriptorFormatter::statusTip(descriptor));
@@ -132,8 +142,5 @@ void MainWindowMenuBuilder::build(
     resultsMenu->addAction(actions.exportScreenshot);
 
     auto *toolsMenu = window->menuBar()->addMenu(zh(u8"工具"));
-    toolsMenu->addAction(actions.projectResources);
     toolsMenu->addAction(actions.validateSamples);
-    toolsMenu->addSeparator();
-    toolsMenu->addAction(actions.clearDiagnostics);
 }
