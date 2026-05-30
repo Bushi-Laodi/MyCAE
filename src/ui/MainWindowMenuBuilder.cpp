@@ -67,6 +67,7 @@ void MainWindowMenuBuilder::build(
     geometryMenu->addAction(actions.createBox);
     geometryMenu->addAction(actions.createCylinder);
     geometryMenu->addAction(actions.createSphere);
+    geometryMenu->addAction(actions.createPlateWithHole);
     geometryMenu->addAction(actions.importStep);
     geometryMenu->addSeparator();
     geometryMenu->addAction(actions.createBoolean);

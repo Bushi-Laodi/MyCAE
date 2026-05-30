@@ -87,6 +87,16 @@ void MeshSetupDialog::setupUi()
         updateSizePreview();
     });
 
+    m_algorithmCombo = new QComboBox(this);
+    m_algorithmCombo->addItem(zh(u8"默认"), toString(GmshMeshAlgorithm3D::Default));
+    m_algorithmCombo->addItem(zh(u8"Delaunay"), toString(GmshMeshAlgorithm3D::Delaunay));
+    m_algorithmCombo->addItem(zh(u8"Frontal-Delaunay"), toString(GmshMeshAlgorithm3D::Frontal));
+    m_algorithmCombo->addItem(zh(u8"HXT"), toString(GmshMeshAlgorithm3D::HXT));
+    form->addRow(zh(u8"3D 算法:"), m_algorithmCombo);
+    connect(m_algorithmCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [this]() {
+        updateSizePreview();
+    });
+
     m_autoSizeCheckBox = new QCheckBox(this);
     form->addRow(zh(u8"自动尺寸:"), m_autoSizeCheckBox);
 
@@ -204,6 +214,7 @@ MeshSetup MeshSetupDialog::meshSetup() const
 {
     MeshSetup setup = m_currentSetup;
     setup.elementType = selectedElementType();
+    setup.algorithm = selectedAlgorithm();
     setup.autoSize = m_autoSizeCheckBox->isChecked();
     setup.minimumSize = setup.autoSize ? 0.0 : m_minimumSizeSpin->value();
     setup.maximumSize = setup.autoSize ? 0.0 : m_maximumSizeSpin->value();
@@ -214,6 +225,7 @@ void MeshSetupDialog::setMeshSetup(const MeshSetup &meshSetup)
 {
     m_currentSetup = meshSetup;
     setElementType(meshSetup.elementType);
+    setAlgorithm(meshSetup.algorithm);
     m_autoSizeCheckBox->setChecked(meshSetup.autoSize);
     m_minimumSizeSpin->setValue(meshSetup.minimumSize);
     m_maximumSizeSpin->setValue(meshSetup.maximumSize);
@@ -269,17 +281,22 @@ void MeshSetupDialog::updateSizePreview()
     const QString elementType = m_elementTypeCombo
         ? m_elementTypeCombo->currentText()
         : displayName(MeshElementType::Tetra4);
+    const QString algorithm = m_algorithmCombo
+        ? m_algorithmCombo->currentText()
+        : displayName(GmshMeshAlgorithm3D::Default);
     if (m_autoSizeCheckBox->isChecked()) {
         m_sizePreviewLabel->setText(
-            zh(u8"当前设置：%1，自动尺寸。Gmsh 会根据几何包围盒和曲率估算全局网格尺寸。")
+            zh(u8"当前设置：%1，3D 算法 %2，自动尺寸。Gmsh 会根据几何包围盒和曲率估算全局网格尺寸。")
                 .arg(elementType)
+                .arg(algorithm)
         );
         return;
     }
 
     m_sizePreviewLabel->setText(
-        zh(u8"当前设置：%1，手动尺寸。最小尺寸 %2，最大尺寸 %3。局部加密尺寸可在下方按面组覆盖，修改后需要重新生成网格。")
+        zh(u8"当前设置：%1，3D 算法 %2，手动尺寸。最小尺寸 %3，最大尺寸 %4。局部加密尺寸可在下方按面组覆盖，修改后需要重新生成网格。")
             .arg(elementType)
+            .arg(algorithm)
             .arg(m_minimumSizeSpin->value(), 0, 'g', 8)
             .arg(m_maximumSizeSpin->value(), 0, 'g', 8)
     );
@@ -299,6 +316,18 @@ MeshElementType MeshSetupDialog::selectedElementType() const
         return MeshElementType::Tetra10;
     }
     return MeshElementType::Tetra4;
+}
+
+void MeshSetupDialog::setAlgorithm(GmshMeshAlgorithm3D algorithm)
+{
+    const int index = m_algorithmCombo->findData(toString(algorithm));
+    m_algorithmCombo->setCurrentIndex(index >= 0 ? index : 0);
+    updateSizePreview();
+}
+
+GmshMeshAlgorithm3D MeshSetupDialog::selectedAlgorithm() const
+{
+    return gmshMeshAlgorithm3DFromString(m_algorithmCombo->currentData().toString());
 }
 
 void MeshSetupDialog::refreshLocalMeshTable()

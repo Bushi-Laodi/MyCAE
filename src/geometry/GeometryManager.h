@@ -5,6 +5,7 @@
 #include "geometry/GeometryBooleanOperation.h"
 #include "geometry/GeometryObject.h"
 #include "geometry/GeometryTransform.h"
+#include "geometry/PlateWithHoleGeometry.h"
 #include "geometry/SphereGeometry.h"
 #include "project/Project.h"
 
@@ -21,6 +22,12 @@ public:
     bool createBox(const Project &project, const BoxGeometry &parameters, BoxGeometry *box, QString *errorMessage) const;
     bool createCylinder(const Project &project, const CylinderGeometry &parameters, CylinderGeometry *cylinder, QString *errorMessage) const;
     bool createSphere(const Project &project, const SphereGeometry &parameters, SphereGeometry *sphere, QString *errorMessage) const;
+    bool createPlateWithHole(
+        const Project &project,
+        const PlateWithHoleGeometry &parameters,
+        PlateWithHoleGeometry *plate,
+        QString *errorMessage
+    ) const;
     bool createBooleanGeometry(
         const Project &project,
         const GeometryObject &leftGeometry,
@@ -72,6 +79,7 @@ private:
     QString nextBoxName(const QString &geometryDirPath) const;
     QString nextCylinderName(const QString &geometryDirPath) const;
     QString nextSphereName(const QString &geometryDirPath) const;
+    QString nextPlateWithHoleName(const QString &geometryDirPath) const;
     QString nextBooleanName(const QString &geometryDirPath, GeometryBooleanOperationType operationType) const;
     bool writeBoxFile(const BoxGeometry &box, QString *errorMessage) const;
     bool readBoxFile(const QString &filePath, BoxGeometry *box, QString *errorMessage) const;
@@ -79,6 +87,7 @@ private:
     bool readCylinderFile(const QString &filePath, CylinderGeometry *cylinder, QString *errorMessage) const;
     bool writeSphereFile(const SphereGeometry &sphere, QString *errorMessage) const;
     bool readSphereFile(const QString &filePath, SphereGeometry *sphere, QString *errorMessage) const;
+    bool writePlateWithHoleFile(const PlateWithHoleGeometry &plate, QString *errorMessage) const;
     bool writeBooleanGeometryFile(
         const Project &project,
         const GeometryObject &geometry,

@@ -10,6 +10,7 @@ class QMainWindow;
 class RenderSettingsPanel;
 class RenderView;
 class ResultPostprocessPanel;
+class SolverPreflightPanel;
 class QString;
 struct PickSelection;
 struct ResultProbe;
@@ -22,6 +23,7 @@ struct MainWindowDockWidgets
     PropertyPanel *propertyPanel = nullptr;
     ResultPostprocessPanel *resultPostprocessPanel = nullptr;
     RenderSettingsPanel *renderSettingsPanel = nullptr;
+    SolverPreflightPanel *solverPreflightPanel = nullptr;
     LogPanel *logPanel = nullptr;
     RenderView *renderView = nullptr;
 };

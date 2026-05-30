@@ -155,12 +155,12 @@ void accumulateTetraQuality(
 QString statusText(const MeshQualityReport &report)
 {
     if (report.invalidTetraCount > 0 || report.degenerateTetraCount > 0) {
-        return QString::fromUtf8(u8"需要检查");
+        return QStringLiteral("Failed");
     }
     if (report.highAspectRatioTetraCount > 0) {
-        return QString::fromUtf8(u8"可用，有高长宽比单元");
+        return QStringLiteral("Warning");
     }
-    return QString::fromUtf8(u8"通过");
+    return QStringLiteral("Passed");
 }
 
 void appendWarnings(MeshQualityReport &report)

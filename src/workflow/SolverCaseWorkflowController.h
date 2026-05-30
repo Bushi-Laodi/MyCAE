@@ -1,5 +1,7 @@
 #pragma once
 
+#include "solver/SolverPreflightReport.h"
+
 #include <QString>
 #include <QStringList>
 
@@ -12,6 +14,7 @@ struct SolverCaseWorkflowResult
     bool success = false;
     QString resultId;
     QStringList logMessages;
+    SolverPreflightReport preflightReport;
 };
 
 class SolverCaseWorkflowController

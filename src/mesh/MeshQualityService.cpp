@@ -61,8 +61,9 @@ QStringList MeshQualityService::logMessages(const MeshQualityReport &report)
             .arg(report.degenerateTetraCount)
             .arg(report.highAspectRatioTetraCount)
     );
+    const bool failed = report.invalidTetraCount > 0 || report.degenerateTetraCount > 0;
     for (const QString &warning : report.warnings) {
-        messages.append(zh(u8"网格质量警告：") + warning);
+        messages.append((failed ? zh(u8"网格质量错误：") : zh(u8"网格质量警告：")) + warning);
     }
     return messages;
 }
@@ -90,18 +91,18 @@ QStringList MeshQualityService::solverPreflightMessages(const MeshObject &meshOb
 {
     QStringList messages;
     if (!meshObject.qualityChecked) {
-        messages.append(zh(u8"网格质量警告：当前网格尚未完成质量检查，建议先重新生成或读取网格信息。"));
+        messages.append(zh(u8"Preflight warning: mesh quality has not been checked. 建议先重新生成网格或读取网格信息。"));
         return messages;
     }
 
     if (hasCriticalIssues(meshObject)) {
-        messages.append(zh(u8"网格质量错误：存在无效/退化单元或体积异常，已阻止求解。"));
+        messages.append(zh(u8"Preflight error: mesh quality failed. 存在无效/退化单元或体积异常，已阻止求解。"));
     } else if (hasWarningIssues(meshObject)) {
-        messages.append(zh(u8"网格质量警告：存在高长宽比单元，求解结果可能不稳定。"));
+        messages.append(zh(u8"Preflight warning: mesh quality warning. 存在高长宽比单元，求解结果可能不稳定。"));
     }
 
     for (const QString &warning : meshObject.qualityWarnings) {
-        messages.append(zh(u8"网格质量警告：") + warning);
+        messages.append((hasCriticalIssues(meshObject) ? zh(u8"Preflight error: ") : zh(u8"Preflight warning: ")) + warning);
     }
     return messages;
 }

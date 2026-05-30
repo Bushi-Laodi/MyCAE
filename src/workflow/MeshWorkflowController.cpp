@@ -209,6 +209,10 @@ QString meshOptionLogSuffix(const MeshSetup &meshSetup)
             suffix += QString(" -clmax %1").arg(meshSetup.maximumSize, 0, 'g', 12);
         }
     }
+    const int algorithmValue = gmshOptionValue(meshSetup.algorithm);
+    if (algorithmValue > 0) {
+        suffix += QString(" -setnumber Mesh.Algorithm3D %1").arg(algorithmValue);
+    }
     return suffix;
 }
 
@@ -359,6 +363,7 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     workflowResult.logMessages.append(zh(u8"几何名称：") + geometry.name);
     workflowResult.logMessages.append(zh(u8"几何类型：") + geometry.type);
     workflowResult.logMessages.append(zh(u8"网格单元类型：") + displayName(meshSetup.elementType));
+    workflowResult.logMessages.append(zh(u8"Gmsh 3D 算法：") + displayName(meshSetup.algorithm));
     workflowResult.logMessages.append(meshSetup.autoSize
         ? zh(u8"网格尺寸模式：自动")
         : zh(u8"网格尺寸模式：手动，min=%1，max=%2")
@@ -409,6 +414,7 @@ MeshWorkflowResult MeshWorkflowController::generateMesh(ProjectModel &projectMod
     meshObject.meshAutoSize = meshSetup.autoSize;
     meshObject.meshMinimumSize = meshSetup.minimumSize;
     meshObject.meshMaximumSize = meshSetup.maximumSize;
+    meshObject.meshAlgorithm = toString(meshSetup.algorithm);
     meshObject.localMeshControls = localMeshControlTexts(projectModel, geometry.name);
 
     const MeshQualityReport qualityReport = MeshQualityChecker::check(meshData);

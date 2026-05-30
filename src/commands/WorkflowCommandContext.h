@@ -9,6 +9,7 @@ class ProjectTreePanel;
 class PropertyPanel;
 class QMainWindow;
 class RenderView;
+class SolverPreflightPanel;
 class SolverPluginManager;
 class UndoStackController;
 
@@ -24,6 +25,7 @@ struct WorkflowCommandContext
     ProjectTreePanel *projectTreePanel = nullptr;
     PropertyPanel *propertyPanel = nullptr;
     RenderView *renderView = nullptr;
+    SolverPreflightPanel *solverPreflightPanel = nullptr;
     LogPanel *logPanel = nullptr;
     QMainWindow *window = nullptr;
     PickController *pickController = nullptr;

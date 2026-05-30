@@ -266,6 +266,7 @@ QJsonDocument SimulationCaseJsonWriter::toJson(const SimulationCase &simulationC
 
     QJsonObject meshSetup;
     meshSetup.insert("elementType", toString(simulationCase.meshSetup.elementType));
+    meshSetup.insert("algorithm", toString(simulationCase.meshSetup.algorithm));
     meshSetup.insert("minimumSize", simulationCase.meshSetup.minimumSize);
     meshSetup.insert("maximumSize", simulationCase.meshSetup.maximumSize);
     meshSetup.insert("autoSize", simulationCase.meshSetup.autoSize);

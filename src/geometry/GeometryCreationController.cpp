@@ -4,6 +4,7 @@
 #include "project/Project.h"
 #include "ui/BoxDialog.h"
 #include "ui/CylinderDialog.h"
+#include "ui/PlateWithHoleDialog.h"
 #include "ui/SphereDialog.h"
 
 #include <QDir>
@@ -47,6 +48,19 @@ GeometryObject geometryObjectFromSphere(const Project &project, const SphereGeom
         : sphere.filePath;
     geometry.brepFile = sphere.occBrepFile;
     geometry.stepFile = sphere.occStepFile;
+    return geometry;
+}
+
+GeometryObject geometryObjectFromPlateWithHole(const Project &project, const PlateWithHoleGeometry &plate)
+{
+    GeometryObject geometry;
+    geometry.name = plate.name;
+    geometry.type = "plate_with_hole";
+    geometry.jsonFile = QFileInfo(plate.filePath).isAbsolute()
+        ? QDir(project.rootPath).relativeFilePath(plate.filePath)
+        : plate.filePath;
+    geometry.brepFile = plate.occBrepFile;
+    geometry.stepFile = plate.occStepFile;
     return geometry;
 }
 
@@ -147,6 +161,45 @@ GeometryCreationResult GeometryCreationController::createGeometry(QWidget *paren
             sphere.occStepErrorMessage
         );
         result.logMessages.append("Sphere geometry created: " + sphere.name);
+        return result;
+    }
+
+    if (type == GeometryCreateType::PlateWithHole) {
+        GeometryCreationResult result;
+
+        if (project.rootPath.isEmpty()) {
+            result.errorMessage = "Please create or open a project first.";
+            result.logMessages.append("Create plate with hole failed: no project is open.");
+            return result;
+        }
+
+        PlateWithHoleDialog dialog(parent);
+        if (dialog.exec() != QDialog::Accepted) {
+            result.canceled = true;
+            result.logMessages.append("Create plate with hole canceled.");
+            return result;
+        }
+
+        QString errorMessage;
+        PlateWithHoleGeometry plate;
+        if (!m_geometryManager.createPlateWithHole(project, dialog.plateParameters(), &plate, &errorMessage)) {
+            result.errorMessage = errorMessage;
+            result.logMessages.append("Create plate with hole failed: " + errorMessage);
+            return result;
+        }
+
+        result.success = true;
+        result.geometryObject = geometryObjectFromPlateWithHole(project, plate);
+        appendOccSaveMessages(
+            result,
+            plate.occBrepSaved,
+            plate.occBrepFile,
+            plate.occBrepErrorMessage,
+            plate.occStepSaved,
+            plate.occStepFile,
+            plate.occStepErrorMessage
+        );
+        result.logMessages.append("Plate with hole geometry created: " + plate.name);
         return result;
     }
 

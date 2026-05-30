@@ -31,6 +31,7 @@ constexpr auto CommandExit = "app.exit";
 constexpr auto CommandCreateBox = "geometry.create.box";
 constexpr auto CommandCreateCylinder = "geometry.create.cylinder";
 constexpr auto CommandCreateSphere = "geometry.create.sphere";
+constexpr auto CommandCreatePlateWithHole = "geometry.create.plateWithHole";
 constexpr auto CommandImportStep = "geometry.import.step";
 constexpr auto CommandCreateBoolean = "geometry.create.boolean";
 constexpr auto CommandTransformGeometry = "geometry.transformSelected";
@@ -139,6 +140,15 @@ MainWindowActions MainWindowActionBuilder::build(
         actions.createSphere,
         window,
         makeGeometryCreateCommand(context, GeometryCreateType::Sphere)
+    );
+
+    actions.createPlateWithHole = new QAction(zh(u8"创建带孔板"), window);
+    actions.createPlateWithHole->setStatusTip(zh(u8"创建用于应力集中示例的带中心孔板几何"));
+    actionRegistry.registerActionCommand(
+        CommandCreatePlateWithHole,
+        actions.createPlateWithHole,
+        window,
+        makeGeometryCreateCommand(context, GeometryCreateType::PlateWithHole)
     );
 
     actions.importStep = new QAction(zh(u8"导入 STEP"), window);

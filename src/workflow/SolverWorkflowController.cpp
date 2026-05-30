@@ -3,6 +3,7 @@
 #include "project/ProjectModel.h"
 #include "solver/plugin/SolverPluginManager.h"
 #include "ui/RenderView.h"
+#include "ui/SolverPreflightPanel.h"
 #include "workflow/SelectionController.h"
 #include "workflow/SolverCaseWorkflowController.h"
 #include "workflow/ProjectWorkflowController.h"
@@ -15,6 +16,7 @@ SolverWorkflowController::SolverWorkflowController(
     ProjectWorkflowController &projectWorkflow,
     PropertyPanel *propertyPanel,
     RenderView *renderView,
+    SolverPreflightPanel *solverPreflightPanel,
     QWidget *parent
 )
     : m_projectModel(projectModel)
@@ -22,6 +24,7 @@ SolverWorkflowController::SolverWorkflowController(
     , m_projectWorkflow(projectWorkflow)
     , m_propertyPanel(propertyPanel)
     , m_renderView(renderView)
+    , m_solverPreflightPanel(solverPreflightPanel)
     , m_parent(parent)
 {
 }
@@ -98,6 +101,9 @@ SolverWorkflowResult SolverWorkflowController::runSolverPlugin(const QString &pl
     SolverWorkflowResult result;
     result.logMessages = caseResult.logMessages;
     result.success = caseResult.success;
+    if (m_solverPreflightPanel && !caseResult.preflightReport.items.isEmpty()) {
+        m_solverPreflightPanel->setReport(caseResult.preflightReport);
+    }
     if (result.success) {
         m_projectWorkflow.refreshResultTree();
         if (!caseResult.resultId.isEmpty()) {

@@ -51,6 +51,7 @@ void MainWindowToolBarBuilder::build(QMainWindow *window, const MainWindowAction
     prepareToolAction(actions.createBox, UiIconFactory::toolbarBadge("B", QColor("#2563eb")), zh(u8"创建长方体"));
     prepareToolAction(actions.createCylinder, UiIconFactory::toolbarBadge("C", QColor("#0f766e")), zh(u8"创建圆柱体"));
     prepareToolAction(actions.createSphere, UiIconFactory::toolbarBadge("S", QColor("#9333ea")), zh(u8"创建球体"));
+    prepareToolAction(actions.createPlateWithHole, UiIconFactory::toolbarBadge("PH", QColor("#be123c")), zh(u8"创建带孔板"));
     prepareToolAction(actions.importStep, UiIconFactory::toolbarBadge("I", QColor("#475569")), zh(u8"导入 STEP"));
     prepareToolAction(actions.createBoolean, UiIconFactory::toolbarBadge("B∩", QColor("#7c3aed")), zh(u8"布尔操作"));
     prepareToolAction(actions.transformGeometry, UiIconFactory::toolbarBadge("T", QColor("#ea580c")), zh(u8"变换选中几何体"));
@@ -95,6 +96,7 @@ void MainWindowToolBarBuilder::build(QMainWindow *window, const MainWindowAction
     workflowToolBar->addAction(actions.createBox);
     workflowToolBar->addAction(actions.createCylinder);
     workflowToolBar->addAction(actions.createSphere);
+    workflowToolBar->addAction(actions.createPlateWithHole);
     workflowToolBar->addAction(actions.createBoolean);
     workflowToolBar->addAction(actions.transformGeometry);
     workflowToolBar->addSeparator();

@@ -90,6 +90,7 @@ bool MeshManager::saveMeshObject(const MeshObject &meshObject, QString *errorMes
     sizeObject.insert("autoSize", meshObject.meshAutoSize);
     sizeObject.insert("minimumSize", meshObject.meshMinimumSize);
     sizeObject.insert("maximumSize", meshObject.meshMaximumSize);
+    sizeObject.insert("algorithm", meshObject.meshAlgorithm);
     sizeObject.insert("localControls", stringListToJson(meshObject.localMeshControls));
     object.insert("meshSize", sizeObject);
 
@@ -204,6 +205,7 @@ bool MeshManager::readMeshObject(const QString &filePath, MeshObject &meshObject
     meshObject.meshAutoSize = sizeObject.value("autoSize").toBool(true);
     meshObject.meshMinimumSize = sizeObject.value("minimumSize").toDouble();
     meshObject.meshMaximumSize = sizeObject.value("maximumSize").toDouble();
+    meshObject.meshAlgorithm = sizeObject.value("algorithm").toString("default");
     meshObject.localMeshControls = stringListFromJson(sizeObject.value("localControls"));
 
     const QJsonObject qualityObject = object.value("quality").toObject();

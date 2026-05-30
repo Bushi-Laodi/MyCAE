@@ -25,6 +25,7 @@
 #include <QRegularExpression>
 #include <QStringList>
 
+#include <algorithm>
 #include <exception>
 #include <cmath>
 
@@ -547,6 +548,106 @@ bool GeometryManager::createSphere(
     return true;
 }
 
+bool GeometryManager::createPlateWithHole(
+    const Project &project,
+    const PlateWithHoleGeometry &parameters,
+    PlateWithHoleGeometry *plate,
+    QString *errorMessage
+) const
+{
+    if (!plate) {
+        if (errorMessage) {
+            *errorMessage = "Internal error: plate with hole output object is null.";
+        }
+        return false;
+    }
+
+    if (project.rootPath.isEmpty()) {
+        if (errorMessage) {
+            *errorMessage = "Please create or open a project before creating geometry.";
+        }
+        return false;
+    }
+    if (parameters.length <= 0.0
+            || parameters.width <= 0.0
+            || parameters.thickness <= 0.0
+            || parameters.holeRadius <= 0.0
+            || parameters.holeRadius >= std::min(parameters.length, parameters.width) * 0.5) {
+        if (errorMessage) {
+            *errorMessage = "Invalid plate with hole dimensions.";
+        }
+        return false;
+    }
+
+    const QString geometryDirPath = geometryDirectory(project);
+    if (!QDir().mkpath(geometryDirPath)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to create geometry directory: " + geometryDirPath;
+        }
+        return false;
+    }
+
+    PlateWithHoleGeometry createdPlate;
+    createdPlate.name = nextPlateWithHoleName(geometryDirPath);
+    createdPlate.length = parameters.length;
+    createdPlate.width = parameters.width;
+    createdPlate.thickness = parameters.thickness;
+    createdPlate.holeRadius = parameters.holeRadius;
+    createdPlate.centerX = parameters.centerX;
+    createdPlate.centerY = parameters.centerY;
+    createdPlate.centerZ = parameters.centerZ;
+    createdPlate.unit = parameters.unit;
+    QString plateFileBase = createdPlate.name.toLower();
+    plateFileBase.replace("platewithhole", "plate_with_hole");
+    createdPlate.filePath = QDir(geometryDirPath).filePath(plateFileBase + ".json");
+    createdPlate.occBrepFile = QDir(project.rootPath).relativeFilePath(
+        QDir(geometryDirPath).filePath(plateFileBase + ".brep")
+    );
+    createdPlate.occStepFile = QDir(project.rootPath).relativeFilePath(
+        QDir(geometryDirPath).filePath(plateFileBase + ".step")
+    );
+
+    try {
+        OCCGeometryFactory factory;
+        OCCShapeIO shapeIO;
+        const TopoDS_Shape shape = factory.createShape(createdPlate);
+
+        createdPlate.occBrepSaved = shapeIO.saveBREP(
+            shape,
+            QDir(project.rootPath).filePath(createdPlate.occBrepFile),
+            &createdPlate.occBrepErrorMessage
+        );
+        createdPlate.occStepSaved = shapeIO.saveSTEP(
+            shape,
+            QDir(project.rootPath).filePath(createdPlate.occStepFile),
+            &createdPlate.occStepErrorMessage
+        );
+    } catch (const std::exception &error) {
+        createdPlate.occBrepErrorMessage = error.what();
+        createdPlate.occStepErrorMessage = error.what();
+    } catch (...) {
+        createdPlate.occBrepErrorMessage = "Unknown OCC export error.";
+        createdPlate.occStepErrorMessage = "Unknown OCC export error.";
+    }
+
+    if (!createdPlate.occBrepSaved || !createdPlate.occStepSaved) {
+        if (errorMessage) {
+            *errorMessage = "Failed to create plate with hole OCC files. BREP: "
+                + createdPlate.occBrepErrorMessage
+                + "; STEP: "
+                + createdPlate.occStepErrorMessage;
+        }
+        return false;
+    }
+
+    if (!writePlateWithHoleFile(createdPlate, errorMessage)) {
+        return false;
+    }
+
+    *plate = createdPlate;
+    return true;
+}
+
 bool GeometryManager::createBooleanGeometry(
     const Project &project,
     const GeometryObject &leftGeometry,
@@ -999,7 +1100,12 @@ bool GeometryManager::loadGeometryObjects(const Project &project, std::vector<Ge
 
         const QJsonObject object = document.object();
         const QString type = object.value("type").toString();
-        if (type != "box" && type != "cylinder" && type != "sphere" && type != "boolean" && type != "step") {
+        if (type != "box"
+                && type != "cylinder"
+                && type != "sphere"
+                && type != "plate_with_hole"
+                && type != "boolean"
+                && type != "step") {
             continue;
         }
 
@@ -1056,6 +1162,16 @@ QString GeometryManager::nextSphereName(const QString &geometryDirPath) const
         ++index;
     }
     return QString("Sphere_%1").arg(index);
+}
+
+QString GeometryManager::nextPlateWithHoleName(const QString &geometryDirPath) const
+{
+    const QDir geometryDir(geometryDirPath);
+    int index = 1;
+    while (QFileInfo::exists(geometryDir.filePath(QString("plate_with_hole_%1.json").arg(index)))) {
+        ++index;
+    }
+    return QString("PlateWithHole_%1").arg(index);
 }
 
 QString GeometryManager::nextBooleanName(
@@ -1324,6 +1440,40 @@ bool GeometryManager::readSphereFile(const QString &filePath, SphereGeometry *sp
     }
 
     *sphere = loadedSphere;
+    return true;
+}
+
+bool GeometryManager::writePlateWithHoleFile(const PlateWithHoleGeometry &plate, QString *errorMessage) const
+{
+    QJsonObject dimensions;
+    dimensions.insert("length", plate.length);
+    dimensions.insert("width", plate.width);
+    dimensions.insert("thickness", plate.thickness);
+    dimensions.insert("holeRadius", plate.holeRadius);
+    dimensions.insert("unit", plate.unit);
+
+    QJsonObject occ;
+    occ.insert("brepFile", plate.occBrepFile);
+    occ.insert("stepFile", plate.occStepFile);
+
+    QJsonObject object;
+    object.insert("type", "plate_with_hole");
+    object.insert("name", plate.name);
+    object.insert("visible", true);
+    object.insert("center", centerObject(plate.centerX, plate.centerY, plate.centerZ));
+    object.insert("dimensions", dimensions);
+    object.insert("occ", occ);
+    object.insert("createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
+
+    QFile file(plate.filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        if (errorMessage) {
+            *errorMessage = "Failed to write plate with hole file: " + file.errorString();
+        }
+        return false;
+    }
+
+    file.write(QJsonDocument(object).toJson(QJsonDocument::Indented));
     return true;
 }
 

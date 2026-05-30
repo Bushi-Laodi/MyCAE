@@ -111,17 +111,50 @@ struct SolverPreflightResult
 {
     bool passed = true;
     QStringList messages;
+    SolverPreflightReport report;
 };
 
-void addPreflightError(SolverPreflightResult &result, const QString &message)
+void addPreflightItem(
+    SolverPreflightResult &result,
+    const QString &category,
+    PreflightCheckStatus status,
+    const QString &message,
+    const QString &suggestion = {}
+)
+{
+    PreflightCheckItem item;
+    item.category = category;
+    item.status = status;
+    item.message = message;
+    item.suggestion = suggestion;
+    result.report.items.append(item);
+}
+
+void addPreflightError(SolverPreflightResult &result, const QString &message, const QString &category = "Input")
 {
     result.passed = false;
     result.messages.append("Preflight error: " + message);
+    addPreflightItem(result, category, PreflightCheckStatus::Failed, message);
 }
 
-void addPreflightWarning(SolverPreflightResult &result, const QString &message)
+void addPreflightWarning(SolverPreflightResult &result, const QString &message, const QString &category = "Input")
 {
     result.messages.append("Preflight warning: " + message);
+    addPreflightItem(result, category, PreflightCheckStatus::Warning, message);
+}
+
+bool hasPreflightItem(
+    const SolverPreflightResult &result,
+    const QString &category,
+    PreflightCheckStatus status
+)
+{
+    for (const PreflightCheckItem &item : result.report.items) {
+        if (item.category == category && item.status == status) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool isStructuralConstraintBoundary(const BoundaryCondition &boundaryCondition, const std::vector<Load> &loads)
@@ -188,17 +221,17 @@ void validateStructuralMaterialUnits(SolverPreflightResult &preflight, const std
     for (const Material &material : materials) {
         if (material.hasDensity && !UnitConverter::isKnownUnit(UnitQuantity::Density, material.densityUnit)) {
             addPreflightError(preflight, "material density has unknown unit: "
-                + material.name + ", unit=" + material.densityUnit + ".");
+                + material.name + ", unit=" + material.densityUnit + ".", "Unit");
         }
         for (const MaterialProperty &property : material.extraProperties) {
             if (isYoungModulusProperty(property.name)
                     && !UnitConverter::isKnownUnit(UnitQuantity::Stress, property.unit)) {
                 addPreflightError(preflight, "material elastic modulus has unknown unit: "
-                    + material.name + ", property=" + property.name + ", unit=" + property.unit + ".");
+                    + material.name + ", property=" + property.name + ", unit=" + property.unit + ".", "Unit");
             } else if (isDensityProperty(property.name)
                     && !UnitConverter::isKnownUnit(UnitQuantity::Density, property.unit)) {
                 addPreflightError(preflight, "material density property has unknown unit: "
-                    + material.name + ", property=" + property.name + ", unit=" + property.unit + ".");
+                    + material.name + ", property=" + property.name + ", unit=" + property.unit + ".", "Unit");
             }
         }
     }
@@ -218,7 +251,7 @@ void validateStructuralLoad(SolverPreflightResult &preflight, const Load &load)
         }
         if (!UnitConverter::isKnownUnit(UnitQuantity::Stress, load.value.unit)) {
             addPreflightError(preflight, "pressure load has unknown unit: "
-                + load.name + ", unit=" + load.value.unit + ".");
+                + load.name + ", unit=" + load.value.unit + ".", "Unit");
         }
     } else if (load.type == LoadType::Force || load.type == LoadType::SurfaceForce) {
         if (load.value.kind == LoadValueKind::Vector3 && vectorIsZero(load.value)) {
@@ -226,7 +259,7 @@ void validateStructuralLoad(SolverPreflightResult &preflight, const Load &load)
         }
         if (!UnitConverter::isKnownUnit(UnitQuantity::Force, load.value.unit)) {
             addPreflightError(preflight, "force load has unknown unit: "
-                + load.name + ", unit=" + load.value.unit + ".");
+                + load.name + ", unit=" + load.value.unit + ".", "Unit");
         }
         if (load.type == LoadType::SurfaceForce) {
             addPreflightWarning(preflight, "SurfaceForce 当前按目标边界节点平均分配为 *CLOAD；不是真实 surface traction: "
@@ -238,7 +271,7 @@ void validateStructuralLoad(SolverPreflightResult &preflight, const Load &load)
         }
         if (!UnitConverter::isKnownUnit(UnitQuantity::Acceleration, load.value.unit)) {
             addPreflightError(preflight, "gravity load has unknown unit: "
-                + load.name + ", unit=" + load.value.unit + ".");
+                + load.name + ", unit=" + load.value.unit + ".", "Unit");
         }
     }
 }
@@ -250,17 +283,17 @@ void validateMeshPreflight(
 )
 {
     if (meshName.trimmed().isEmpty()) {
-        addPreflightError(preflight, "no mesh is selected for this simulation case. 请先生成或导入网格。");
+        addPreflightError(preflight, "no mesh is selected for this simulation case. 请先生成或导入网格。", "Mesh");
         return;
     }
 
     const MeshObject *meshObject = projectModel.findMeshByName(meshName);
     if (!meshObject) {
-        addPreflightError(preflight, "mesh not found: " + meshName + ". 请重新选择或导入网格。");
+        addPreflightError(preflight, "mesh not found: " + meshName + ". 请重新选择或导入网格。", "Mesh");
         return;
     }
     if (meshObject->mshFile.trimmed().isEmpty()) {
-        addPreflightError(preflight, "mesh object has no .msh file path: " + meshObject->name + ". 请重新生成或导入网格。");
+        addPreflightError(preflight, "mesh object has no .msh file path: " + meshObject->name + ". 请重新生成或导入网格。", "Mesh");
         return;
     }
 
@@ -268,18 +301,24 @@ void validateMeshPreflight(
         ? meshObject->mshFile
         : QDir(projectModel.project().rootPath).filePath(meshObject->mshFile);
     if (!QFileInfo::exists(meshPath)) {
-        addPreflightError(preflight, "mesh file does not exist: " + meshPath + ". 请重新生成网格。");
+        addPreflightError(preflight, "mesh file does not exist: " + meshPath + ". 请重新生成网格。", "Mesh");
     }
     if (meshObject->stale) {
-        addPreflightError(preflight, "mesh is stale. 网格已过期，请重新生成网格后再求解。");
+        addPreflightError(preflight, "mesh is stale. 网格已过期，请重新生成网格后再求解。", "Mesh");
         if (!meshObject->staleReason.isEmpty()) {
-            addPreflightWarning(preflight, "mesh stale reason: " + meshObject->staleReason);
+            addPreflightWarning(preflight, "mesh stale reason: " + meshObject->staleReason, "Mesh");
         }
     }
 
     preflight.messages.append(MeshQualityService::solverPreflightMessages(*meshObject));
     if (MeshQualityService::hasCriticalIssues(*meshObject)) {
-        addPreflightError(preflight, "mesh quality has critical issues. 请修复退化单元、负体积或无效单元。");
+        addPreflightError(preflight, "mesh quality has critical issues. 请修复退化单元、负体积或无效单元。", "Mesh Quality");
+    } else if (!meshObject->qualityChecked) {
+        addPreflightWarning(preflight, "mesh quality has not been checked. 建议先重新生成网格或读取网格信息。", "Mesh Quality");
+    } else if (MeshQualityService::hasWarningIssues(*meshObject)) {
+        addPreflightWarning(preflight, "mesh quality has warnings. 存在高长宽比单元，建议检查后继续。", "Mesh Quality");
+    } else {
+        addPreflightItem(preflight, "Mesh Quality", PreflightCheckStatus::Passed, "mesh quality passed.");
     }
 }
 
@@ -334,10 +373,13 @@ void validateCalculiXSectionAssignments(
     const CalculiXSectionValidationResult sectionValidation =
         CalculiXSectionAssignmentValidator::validate(structuralCase, meshObject, meshData);
     for (const QString &error : sectionValidation.errors) {
-        addPreflightError(preflight, error);
+        addPreflightError(preflight, error, "Section");
     }
     for (const QString &warning : sectionValidation.warnings) {
-        addPreflightWarning(preflight, warning);
+        addPreflightWarning(preflight, warning, "Section");
+    }
+    if (sectionValidation.errors.isEmpty() && sectionValidation.warnings.isEmpty()) {
+        addPreflightItem(preflight, "Section", PreflightCheckStatus::Passed, "section assignment coverage is valid.");
     }
 }
 
@@ -398,12 +440,19 @@ SolverPreflightResult validateCalculiXPreflight(
 {
     SolverPreflightResult preflight;
     if (projectModel.geometryObjects().isEmpty()) {
-        addPreflightError(preflight, "project has no geometry. 请先创建或导入几何。");
+        addPreflightError(preflight, "project has no geometry. 请先创建或导入几何。", "Geometry");
+    } else {
+        addPreflightItem(preflight, "Geometry", PreflightCheckStatus::Passed, "project geometry exists.");
     }
 
     validateMeshPreflight(preflight, projectModel, meshName);
 
     const StructuralCase &structuralCase = simulationCase.structuralCase;
+    if (structuralCase.materials.empty()) {
+        addPreflightError(preflight, "missing structural material. 请先创建结构材料。", "Material");
+    } else {
+        addPreflightItem(preflight, "Material", PreflightCheckStatus::Passed, "structural material exists.");
+    }
     validateStructuralMaterialUnits(preflight, structuralCase.materials);
     for (const BoundaryCondition &boundaryCondition : simulationCase.boundaryConditions) {
         if (boundaryCondition.enabled && boundaryCondition.type == BoundaryConditionType::SymmetryStructural) {
@@ -423,10 +472,14 @@ SolverPreflightResult validateCalculiXPreflight(
         hasConstraint = hasConstraint || isStructuralConstraintBoundary(boundaryCondition, structuralCase.loads);
     }
     if (!hasConstraint) {
-        addPreflightError(preflight, "missing fixed/displacement constraint; the model may move as a rigid body. 缺少固定约束，模型可能刚体运动。");
+        addPreflightError(preflight, "missing fixed/displacement constraint; the model may move as a rigid body. 缺少固定约束，模型可能刚体运动。", "Boundary");
+    } else {
+        addPreflightItem(preflight, "Boundary", PreflightCheckStatus::Passed, "structural constraint exists.");
     }
     if (structuralCase.loads.empty()) {
-        addPreflightError(preflight, "missing structural load. 请添加压力、力或重力载荷。");
+        addPreflightError(preflight, "missing structural load. 请添加压力、力或重力载荷。", "Load");
+    } else {
+        addPreflightItem(preflight, "Load", PreflightCheckStatus::Passed, "structural load exists.");
     }
     for (const Load &load : structuralCase.loads) {
         if (!load.enabled) {
@@ -437,6 +490,9 @@ SolverPreflightResult validateCalculiXPreflight(
                 + load.name + ". 载荷引用的边界已丢失，请重新选择载荷作用面。");
         }
         validateStructuralLoad(preflight, load);
+    }
+    if (!hasPreflightItem(preflight, "Unit", PreflightCheckStatus::Failed)) {
+        addPreflightItem(preflight, "Unit", PreflightCheckStatus::Passed, "material and load units are known.");
     }
 
     validateBoundaryTargets(
@@ -452,9 +508,10 @@ SolverPreflightResult validateCalculiXPreflight(
     if (!CalculiXEnvironment::executableAvailable(&resolvedCcx)) {
         addPreflightError(preflight, "ccx executable is not available: "
             + CalculiXEnvironment::executablePath()
-            + ". 请配置 MYCAE_CALCULIX_EXECUTABLE 或 CMake 中的 CalculiX 路径。");
+            + ". 请配置 MYCAE_CALCULIX_EXECUTABLE 或 CMake 中的 CalculiX 路径。", "Solver");
     } else {
         preflight.messages.append("Preflight info: CalculiX executable found: " + resolvedCcx);
+        addPreflightItem(preflight, "Solver", PreflightCheckStatus::Passed, "CalculiX executable found: " + resolvedCcx);
     }
 
     if (preflight.passed) {
@@ -561,22 +618,25 @@ SolverCaseWorkflowResult SolverCaseWorkflowController::runPlugin(const QString &
     if (pluginId == "calculix") {
         const SolverPreflightResult preflight =
             validateCalculiXPreflight(m_projectModel, simulationCase, meshName);
+        result.preflightReport = preflight.report;
         result.logMessages.append(preflight.messages);
         if (!preflight.passed) {
             return result;
         }
     }
-    if (const MeshObject *meshObject = m_projectModel.findMeshByName(meshName)) {
-        if (meshObject->stale) {
-            result.logMessages.append(zh(u8"运行求解器失败：网格已过期，请重新生成网格后再求解。"));
-            if (!meshObject->staleReason.isEmpty()) {
-                result.logMessages.append(zh(u8"网格过期原因：") + meshObject->staleReason);
+    if (pluginId != "calculix") {
+        if (const MeshObject *meshObject = m_projectModel.findMeshByName(meshName)) {
+            if (meshObject->stale) {
+                result.logMessages.append(zh(u8"运行求解器失败：网格已过期，请重新生成网格后再求解。"));
+                if (!meshObject->staleReason.isEmpty()) {
+                    result.logMessages.append(zh(u8"网格过期原因：") + meshObject->staleReason);
+                }
+                return result;
             }
-            return result;
-        }
-        result.logMessages.append(MeshQualityService::solverPreflightMessages(*meshObject));
-        if (MeshQualityService::hasCriticalIssues(*meshObject)) {
-            return result;
+            result.logMessages.append(MeshQualityService::solverPreflightMessages(*meshObject));
+            if (MeshQualityService::hasCriticalIssues(*meshObject)) {
+                return result;
+            }
         }
     }
     const QString caseDirectory = solverCaseDirectory(m_projectModel, pluginId, simulationCase);

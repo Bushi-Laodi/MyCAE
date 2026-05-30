@@ -88,7 +88,17 @@ QString qualityStatusText(const MeshObject &meshObject)
     if (!meshObject.qualityChecked) {
         return zh(u8"未检查");
     }
-    return meshObject.qualityStatus.trimmed().isEmpty() ? zh(u8"已检查") : meshObject.qualityStatus;
+    const QString status = meshObject.qualityStatus.trimmed();
+    if (status == "Passed") {
+        return zh(u8"通过");
+    }
+    if (status == "Warning") {
+        return zh(u8"警告");
+    }
+    if (status == "Failed") {
+        return zh(u8"失败");
+    }
+    return status.isEmpty() ? zh(u8"已检查") : status;
 }
 
 bool hasQualityIssueIds(const MeshObject &meshObject)
@@ -119,6 +129,7 @@ void MeshPropertyView::populate(
     sizeForm->addRow(zh(u8"Tetra4:"), valueLabel(QString::number(meshObject.tetra4Count), parent));
     sizeForm->addRow(zh(u8"Tetra10:"), valueLabel(QString::number(meshObject.tetra10Count), parent));
     sizeForm->addRow(zh(u8"表面三角形:"), valueLabel(QString::number(meshObject.surfaceTriangleCount), parent));
+    sizeForm->addRow(zh(u8"网格算法:"), valueLabel(meshObject.meshAlgorithm, parent));
     sizeForm->addRow(zh(u8"全局尺寸:"), valueLabel(globalSizeText(meshObject), parent));
     sizeForm->addRow(zh(u8"局部尺寸:"), valueLabel(localControlText(meshObject), parent));
 
@@ -143,7 +154,7 @@ void MeshPropertyView::populate(
         auto *buttonLayout = new QHBoxLayout(buttonRow);
         buttonLayout->setContentsMargins(0, 0, 0, 0);
 
-        auto *highlightButton = new QPushButton(zh(u8"高亮质量问题"), buttonRow);
+        auto *highlightButton = new QPushButton(zh(u8"高亮问题单元"), buttonRow);
         highlightButton->setEnabled(static_cast<bool>(actions.highlightQualityIssues));
         QObject::connect(highlightButton, &QPushButton::clicked, buttonRow, [actions]() {
             if (actions.highlightQualityIssues) {

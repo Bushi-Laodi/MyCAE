@@ -441,6 +441,7 @@ WorkflowCommandContext MainWindow::workflowCommandContext()
         m_docks.projectTreePanel,
         m_docks.propertyPanel,
         m_docks.renderView,
+        m_docks.solverPreflightPanel,
         m_docks.logPanel,
         this,
         &m_pickController,

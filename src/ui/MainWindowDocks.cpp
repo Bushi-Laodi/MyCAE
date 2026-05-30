@@ -7,6 +7,7 @@
 #include "ui/RenderView.h"
 #include "ui/RenderSettingsPanel.h"
 #include "ui/ResultPostprocessPanel.h"
+#include "ui/SolverPreflightPanel.h"
 
 #include <QDockWidget>
 #include <QMainWindow>
@@ -71,6 +72,11 @@ MainWindowDockWidgets MainWindowDockBuilder::build(QMainWindow *window, const Ma
     widgets.diagnosticPanel = new DiagnosticPanel(diagnosticDock);
     diagnosticDock->setWidget(widgets.diagnosticPanel);
     window->addDockWidget(Qt::BottomDockWidgetArea, diagnosticDock);
+
+    auto *preflightDock = new QDockWidget(zh(u8"求解前检查"), window);
+    widgets.solverPreflightPanel = new SolverPreflightPanel(preflightDock);
+    preflightDock->setWidget(widgets.solverPreflightPanel);
+    window->addDockWidget(Qt::BottomDockWidgetArea, preflightDock);
 
     auto *propertyDock = new QDockWidget(zh(u8"属性"), window);
     propertyDock->setMinimumWidth(340);
@@ -241,6 +247,7 @@ MainWindowDockWidgets MainWindowDockBuilder::build(QMainWindow *window, const Ma
     logDock->setWidget(widgets.logPanel);
     window->addDockWidget(Qt::BottomDockWidgetArea, logDock);
     window->tabifyDockWidget(logDock, diagnosticDock);
+    window->tabifyDockWidget(logDock, preflightDock);
 
     return widgets;
 }

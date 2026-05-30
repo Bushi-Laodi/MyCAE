@@ -62,6 +62,8 @@ private:
     void updateSizePreview();
     void setElementType(MeshElementType elementType);
     MeshElementType selectedElementType() const;
+    void setAlgorithm(GmshMeshAlgorithm3D algorithm);
+    GmshMeshAlgorithm3D selectedAlgorithm() const;
     void refreshLocalMeshTable();
     void updateLocalMeshButtons();
     void editSelectedLocalMeshSize();
@@ -74,6 +76,7 @@ private:
     std::vector<FaceGroup> m_originalFaceGroups;
     std::vector<FaceGroup> m_pendingFaceGroups;
     QComboBox *m_elementTypeCombo = nullptr;
+    QComboBox *m_algorithmCombo = nullptr;
     QCheckBox *m_autoSizeCheckBox = nullptr;
     QDoubleSpinBox *m_minimumSizeSpin = nullptr;
     QDoubleSpinBox *m_maximumSizeSpin = nullptr;

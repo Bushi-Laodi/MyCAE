@@ -9,6 +9,7 @@ class ProjectModel;
 class ProjectWorkflowController;
 class PropertyPanel;
 class RenderView;
+class SolverPreflightPanel;
 class SolverPluginManager;
 class QWidget;
 
@@ -27,6 +28,7 @@ public:
         ProjectWorkflowController &projectWorkflow,
         PropertyPanel *propertyPanel,
         RenderView *renderView,
+        SolverPreflightPanel *solverPreflightPanel,
         QWidget *parent
     );
 
@@ -52,5 +54,6 @@ private:
     ProjectWorkflowController &m_projectWorkflow;
     PropertyPanel *m_propertyPanel = nullptr;
     RenderView *m_renderView = nullptr;
+    SolverPreflightPanel *m_solverPreflightPanel = nullptr;
     QWidget *m_parent = nullptr;
 };

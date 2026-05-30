@@ -149,6 +149,7 @@ qt_add_executable(MyCAE
     src/geometry/GeometryPropertyController.cpp
     src/geometry/GeometryPropertyController.h
     src/geometry/GeometryTransform.h
+    src/geometry/PlateWithHoleGeometry.h
     src/geometry/SphereGeometry.h
     src/commands/AppCommand.h
     src/commands/CommandUtilities.cpp
@@ -206,6 +207,8 @@ qt_add_executable(MyCAE
     src/occ/OCCCylinderBuilder.h
     src/occ/OCCGeometryFactory.cpp
     src/occ/OCCGeometryFactory.h
+    src/occ/OCCPlateWithHoleBuilder.cpp
+    src/occ/OCCPlateWithHoleBuilder.h
     src/occ/OCCShapeConverter.cpp
     src/occ/OCCShapeConverter.h
     src/occ/OCCShapeIO.cpp
@@ -295,6 +298,7 @@ qt_add_executable(MyCAE
     src/solver/SimulationCaseManager.h
     src/solver/SolverDataService.cpp
     src/solver/SolverDataService.h
+    src/solver/SolverPreflightReport.h
     src/solver/calculix/CalculiXCasePaths.cpp
     src/solver/calculix/CalculiXCasePaths.h
     src/solver/calculix/CalculiXCaseData.h
@@ -405,6 +409,8 @@ qt_add_executable(MyCAE
     src/ui/MainWindowViewController.h
     src/ui/MaterialDialog.cpp
     src/ui/MaterialDialog.h
+    src/ui/PlateWithHoleDialog.cpp
+    src/ui/PlateWithHoleDialog.h
     src/ui/SectionAssignmentDialog.cpp
     src/ui/SectionAssignmentDialog.h
     src/ui/GeometryTransformDialog.cpp
@@ -450,6 +456,8 @@ qt_add_executable(MyCAE
     src/ui/RenderView.h
     src/ui/SolverDataController.cpp
     src/ui/SolverDataController.h
+    src/ui/SolverPreflightPanel.cpp
+    src/ui/SolverPreflightPanel.h
     src/ui/VtkRenderCanvas.cpp
     src/ui/VtkRenderCanvas.h
     src/workflow/GeometryWorkflowController.cpp

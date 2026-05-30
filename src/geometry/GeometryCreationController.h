@@ -13,7 +13,8 @@ enum class GeometryCreateType
 {
     Box,
     Cylinder,
-    Sphere
+    Sphere,
+    PlateWithHole
 };
 
 struct GeometryCreationResult

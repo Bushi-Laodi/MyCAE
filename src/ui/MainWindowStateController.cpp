@@ -37,6 +37,9 @@ void MainWindowStateController::update(
     if (actions.createSphere) {
         actions.createSphere->setEnabled(hasProject);
     }
+    if (actions.createPlateWithHole) {
+        actions.createPlateWithHole->setEnabled(hasProject);
+    }
     if (actions.importStep) {
         actions.importStep->setEnabled(hasProject);
     }

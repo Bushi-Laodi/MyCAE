@@ -25,6 +25,7 @@ struct MainWindowActions
     QAction *createBox = nullptr;
     QAction *createCylinder = nullptr;
     QAction *createSphere = nullptr;
+    QAction *createPlateWithHole = nullptr;
     QAction *importStep = nullptr;
     QAction *createBoolean = nullptr;
     QAction *transformGeometry = nullptr;

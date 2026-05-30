@@ -66,6 +66,7 @@ SolverWorkflowController makeSolverWorkflow(
         projectWorkflow,
         context.propertyPanel,
         context.renderView,
+        context.solverPreflightPanel,
         context.window
     );
 }

@@ -132,6 +132,12 @@ GmshRunResult GmshRunner::generate3DMesh(
             arguments.append(QString::number(meshSetup.maximumSize, 'g', 12));
         }
     }
+    const int algorithmValue = gmshOptionValue(meshSetup.algorithm);
+    if (algorithmValue > 0) {
+        arguments.append(QStringLiteral("-setnumber"));
+        arguments.append(QStringLiteral("Mesh.Algorithm3D"));
+        arguments.append(QString::number(algorithmValue));
+    }
     process.setArguments(arguments);
     process.start();
 
