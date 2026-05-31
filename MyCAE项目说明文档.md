@@ -104,7 +104,8 @@ MyCAE 当前更适合定位为：
 | CalculiX 求解 | 生成 `.inp` 文件、调用求解器、读取结果 |
 | 结果后处理 | 显示位移、应力、反力等结果场 |
 | 结果导出 | 支持 CSV、报告、截图等导出能力 |
-| 插件扩展 | 已有 CalculiX 插件基础，OpenFOAM 扩展预留 |
+| 插件扩展 | 已有 CalculiX 和 OpenFOAM 插件注册机制，支持内置插件和外部进程插件扩展 |
+| OpenFOAM 微服务 | 通过 HTTP/JSON 调用本地 FastAPI 服务，预留 CFD 求解远程执行能力 |
 
 ### 2.2 工程管理功能
 
@@ -415,17 +416,152 @@ Qt 用户界面层
 
 这种设计让用户操作和工程数据保持一致，也方便保存、重新打开和后续扩展。
 
-### 3.6 求解器插件设计
+### 3.6 求解器插件化设计
 
-当前项目已经围绕 CalculiX 建立求解器适配流程。CalculiX 模块负责：
+MyCAE 的求解器不是直接写死在主窗口中的，而是通过插件接口统一管理。这样做的目的是让不同求解器都遵守同一套调用流程，主程序不需要关心某个求解器内部到底是 CalculiX、OpenFOAM，还是后续新增的其他求解器。
+
+求解器插件的核心接口可以概括为三步：
+
+```text
+exportCase   导出求解器输入文件或请求文件
+runCase      执行求解过程
+readResult   读取求解结果并返回给 MyCAE
+```
+
+也就是说，不管是哪一种求解器插件，都需要回答三个问题：
+
+1. 如何把 MyCAE 的工程数据转换成该求解器能理解的输入？
+2. 如何启动该求解器执行计算？
+3. 如何把求解结果重新读回 MyCAE？
+
+当前项目中，求解器插件接口主要包含：
+
+| 接口 | 作用 |
+|---|---|
+| `descriptor()` | 返回插件名称、ID、版本、求解类型和能力描述 |
+| `exportCase()` | 导出求解工况 |
+| `runCase()` | 运行求解器 |
+| `readResult()` | 读取结果文件 |
+
+求解器插件管理器负责注册和查找插件。当前内置插件包括：
+
+| 插件 ID | 插件名称 | 求解类型 | 当前状态 |
+|---|---|---|---|
+| `calculix` | CalculiX | 结构有限元分析 | 可用于主线演示 |
+| `openfoam` | OpenFOAM | CFD 流体分析 | 微服务演示集成 |
+
+插件化设计的优点是：
+
+1. 主程序只需要调用统一接口，不需要为每个求解器写一套界面逻辑。
+2. CalculiX 和 OpenFOAM 可以采用不同执行方式，但对上层流程保持一致。
+3. 后续可以继续增加外部进程插件，例如自定义 Python 求解脚本。
+4. 每个插件可以声明自己的能力，例如是否支持导出、运行、读取结果。
+5. 便于后续实现多求解器切换和自动化调度。
+
+### 3.7 CalculiX 插件设计
+
+CalculiX 是当前结构静力分析主线使用的求解器插件。
+
+CalculiX 插件负责：
 
 1. 从工程数据中提取结构分析所需信息。
-2. 生成 CalculiX 输入文件。
-3. 调用外部 `ccx.exe`。
-4. 解析输出结果。
-5. 把结果交给 VTK 后处理模块显示。
+2. 检查网格、材料、材料分区、边界条件和载荷是否完整。
+3. 生成 CalculiX 输入文件 `.inp`。
+4. 调用外部 `ccx.exe` 执行求解。
+5. 读取 `.dat`、`.frd`、`.sta` 和日志文件。
+6. 将位移、应力和反力结果交给 VTK 后处理模块显示。
 
-这种设计为后续扩展 OpenFOAM 或其他求解器提供了基础。
+CalculiX 插件的执行流程如下：
+
+```text
+ProjectModel
+-> SimulationCase
+-> SolverCaseContext
+-> CalculiXPlugin.exportCase()
+-> CalculiXPlugin.runCase()
+-> CalculiXPlugin.readResult()
+-> ResultObject
+-> VTK 后处理显示
+```
+
+对于用户来说，点击“运行 CalculiX”时看到的是一个按钮操作；对于程序来说，实际执行的是插件接口中的导出、运行和读取三个阶段。
+
+### 3.8 OpenFOAM 微服务设计
+
+OpenFOAM 的运行环境通常比 CalculiX 更复杂，它依赖 Linux 环境、OpenFOAM case 目录结构、求解器命令、网格转换和后处理文件。为了避免把这些复杂环境全部塞进 Qt 桌面程序，本项目采用了“微服务式”的集成思路。
+
+当前 OpenFOAM 插件不是直接在 Qt 程序内部运行完整 OpenFOAM，而是通过 HTTP/JSON 请求调用一个本地或远程服务。该服务可以用 FastAPI 实现，负责处理 OpenFOAM 风格的 case 生成、运行和结果返回。
+
+OpenFOAM 微服务架构如下：
+
+```text
+MyCAE 桌面端
+-> OpenFoamPlugin
+-> OpenFoamCaseWriter 导出请求清单
+-> OpenFoamServiceClient 发送 HTTP POST /run
+-> FastAPI OpenFOAM 服务
+-> 生成或运行 OpenFOAM case
+-> 输出 VTK / 日志 / JSON 响应
+-> MyCAE 读取响应并导入结果
+```
+
+该设计中，各部分职责如下：
+
+| 模块 | 职责 |
+|---|---|
+| MyCAE Qt 客户端 | 管理工程、几何、网格、边界、材料和结果显示 |
+| `OpenFoamPlugin` | 作为 MyCAE 内部的 OpenFOAM 求解器插件 |
+| `OpenFoamCaseWriter` | 导出 OpenFOAM 请求清单 `openfoam_case_request.json` |
+| `OpenFoamServiceClient` | 向服务端发送 HTTP 请求并保存响应 |
+| FastAPI 服务端 | 接收请求、组织 OpenFOAM case、执行求解或演示任务 |
+| OpenFOAM 环境 | 实际运行 CFD 求解器 |
+| VTK 后处理 | 将服务返回的 VTK 文件显示到 MyCAE 中 |
+
+当前 OpenFOAM 服务默认地址为：
+
+```text
+http://127.0.0.1:8765
+```
+
+运行请求接口为：
+
+```text
+POST /run
+```
+
+请求数据主要包含：
+
+| 字段 | 含义 |
+|---|---|
+| `caseName` | 工况名称 |
+| `caseDirectory` | 求解工况目录 |
+| `projectName` | 当前工程名称 |
+| `meshName` | 当前 CFD 网格名称 |
+| `meshNodeCount` | 网格节点数量 |
+| `meshCellCount` | 网格单元数量 |
+| `materialCount` | CFD 材料数量 |
+| `boundaryConditionCount` | CFD 边界数量 |
+| `loadCount` | CFD 场值或载荷数量 |
+
+服务端返回结果主要包含：
+
+| 字段 | 含义 |
+|---|---|
+| `success` | 服务端任务是否成功 |
+| `jobId` | 服务端任务编号 |
+| `summary` | 求解或演示摘要 |
+| `logFile` | 服务日志文件 |
+| `vtkFiles` | 可导入 MyCAE 后处理的 VTK 文件 |
+| `log` | 服务端返回的日志消息 |
+
+这种微服务设计的优点是：
+
+1. Qt 桌面程序不需要直接绑定复杂的 OpenFOAM 运行环境。
+2. OpenFOAM 可以部署在本机、WSL、Linux 服务器或远程计算节点上。
+3. CFD 求解流程可以独立升级，不影响桌面端主程序。
+4. 后续可以接入 AI Agent，让 Agent 在服务端自动生成 OpenFOAM case。
+5. 服务端可以扩展队列、任务 ID、远程日志、异步求解和结果下载。
+6. 结构求解和流体求解在 MyCAE 中仍然保持统一的插件调用方式。
 
 ---
 
@@ -733,6 +869,32 @@ Reaction Force Magnitude
 5. AI Agent 自动创建仿真工况。
 6. 自动生成仿真报告。
 
+### 6.9 求解器插件化亮点
+
+求解器插件化是本项目架构上的重要亮点。传统写法可能会把“运行 CalculiX”直接写在某个按钮事件中，这样后续如果要接入 OpenFOAM 或其他求解器，就需要修改大量界面代码。
+
+MyCAE 采用统一插件接口，把求解器能力抽象为：
+
+```text
+导出工况 -> 运行求解 -> 读取结果
+```
+
+这样 CalculiX 和 OpenFOAM 虽然内部实现完全不同，但在主程序看来都是一个 `SolverPlugin`。这使得软件具备继续扩展多求解器的基础。
+
+### 6.10 OpenFOAM 微服务亮点
+
+OpenFOAM 微服务设计体现了桌面端与计算端解耦的思想。Qt 桌面程序负责工程管理、参数组织和结果显示，OpenFOAM 服务端负责 CFD case 生成、运行和结果文件输出。
+
+这种设计相比直接在 Qt 中调用 OpenFOAM 命令有几个优势：
+
+1. OpenFOAM 环境可以独立部署，不污染 Windows 桌面程序环境。
+2. 服务端可以放在 WSL、Linux 服务器或远程计算节点上。
+3. Qt 端和服务端之间只通过 JSON 通信，接口清晰。
+4. 后续可以扩展异步任务队列、远程求解、日志监控和结果下载。
+5. AI Agent 可以接入服务端，自动生成或修改 OpenFOAM case。
+
+因此，OpenFOAM 微服务不是单纯“调用另一个程序”，而是为后续 CFD 自动化和远程仿真平台化预留了清晰接口。
+
 ---
 
 ## 7. 系统部署与运行介绍
@@ -768,7 +930,48 @@ Reaction Force Magnitude
 
 如果 CalculiX 不可用，软件可以完成建模和网格，但不能完成结构求解。
 
-### 7.3 基本操作流程
+### 7.3 OpenFOAM 微服务运行方式
+
+如果需要运行 OpenFOAM 微服务，需要先启动服务端。默认服务地址为：
+
+```text
+http://127.0.0.1:8765
+```
+
+服务启动命令示例：
+
+```powershell
+python -m uvicorn openfoam_demo_service:app --host 127.0.0.1 --port 8765
+```
+
+启动服务后，MyCAE 中的 OpenFOAM 插件会向下面的接口发送请求：
+
+```text
+POST http://127.0.0.1:8765/run
+```
+
+如果需要修改服务地址，可以设置环境变量：
+
+```powershell
+$env:MYCAE_OPENFOAM_SERVICE_URL="http://127.0.0.1:8765"
+```
+
+OpenFOAM 微服务运行后，MyCAE 会在求解工况目录下保存请求和响应文件：
+
+```text
+openfoam_case_request.json      MyCAE 发给服务端的请求清单
+openfoam_service_result.json    服务端返回的结果 JSON
+openfoam_demo.log               服务端日志文件
+```
+
+如果服务没有启动，OpenFOAM 插件会提示请求失败或超时。此时应先确认：
+
+1. FastAPI 服务是否已经启动。
+2. 服务端口是否为 `8765`。
+3. `MYCAE_OPENFOAM_SERVICE_URL` 是否配置正确。
+4. 防火墙或代理是否阻止了本地 HTTP 请求。
+
+### 7.4 基本操作流程
 
 推荐运行流程：
 
@@ -787,7 +990,7 @@ Reaction Force Magnitude
 -> 查看位移和应力云图
 ```
 
-### 7.4 自动化测试
+### 7.5 自动化测试
 
 可以使用以下命令运行测试：
 
